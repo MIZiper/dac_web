@@ -1,0 +1,44 @@
+
+## network
+
+Home: (nginx)
+
+  /dac/
+  General actions: (flask)
+    /
+    /new
+    /project/
+      / # get published projects
+      /{path to config}
+      /{project_uuid}
+
+    /sess/{sess id}/
+    Analysis session: (flask + tornado)
+      /
+      /data/
+        / # data of global_context
+        /{context} # data of context
+        /{data id} # get_config/set_config/activate(for gc data)
+      /actions/
+        / # actions of global_context
+        /{context} # actions of context
+        /{action id} # get_config/set_config/run_action
+      /plugins/{plugin name}
+
+## storage
+
+/root/dir/for/config
+
+  /publish # config published for offical ref, link to "saved"
+    /project
+      /{test round}-{proto}-{analysis type}-{appendix}
+
+  /saved
+    /{saved_uuid}
+
+  /ext_model # to be statistically analyzed/linked, contain "saved_uuid"
+
+  /session
+    /{sess_uuid}
+
+/root/dir/for/rawdata # e.g. project folder on file server
