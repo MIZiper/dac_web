@@ -1,5 +1,5 @@
 <template>
-    <v-card height="75%">
+    <v-card>
         <v-card-title>Object Browser</v-card-title>
         <v-card-text>
             <v-list dense>

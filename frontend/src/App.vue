@@ -20,11 +20,15 @@
     <v-container fluid class="mt-16">
       <v-row>
         <v-col cols="4">
-          <ObjectBrowser class="mb-4" />
-          <YamlEditor />
+          <v-row style="height: 75vh;" class="ma-0">
+            <ObjectBrowser style="width: 49%;" />
+            <v-spacer></v-spacer>
+            <ObjectBrowser style="width: 49%;" />
+          </v-row>
+          <YamlEditor class="mt-4" />
         </v-col>
         <v-col cols="8">
-          <MainContent class="mb-4"/>
+          <MainContent class="mb-4" />
           <MessageZone />
         </v-col>
       </v-row>

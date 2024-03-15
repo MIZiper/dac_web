@@ -1,12 +1,19 @@
 <template>
     <v-card>
-        <v-card-title>YAML Editor</v-card-title>
+        <v-row class="ma-0">
+            <v-card-title>YAML Editor</v-card-title>
+            <v-spacer></v-spacer>
+
+            <v-btn>
+                <v-icon>mdi-account-circle</v-icon>
+            </v-btn>
+            <v-btn>
+                <v-icon>mdi-account-circle</v-icon>
+            </v-btn>
+        </v-row>
         <v-card-text>
             <v-textarea v-model="yamlCode" rows="10"></v-textarea>
         </v-card-text>
-      <v-btn icon>
-        <v-icon>mdi-account-circle</v-icon>
-      </v-btn>
     </v-card>
 </template>
 
