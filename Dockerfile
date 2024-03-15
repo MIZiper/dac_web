@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 
 # Copy the application code
 COPY ./backend ./backend
-COPY ./frontend/dist ./frontend
+COPY ./frontend/dist ./frontend/dist
 
 # Expose the port the router module listens on
 EXPOSE 5000
