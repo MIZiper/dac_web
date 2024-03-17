@@ -15,14 +15,13 @@ Home: (nginx)
     /sess/{sess id}/
     Analysis session: (flask + tornado)
       /
-      /data/
-        / # data of global_context
-        /{context} # data of context
-        /{data id} # get_config/set_config/activate(for gc data)
-      /actions/
-        / # actions of global_context
-        /{context} # actions of context
-        /{action id} # get_config/set_config/run_action
+      /{context id}/
+        /data # data of context
+        /actions # actions of context
+      /{context id}/data/{data id}
+        # get_config/set_config/activate(for gc data)
+      /{context id}/actions/{action id}
+        # get_config/set_config/run_action
       /plugins/{plugin name}
 
 ## storage
