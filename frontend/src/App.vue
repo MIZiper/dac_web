@@ -55,6 +55,7 @@ import ObjectBrowser from './components/ObjectBrowser.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
+import axios from 'axios'
 
 export default {
   components: {
@@ -71,6 +72,25 @@ export default {
   },
   methods: {
     startOption(option) {
+      if (option == 'new') {
+        axios.post('/new').then(response => {
+          sess_id = response.data['dac-sess_id'];
+          sessionStorage.setItem('sess_id', sess_id);
+          this.start_dialog = false;
+        }).catch(error => {
+          console.error("There was an error fetching session id:", error);
+        });
+      } else {
+        axios.get('/projects/', {
+          headers: {
+            'dac-sess_id': sessionStorage.getItem('sess_id')
+          }
+        }).then(response => {
+
+        }).catch(error => {
+          console.error("There was an error starting project:", error);
+        });
+      }
       this.start_dialog = false;
     }
   }

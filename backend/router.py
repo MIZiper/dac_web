@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+import uuid
 from podman import PodmanClient
 from podman.errors import NotFound
 
@@ -22,11 +23,9 @@ with PodmanClient(base_url=podman_url) as client:
     def static_files(filename):
         return send_from_directory(app.static_folder, filename)
 
-    @app.route('/start', methods=['POST'])
-    def start_analysis():
-        user_id = request.json.get('user_id')
-        if not user_id:
-            return jsonify({"error": "User ID is required"}), 400
+    @app.route('/new', methods=['POST'])
+    def new_session():
+        sess_id = str(uuid.uuid4())
 
         # # Define the path for the progress file or a shared volume
         # # This example uses a file-based approach for simplicity
@@ -37,16 +36,26 @@ with PodmanClient(base_url=podman_url) as client:
 
         # Start a new container for the analysis module
         try:
-            container = client.containers.run(container_image,
-                                               ["python", analysis_entry],
-                                               name=f"analysis_{user_id}",
-                                               # volumes=volumes,
-                                               remove=True,
-                                               detach=True)
-            user_containers[user_id] = container.id
-            return jsonify({"message": "Analysis started", "container_id": container.id}), 200
+            container = client.containers.run(
+                container_image,
+                ["python", analysis_entry],
+                name=f"analysis_{sess_id}", # volumes=volumes,
+                remove=True, detach=True
+            )
+            user_containers[sess_id] = container.id
+
+            # TODO: and return project_id?
+            return jsonify({"message": "Analysis started", "dac-sess_id": sess_id}), 200
         except Exception as e:
             return jsonify({"error": f"Failed to start analysis: {str(e)}"}), 500
+        
+    @app.route('/projects/<uuid:project_id', methods=['GET'])
+    def load_project(project_id):
+        sess_id = request.headers.get('dac-sess_id')
+        if sess_id:
+            pass
+        else: # newly created, start a container
+            pass
 
     @app.route('/progress', methods=['GET'])
     def get_progress():
