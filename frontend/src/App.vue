@@ -33,6 +33,20 @@
         </v-col>
       </v-row>
     </v-container>
+
+    <v-dialog v-model="start_dialog" persistent max-width="600px">
+      <v-card>
+        <v-card-title>Start analysis</v-card-title>
+        <v-card-text style="color: red; font-weight: bold;">Site under development, service not yet
+          available</v-card-text>
+        <v-card-text>Choose the options below to start analysis</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" text @click="startOption('new')">New</v-btn>
+          <v-btn color="green darken-1" text @click="startOption('load')">Load</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -51,7 +65,13 @@ export default {
   },
   data() {
     return {
-      title: "DAC analysis frame"
+      title: "DAC analysis frame",
+      start_dialog: true,
+    }
+  },
+  methods: {
+    startOption(option) {
+      this.start_dialog = false;
     }
   }
 }
