@@ -3,3 +3,4 @@ podman
 numpy
 matplotlib
 tornado
+dac>=0.3

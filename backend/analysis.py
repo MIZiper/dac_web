@@ -1,7 +1,12 @@
+import os
+from os import path
+
 from flask import Flask, request, jsonify
 from werkzeug.routing import UnicodeConverter
 
+import dac
 from dac.core import Container, GCK
+from dac.core.plugin import use_plugin
 GCK_ID = 'global'
 
 class ContextKeyConverter(UnicodeConverter):
@@ -18,6 +23,10 @@ app.url_map.converters['node'] = ContextKeyConverter
 
 container = Container.parse_save_config({})
 
+# ----
+# init
+# ----
+
 @app.route('/init', methods=['POST'])
 def init():
     config = request.json
@@ -26,10 +35,38 @@ def init():
 
     return jsonify({"message": "Init done"}), 200
 
+# -------
+# plugins
+# -------
+
 @app.route('/plugins', methods=['GET', 'POST'])
 def handle_plugins():
-    # GET -> list of available plugins
-    # POST -> use plugin
+    class FakeDACWin:
+        def message(self, s):
+            pass
+
+    plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
+    if request.method=="GET":
+        return jsonify({
+            "data": os.listdir(plugins_dir)
+        })
+    else:
+        target_plugin = request.get_json().get("data")
+        use_plugin(path.join(plugins_dir, target_plugin), dac_win=FakeDACWin())
+        return jsonify({
+            "message": f"Switch to {target_plugin}"
+        })
+    
+# --------
+# contexts
+# --------
+    
+@app.route('/contexts', method=['GET', 'POST'])
+def handle_contexts():
+    pass
+
+@app.route('/contexts/<ctx:context_key_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
+def handle_context_of(context_key_id: str):
     pass
 
 @app.route('/types/<string: option>', methods=['GET'])
@@ -55,12 +92,16 @@ def get_available_types(option: str):
             "error": "Unrecognized command"
         }), 404
 
-@app.route('/<ctx:context_key_id>/data', methods=['GET'])
-def get_data_of(context_key_id: str):
+# ----
+# data
+# ----
+
+@app.route('/<ctx:context_key_id>/data', methods=['GET', 'POST'])
+def handle_data(context_key_id: str):
     if context_key_id == GCK_ID:
         context_key = GCK
     else:
-        for node_type, node_name, node in container.GlobalContext.NodeIter:
+        for node_type, node_name, node in container.context_keys.NodeIter:
             if node.uuid==context_key_id:
                 context_key = node
                 break
@@ -76,12 +117,21 @@ def get_data_of(context_key_id: str):
         ]
     }), 200
 
-@app.route('/<ctx:context_key_id>/actions', methods=['GET'])
-def get_actions_of(context_key_id: str):
+@app.route('/<ctx:context_key_id>/data/<node:data_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
+def handle_data_of(context_key_id: str, data_id: str):
+    # GET/PUT/POST/DELETE => get_config/set_config/.../delete
+    pass
+
+# -------
+# actions
+# -------
+
+@app.route('/<ctx:context_key_id>/actions', methods=['GET', 'POST'])
+def handle_actions(context_key_id: str):
     if context_key_id == GCK_ID:
         context_key = GCK
     else:
-        for node_type, node_name, node in container.GlobalContext.NodeIter:
+        for node_type, node_name, node in container.context_keys.NodeIter:
             if node.uuid==context_key_id:
                 context_key = node
                 break
@@ -95,15 +145,14 @@ def get_actions_of(context_key_id: str):
         if action.context_key is context_key
     ]}), 200
 
-@app.route('/<ctx:context_key_id>/data/<node:data_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
-def handle_data_of(context_key_id: str, data_id: str):
-    # GET/PUT/POST/DELETE => get_config/set_config/activate/delete
-    pass
-
 @app.route('/<ctx:context_key_id>/actions/<node:action_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def handle_action_of(context_key_id: str, action_id: str):
     # GET/PUT/POST/DELETE => get_config/set_config/exec/delete
     pass
+
+# ------
+# others
+# ------
 
 # @app.route("/progress")
 # @app.route("/terminate")
