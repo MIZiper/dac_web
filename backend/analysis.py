@@ -21,6 +21,8 @@ app = Flask(__name__)
 app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
 
+plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
+use_plugin(path.join(plugins_dir, "0.base.yaml"))
 container = Container.parse_save_config({})
 
 # ----
@@ -45,7 +47,6 @@ def handle_plugins():
         def message(self, s):
             pass
 
-    plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
     if request.method=="GET":
         return jsonify({
             "data": os.listdir(plugins_dir)
@@ -54,14 +55,14 @@ def handle_plugins():
         target_plugin = request.get_json().get("data")
         use_plugin(path.join(plugins_dir, target_plugin), dac_win=FakeDACWin())
         return jsonify({
-            "message": f"Switch to {target_plugin}"
+            "message": f"Switch to '{target_plugin}'"
         })
     
 # --------
 # contexts
 # --------
     
-@app.route('/contexts', method=['GET', 'POST'])
+@app.route('/contexts', methods=['GET', 'POST'])
 def handle_contexts():
     pass
 
@@ -69,12 +70,14 @@ def handle_contexts():
 def handle_context_of(context_key_id: str):
     pass
 
-@app.route('/types/<string: option>', methods=['GET'])
+@app.route('/types/<string:option>', methods=['GET'])
 def get_available_types(option: str):
     if option == 'data':
         return jsonify({
             "data": [
                 (data_type.__name__, data_type.__name__) # TODO: data_type_name should include module info
+                if not isinstance(data_type, str) else
+                data_type
                 for data_type
                 in Container.GetGlobalDataTypes()
             ]
@@ -83,6 +86,8 @@ def get_available_types(option: str):
         return jsonify({
             "data": [
                 (action_type.__name__, action_type.CAPTION) # TODO: action_type_name should include module info
+                if not isinstance(action_type, str) else
+                action_type
                 for action_type
                 in container.ActionTypesInCurrentContext
             ]
