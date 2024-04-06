@@ -43,6 +43,7 @@ def init():
 
 @app.route('/plugins', methods=['GET', 'POST'])
 def handle_plugins():
+    # GET/POST => get list / activate
     class FakeDACWin:
         def message(self, s):
             pass
@@ -64,11 +65,53 @@ def handle_plugins():
     
 @app.route('/contexts', methods=['GET', 'POST'])
 def handle_contexts():
-    pass
+    # GET/POST => get list / create new
+    if request.method == "GET":
+        return jsonify({
+            "data": [
+                (node_type.__name__, node_name, node.uuid)
+                for node_type, node_name, node
+                in container.context_keys.NodeIter
+            ]
+        }), 200
+    else:
+        data = request.get_json().get("data")
+        context_key_type = Container.GetClass(data['type'])
+        context_key = context_key_type(data['name'])
+        
+        return jsonify({
+            "message": f"Create context '{context_key.name}'",
+            "data": context_key.uuid
+        })
 
 @app.route('/contexts/<ctx:context_key_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def handle_context_of(context_key_id: str):
-    pass
+    # GET/PUT/POST/DELETE => get / update / activate / delete
+    if (context_key:=get_context_key(context_key_id)) is None:
+        return jsonify({"error": "No such context key"}), 404
+    if context_key is GCK and request.method != "POST":
+        return jsonify({"error": "Cannot modify global context key"}), 400
+    
+    if request.method == "GET":
+        return jsonify({
+            "data": context_key.get_construct_config()
+        })
+    elif request.method == "PUT":
+        data = request.get_json().get("data")
+        context_key.apply_construct_config(data)
+        return jsonify({
+            "message": f"Update context '{context_key.name}'",
+        })
+    elif request.method == "POST":
+        container.activate_context(context_key)
+        return jsonify({
+            "message": f"Activate context '{context_key.name}'",
+        })
+    elif request.method == "DELETE":
+        container.remove_context_key(context_key)
+        return jsonify({
+            "message": f"Delete context '{context_key.name}'",
+        })
 
 @app.route('/types/<string:option>', methods=['GET'])
 def get_available_types(option: str):
@@ -103,17 +146,12 @@ def get_available_types(option: str):
 
 @app.route('/<ctx:context_key_id>/data', methods=['GET', 'POST'])
 def handle_data(context_key_id: str):
-    if context_key_id == GCK_ID:
-        context_key = GCK
-    else:
-        for node_type, node_name, node in container.context_keys.NodeIter:
-            if node.uuid==context_key_id:
-                context_key = node
-                break
-        else:
-            return jsonify({"error": "No such context key"}), 404
+    # GET/POST => get list / ... (cannot add data via user)
+    if (context_key:=get_context_key(context_key_id)) is None:
+        return jsonify({"error": "No such context key"}), 404
     
     context = container.get_context(context_key)
+    
     return jsonify({
         "data": [
             (node_type.__name__, node_name, node.uuid)
@@ -124,8 +162,23 @@ def handle_data(context_key_id: str):
 
 @app.route('/<ctx:context_key_id>/data/<node:data_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def handle_data_of(context_key_id: str, data_id: str):
-    # GET/PUT/POST/DELETE => get_config/set_config/.../delete
-    pass
+    # GET/PUT/POST/DELETE => get_config/set_config/.../delete (data not yet deletable)
+    if (context_key:=get_context_key(context_key_id)) is None:
+        return jsonify({"error": "No such context key"}), 404
+    
+    context = container.get_context(context_key)
+    if (data:=context.get_node_by_uuid(data_id)) is None:
+        return jsonify({"error": "No such data"}), 404
+    
+    if request.method == "GET":
+        return jsonify({
+            "data": data.get_construct_config()
+        })
+    elif request.method == "PUT":
+        data.apply_construct_config(request.get_json().get("data"))
+        return jsonify({
+            "message": f"Update data '{data.name}'",
+        })
 
 # -------
 # actions
@@ -133,31 +186,67 @@ def handle_data_of(context_key_id: str, data_id: str):
 
 @app.route('/<ctx:context_key_id>/actions', methods=['GET', 'POST'])
 def handle_actions(context_key_id: str):
-    if context_key_id == GCK_ID:
-        context_key = GCK
-    else:
-        for node_type, node_name, node in container.context_keys.NodeIter:
-            if node.uuid==context_key_id:
-                context_key = node
-                break
-        else:
-            return jsonify({"error": "No such context key"}), 404
-        
-    return jsonify({"data": [
-        (type(action).__name__, action.name, action.uuid)
-        for action
-        in container.actions
-        if action.context_key is context_key
-    ]}), 200
+    # GET/POST => get list / create new
+    if (context_key:=get_context_key(context_key_id)) is None:
+        return jsonify({"error": "No such context key"}), 404
+    
+    context = container.get_context(context_key)
+    if request.method == "POST":
+        action_type = Container.GetClass(request.get_json().get("data")['type'])
+        action = action_type(request.get_json().get("data")['name'])
+        action.context_key = context_key
+        container.actions.append(action)
+        return jsonify({
+            "message": f"Create action '{action.name}'",
+            "data": action.uuid
+        })
+    elif request.method == "GET":
+        return jsonify({"data": [
+            (type(action).__name__, action.name, action.uuid)
+            for action
+            in container.actions
+            if action.context_key is context_key
+        ]}), 200
 
 @app.route('/<ctx:context_key_id>/actions/<node:action_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def handle_action_of(context_key_id: str, action_id: str):
     # GET/PUT/POST/DELETE => get_config/set_config/exec/delete
-    pass
+    if (context_key:=get_context_key(context_key_id)) is None:
+        return jsonify({"error": "No such context key"}), 404
+
+    # NOTE: action's context is not necessarily the same as the context key (current key)
+
+    action = filter(lambda a: a.uuid == action_id, container.actions).__next__()
+    if request.method == "GET":
+        return jsonify({
+            "data": action.get_construct_config()
+        })
+    elif request.method == "PUT":
+        data = request.get_json().get("data")
+        action.apply_construct_config(data)
+        return jsonify({
+            "message": f"Update action '{action.name}'",
+        })
+    elif request.method == "POST":
+       action.exec()
+    elif request.method == "DELETE":
+        container.remove_action(action)
+        return jsonify({
+            "message": f"Delete action '{action.name}'",
+        })
 
 # ------
 # others
 # ------
+
+def get_context_key(context_key_id: str):
+    if context_key_id == GCK_ID:
+        return GCK
+    else:
+        try:
+            return container.context_keys.get_node_by_uuid(context_key_id)
+        except:
+            return None
 
 # @app.route("/progress")
 # @app.route("/terminate")
