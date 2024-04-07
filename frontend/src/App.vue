@@ -23,7 +23,7 @@
           <v-row style="height: 75vh;" class="ma-0">
             <ObjectBrowser style="width: 49%;" />
             <v-spacer></v-spacer>
-            <ObjectBrowser style="width: 49%;" />
+            <ActionBrowser style="width: 49%;" />
           </v-row>
           <YamlEditor class="mt-4" />
         </v-col>
@@ -52,6 +52,7 @@
 
 <script>
 import ObjectBrowser from './components/ObjectBrowser.vue';
+import ActionBrowser from './components/ActionBrowser.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
@@ -60,6 +61,7 @@ import axios from 'axios'
 export default {
   components: {
     ObjectBrowser,
+    ActionBrowser,
     YamlEditor,
     MainContent,
     MessageZone

@@ -118,7 +118,7 @@ def get_available_types(option: str):
     if option == 'data':
         return jsonify({
             "data": [
-                (data_type.__name__, data_type.__name__) # TODO: data_type_name should include module info
+                (data_type.__name__, f"{data_type.__module__}.{data_type.__qualname__}") # TODO: data_type_name should include module info
                 if not isinstance(data_type, str) else
                 data_type
                 for data_type
