@@ -52,10 +52,10 @@ def handle_plugins():
 
     if request.method=="GET":
         return jsonify({
-            "data": os.listdir(plugins_dir)
+            "plugins": os.listdir(plugins_dir)
         })
     else:
-        target_plugin = request.get_json().get("data")
+        target_plugin = request.get_json().get("plugin")
         use_plugin(path.join(plugins_dir, target_plugin), dac_win=FakeDACWin())
         return jsonify({
             "message": f"Switch to '{target_plugin}'"
@@ -70,20 +70,20 @@ def handle_contexts():
     # GET/POST => get list / create new
     if request.method == "GET":
         return jsonify({
-            "data": [
+            "contexts": [
                 (node_type.__name__, node_name, node.uuid)
                 for node_type, node_name, node
                 in container.context_keys.NodeIter
             ]
         }), 200
     else:
-        data = request.get_json().get("data")
-        context_key_type = Container.GetClass(data['type'])
-        context_key = context_key_type(data['name'])
+        context_config = request.get_json().get("context_config")
+        context_key_type = Container.GetClass(context_config['type'])
+        context_key = context_key_type(context_config['name'])
         
         return jsonify({
             "message": f"Create context '{context_key.name}'",
-            "data": context_key.uuid
+            "context_uuid": context_key.uuid
         })
 
 @app.route('/contexts/<ctx:context_key_id>', methods=['GET', 'PUT', 'POST', 'DELETE'])
@@ -96,11 +96,11 @@ def handle_context_of(context_key_id: str):
     
     if request.method == "GET":
         return jsonify({
-            "data": context_key.get_construct_config()
+            "context_config": context_key.get_construct_config()
         })
     elif request.method == "PUT":
-        data = request.get_json().get("data")
-        context_key.apply_construct_config(data)
+        context_config = request.get_json().get("context_config")
+        context_key.apply_construct_config(context_config)
         return jsonify({
             "message": f"Update context '{context_key.name}'",
         })
@@ -117,9 +117,9 @@ def handle_context_of(context_key_id: str):
 
 @app.route('/types/<string:option>', methods=['GET'])
 def get_available_types(option: str):
-    if option == 'data':
+    if option == 'context':
         return jsonify({
-            "data": [
+            "context_types": [
                 (data_type.__name__, f"{data_type.__module__}.{data_type.__qualname__}") # TODO: data_type_name should include module info
                 if not isinstance(data_type, str) else
                 data_type
@@ -127,9 +127,9 @@ def get_available_types(option: str):
                 in Container.GetGlobalDataTypes()
             ]
         }), 200
-    elif option == 'actions':
+    elif option == 'action':
         return jsonify({
-            "data": [
+            "action_types": [
                 (action_type.__name__, action_type.CAPTION) # TODO: action_type_name should include module info
                 if not isinstance(action_type, str) else
                 action_type
@@ -174,10 +174,10 @@ def handle_data_of(context_key_id: str, data_id: str):
     
     if request.method == "GET":
         return jsonify({
-            "data": data.get_construct_config()
+            "data_config": data.get_construct_config()
         })
     elif request.method == "PUT":
-        data.apply_construct_config(request.get_json().get("data"))
+        data.apply_construct_config(request.get_json().get("data_config")) # but shouldn't be editable
         return jsonify({
             "message": f"Update data '{data.name}'",
         })
@@ -194,16 +194,17 @@ def handle_actions(context_key_id: str):
     
     context = container.get_context(context_key)
     if request.method == "POST":
-        action_type = Container.GetClass(request.get_json().get("data")['type'])
-        action = action_type(request.get_json().get("data")['name'])
+        action_config = request.get_json().get("action_config")
+        action_type = Container.GetClass(action_config['type'])
+        action = action_type(action_config['name'])
         action.context_key = context_key
         container.actions.append(action)
         return jsonify({
             "message": f"Create action '{action.name}'",
-            "data": action.uuid
+            "action_uuid": action.uuid
         })
     elif request.method == "GET":
-        return jsonify({"data": [
+        return jsonify({"actions": [
             (type(action).__name__, action.name, action.uuid)
             for action
             in container.actions
@@ -221,11 +222,11 @@ def handle_action_of(context_key_id: str, action_id: str):
     action = filter(lambda a: a.uuid == action_id, container.actions).__next__()
     if request.method == "GET":
         return jsonify({
-            "data": action.get_construct_config()
+            "action_config": action.get_construct_config()
         })
     elif request.method == "PUT":
-        data = request.get_json().get("data")
-        action.apply_construct_config(data)
+        action_config = request.get_json().get("action_config")
+        action.apply_construct_config(action_config)
         return jsonify({
             "message": f"Update action '{action.name}'",
         })

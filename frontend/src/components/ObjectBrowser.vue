@@ -28,8 +28,8 @@ export default {
     },
     methods: {
         handleDataRequest() {
-            ax_project.get('types/data').then(response => {
-                this.data_items = response.data['data'];
+            ax_project.get('types/context').then(response => {
+                this.data_items = response.data['context_types'];
             }).catch(error => {
                 console.error("There was an error fetching object list:", error);
             });

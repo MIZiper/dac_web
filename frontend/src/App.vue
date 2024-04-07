@@ -10,7 +10,7 @@
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props" title="Plugins">
             <v-icon>mdi-view-list</v-icon>
-      </v-btn>
+          </v-btn>
         </template>
         <v-list>
           <v-list-item v-for="(plugin, index) in plugins" :key="index" @click="switchPlugin(plugin)">
@@ -111,6 +111,23 @@ export default {
     initAnalysis() {
       this.emitter.emit('data-refresh-request');
       this.emitter.emit('action-refresh-request');
+
+      ax_project.get("plugins").then(response => {
+        this.plugins = response.data['plugins'];
+      }).catch(error => {
+        console.error("There was an error fetching plugins:", error);
+      });
+    },
+    switchPlugin(plugin) {
+      ax_project.post("plugins", {
+        plugin: plugin
+      }).then(response => {
+        console.log(response.data)
+      }).catch(error => {
+        console.error("There was an error switching plugin:", error);
+      });
+
+      this.emitter.emit('data-refresh-request');
     }
   }
 }
