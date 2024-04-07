@@ -57,6 +57,7 @@ import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
 import axios from 'axios'
+import {ax_base, ax_project} from '@/utils';
 
 export default {
   components: {
@@ -94,6 +95,11 @@ export default {
         });
       }
       this.start_dialog = false;
+      this.initAnalysis();
+    },
+    initAnalysis() {
+      this.emitter.emit('data-refresh-request');
+      this.emitter.emit('action-refresh-request');
     }
   }
 }

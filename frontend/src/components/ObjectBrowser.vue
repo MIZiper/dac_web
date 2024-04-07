@@ -12,6 +12,8 @@
 </template>
 
 <script>
+import {ax_base, ax_project} from '@/utils';
+
 export default {
     data() {
         return {
@@ -19,6 +21,18 @@ export default {
                 ["Title 1", "Type 1"],
                 ["Title 2", "Type 2"],
             ],
+        }
+    },
+    mounted() {
+        this.emitter.on('data-refresh-request', this.handleDataRequest);
+    },
+    methods: {
+        handleDataRequest() {
+            ax_project.get('types/data').then(response => {
+                this.data_items = response.data['data'];
+            }).catch(error => {
+                console.error("There was an error fetching object list:", error);
+            });
         }
     }
 }

@@ -3,6 +3,7 @@ from os import path
 
 from flask import Flask, request, jsonify
 from werkzeug.routing import UnicodeConverter
+from flask_cors import CORS # to be removed in final container
 
 import dac
 from dac.core import Container, GCK
@@ -20,6 +21,7 @@ class NodeConverter(UnicodeConverter):
 app = Flask(__name__)
 app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
+CORS(app)
 
 plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
 use_plugin(path.join(plugins_dir, "0.base.yaml"))
