@@ -2,7 +2,7 @@
     <v-card>
         <v-card-title>Data Browser</v-card-title>
         <v-card-text>
-            <v-list dense>
+            <v-list density="compact">
                 <v-list-item v-for="(item, index) in data_items" :key="index">
                     <v-list-item-title>{{ item[0] }}</v-list-item-title>
                 </v-list-item>

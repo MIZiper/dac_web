@@ -2,7 +2,7 @@
     <v-card>
         <v-card-title>Action Browser</v-card-title>
         <v-card-text>
-            <v-list dense>
+            <v-list density="compact">
                 <v-list-item v-for="(item, index) in objectList" :key="index">
                     <v-list-item-title><v-icon>mdi-folder</v-icon> {{ item }}</v-list-item-title>
                 </v-list-item>

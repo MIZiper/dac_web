@@ -4,11 +4,11 @@
             <v-card-title>YAML Editor</v-card-title>
             <v-spacer></v-spacer>
 
-            <v-btn>
-                <v-icon>mdi-account-circle</v-icon>
+            <v-btn variant="text" title="Save config">
+                <v-icon>mdi-check-circle</v-icon>
             </v-btn>
-            <v-btn>
-                <v-icon>mdi-account-circle</v-icon>
+            <v-btn variant="text" title="Save and run">
+                <v-icon>mdi-fire-circle</v-icon>
             </v-btn>
         </v-row>
         <v-card-text>

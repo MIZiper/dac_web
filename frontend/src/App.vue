@@ -6,14 +6,24 @@
 
       <v-spacer> </v-spacer>
 
-      <v-btn icon>
-        <v-icon>mdi-account-circle</v-icon>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" title="Plugins">
+            <v-icon>mdi-view-list</v-icon>
       </v-btn>
-      <v-btn icon>
-        <v-icon>mdi-settings</v-icon>
+        </template>
+        <v-list>
+          <v-list-item v-for="(plugin, index) in plugins" :key="index" @click="switchPlugin(plugin)">
+            <v-list-item-title>{{ plugin }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      
+      <v-btn icon title="Import data"> <!-- save project, publish project -->
+        <v-icon>mdi-download</v-icon>
       </v-btn>
-      <v-btn icon>
-        <v-icon>mdi-help-circle</v-icon>
+      <v-btn icon title="Open project">
+        <v-icon>mdi-folder-open</v-icon>
       </v-btn>
     </v-app-bar>
 
@@ -71,6 +81,7 @@ export default {
     return {
       title: "DAC analysis frame",
       start_dialog: true,
+      plugins: ['Plugin 1', 'Plugin 2', 'Plugin 3'],
     }
   },
   methods: {
