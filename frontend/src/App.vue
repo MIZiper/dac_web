@@ -13,12 +13,12 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="(plugin, index) in plugins" :key="index" @click="switchPlugin(plugin)">
+          <v-list-item v-for="plugin in plugins" :key="plugin" @click="switchPlugin(plugin)">
             <v-list-item-title>{{ plugin }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
-      
+
       <v-btn icon title="Import data"> <!-- save project, publish project -->
         <v-icon>mdi-download</v-icon>
       </v-btn>
@@ -30,8 +30,9 @@
     <v-container fluid class="mt-16">
       <v-row>
         <v-col cols="4">
-          <v-row style="height: 75vh;" class="ma-0">
-            <ObjectBrowser style="width: 49%;" />
+          <ContextList class="mb-4" />
+          <v-row style="height: 65vh;" class="ma-0">
+            <DataBrowser style="width: 49%;" />
             <v-spacer></v-spacer>
             <ActionBrowser style="width: 49%;" />
           </v-row>
@@ -61,18 +62,20 @@
 </template>
 
 <script>
-import ObjectBrowser from './components/ObjectBrowser.vue';
+import DataBrowser from './components/DataBrowser.vue';
 import ActionBrowser from './components/ActionBrowser.vue';
+import ContextList from './components/ContextList.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
 import axios from 'axios'
-import {ax_base, ax_project} from '@/utils';
+import { ax_base, ax_project } from '@/utils';
 
 export default {
   components: {
-    ObjectBrowser,
+    DataBrowser,
     ActionBrowser,
+    ContextList,
     YamlEditor,
     MainContent,
     MessageZone
@@ -83,6 +86,9 @@ export default {
       start_dialog: true,
       plugins: ['Plugin 1', 'Plugin 2', 'Plugin 3'],
     }
+  },
+  mounted() {
+    this.emitter.on('plugin-refresh-request', this.handlePluginRequest);
   },
   methods: {
     startOption(option) {
@@ -111,11 +117,15 @@ export default {
     initAnalysis() {
       this.emitter.emit('data-refresh-request');
       this.emitter.emit('action-refresh-request');
+      this.emitter.emit('context-refresh-request');
+      this.emitter.emit('plugin-refresh-request')
+    },
 
-      ax_project.get("plugins").then(response => {
+    handlePluginRequest() {
+      ax_project.get('plugins').then(response => {
         this.plugins = response.data['plugins'];
       }).catch(error => {
-        console.error("There was an error fetching plugins:", error);
+        console.error("There was an error fetching plugin list:", error);
       });
     },
     switchPlugin(plugin) {
@@ -127,7 +137,8 @@ export default {
         console.error("There was an error switching plugin:", error);
       });
 
-      this.emitter.emit('data-refresh-request');
+      this.emitter.emit('context_type-refresh-request')
+      this.emitter.emit('action_type-refresh-request')
     }
   }
 }

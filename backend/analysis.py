@@ -71,7 +71,7 @@ def handle_contexts():
     if request.method == "GET":
         return jsonify({
             "contexts": [
-                (node_type.__name__, node_name, node.uuid)
+                {"name": node_name, "uuid": node.uuid}
                 for node_type, node_name, node
                 in container.context_keys.NodeIter
             ]
@@ -120,7 +120,7 @@ def get_available_types(option: str):
     if option == 'context':
         return jsonify({
             "context_types": [
-                (data_type.__name__, f"{data_type.__module__}.{data_type.__qualname__}") # TODO: data_type_name should include module info
+                {"name": data_type.__name__, "type": f"{data_type.__module__}.{data_type.__qualname__}"}
                 if not isinstance(data_type, str) else
                 data_type
                 for data_type
@@ -130,7 +130,7 @@ def get_available_types(option: str):
     elif option == 'action':
         return jsonify({
             "action_types": [
-                (action_type.__name__, action_type.CAPTION) # TODO: action_type_name should include module info
+                {"name": action_type.CAPTION, "type": f"{action_type.__module__}.{action_type.__qualname__}"}
                 if not isinstance(action_type, str) else
                 action_type
                 for action_type

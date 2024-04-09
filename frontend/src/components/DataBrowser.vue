@@ -1,0 +1,38 @@
+<template>
+    <v-card>
+        <v-card-title>Data</v-card-title>
+        <v-card-text>
+            <v-list density="compact">
+                <v-list-item v-for="dt_itm in data_items" :key="dt_itm.uuid">
+                    <v-list-item-title>{{ dt_itm.name }}</v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-card-text>
+    </v-card>
+</template>
+
+<script>
+import { ax_base, ax_project } from '@/utils';
+
+export default {
+    data() {
+        return {
+            data_items: [
+                { name: "Data 1", uuid: "uuid1" }
+            ],
+        }
+    },
+    mounted() {
+        this.emitter.on('data-refresh-request', this.handleDataRequest);
+    },
+    methods: {
+        handleDataRequest() {
+            
+        }
+    }
+}
+</script>
+
+<style scoped>
+/* Add component-specific styles here */
+</style>
