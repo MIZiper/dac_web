@@ -16,7 +16,7 @@
                 </v-list>
             </v-menu>
         </v-row>
-        <v-card-text>
+        <v-card-text class="pt-0 pl-2 pr-0">
             <v-list density="compact">
                 <v-list-item v-for="act_itm in actions" :key="act_itm.uuid">
                     <v-list-item-title><v-icon>mdi-folder</v-icon> {{ act_itm.name }}</v-list-item-title>
@@ -33,10 +33,10 @@ export default {
     data() {
         return {
             actions: [
-                { name: 'Context 1', uuid: 'uuid1' }
+                { name: 'Action 1', uuid: 'uuid1' }
             ],
             action_types: [
-                { name: 'Context Type 1', type: 'path/to/context1' }
+                { name: 'Action Type 1', type: 'action.type.1' }
             ],
         };
     },

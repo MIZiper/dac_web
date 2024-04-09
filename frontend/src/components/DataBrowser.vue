@@ -1,7 +1,7 @@
 <template>
     <v-card>
         <v-card-title>Data</v-card-title>
-        <v-card-text>
+        <v-card-text class="pt-0 pl-2 pr-0">
             <v-list density="compact">
                 <v-list-item v-for="dt_itm in data_items" :key="dt_itm.uuid">
                     <v-list-item-title>{{ dt_itm.name }}</v-list-item-title>

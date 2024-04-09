@@ -16,7 +16,7 @@
                 </v-list>
             </v-menu>
         </v-row>
-        <v-card-text>
+        <v-card-text class="pb-0 pt-0">
             <v-select v-model="current_context" :items="context_keys" item-title="name" item-value="uuid"
                 density="compact" label="Select a context"></v-select>
         </v-card-text>
@@ -34,7 +34,7 @@ export default {
                 { name: 'Context 1', uuid: 'uuid1' }
             ],
             context_types: [
-                { name: 'Context 1', type: 'path/to/context1' }
+                { name: 'Context Type 1', type: 'context.type.1' }
             ],
         };
     },
