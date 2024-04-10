@@ -18,7 +18,7 @@
         </v-row>
         <v-card-text class="pb-0 pt-0">
             <v-select v-model="current_context" :items="context_keys" item-title="name" item-value="uuid"
-                density="compact" label="Select a context"></v-select>
+                density="compact" label="Select a context" @update:model-value="handleContextChange"></v-select>
         </v-card-text>
     </v-card>
 </template>
@@ -46,6 +46,10 @@ export default {
         handleContextRequest() {
             ax_project.get('contexts').then(response => {
                 this.context_keys = response.data['contexts'];
+                this.current_context = response.data['current_context'];
+
+                this.emitter.emit('action-refresh-request', this.current_context);
+                this.emitter.emit('data-refresh-request', this.current_context);
             }).catch(error => {
                 console.error("There was an error fetching context key list:", error);
             });
@@ -55,6 +59,17 @@ export default {
                 this.context_types = response.data['context_types'];
             }).catch(error => {
                 console.error("There was an error fetching context type list:", error);
+            });
+        },
+        handleContextChange(context_uuid) {
+            ax_project.post('contexts/'+context_uuid, {}).then(response => {
+                console.log(response.data['message']);
+                // this.current_context = response.data['current_context'];
+                this.emitter.emit('data-refresh-request', this.current_context);
+                this.emitter.emit('action-refresh-request', this.current_context);
+                this.emitter.emit('action_type-refresh-request');
+            }).catch(error => {
+                console.error("There was an error switching context:", error);
             });
         },
     }

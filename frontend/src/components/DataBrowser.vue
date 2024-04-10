@@ -26,8 +26,12 @@ export default {
         this.emitter.on('data-refresh-request', this.handleDataRequest);
     },
     methods: {
-        handleDataRequest() {
-            
+        handleDataRequest(context_uuid) {
+            ax_project.get(context_uuid+'/data').then(response => {
+                this.data_items = response.data['data'];
+            }).catch(error => {
+                console.error("There was an error fetching data list:", error);
+            });
         }
     }
 }

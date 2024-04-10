@@ -1,0 +1,106 @@
+{
+  "dac": {
+    "_": {
+      "version": "0.3.0"
+    },
+    "actions": [
+      {
+        "_uuid_": "0e8458a7-a65e-4f57-b32e-f47fc669c9f2",
+        "_class_": "dac.modules.timedata.construct.SignalConstructAction",
+        "name": "Construct signal with sines",
+        "components": [
+          [
+            1,
+            3,
+            90
+          ],
+          [
+            2,
+            5,
+            60
+          ],
+          [
+            1,
+            4,
+            0
+          ],
+          [
+            3,
+            13,
+            0
+          ]
+        ],
+        "duration": 20,
+        "fs": 1000,
+        "out_name": "cst",
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      },
+      {
+        "_uuid_": "a252bbf4-5639-47b8-9c4e-3fda2256267f",
+        "_class_": "dac.modules.timedata.actions.ShowTimeDataAction",
+        "name": "Show measurement data",
+        "channels": [
+          "cst"
+        ],
+        "plot_dt": null,
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      },
+      {
+        "_uuid_": "fb1ec1ac-7dee-482d-bf89-4c6a4aae05e5",
+        "_class_": "dac.modules.nvh.actions.ToFreqIntermediateAction",
+        "name": "FFT to frequency domain with window and reference",
+        "channels": [
+          "cst"
+        ],
+        "corr": "NarrowBand",
+        "overlap": 0.75,
+        "ref_channel": null,
+        "resolution": 0.1,
+        "window": "Hanning",
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      },
+      {
+        "_uuid_": "0608532c-6ad1-47af-b523-636ff710a061",
+        "_class_": "dac.modules.nvh.actions.ViewFreqIntermediateAction",
+        "name": "Show FFT color plot",
+        "channel": "cst",
+        "xlim": [
+          0,
+          100
+        ],
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      },
+      {
+        "_uuid_": "f6005865-cad7-47fc-b8ed-7296bd96a895",
+        "_class_": "dac.modules.nvh.actions.AverageIntermediateAction",
+        "name": "Average (static) FreqIntermediate to spectrum",
+        "average": "Energy",
+        "channels": [
+          "cst"
+        ],
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      },
+      {
+        "_uuid_": "9ccace2f-aa46-4f98-b25f-7450bfd1da67",
+        "_class_": "dac.modules.nvh.actions.ViewFreqDomainAction",
+        "name": "Show FFT spectrum",
+        "channels": [
+          "cst"
+        ],
+        "xlim": [
+          0,
+          100
+        ],
+        "with_phase": true,
+        "_context_": "1126903b-87a9-4d98-aefa-e7291ee8a59d"
+      }
+    ],
+    "contexts": [
+      {
+        "_uuid_": "1126903b-87a9-4d98-aefa-e7291ee8a59d",
+        "_class_": "dac.core.data.SimpleDefinition",
+        "name": "Test"
+      }
+    ]
+  }
+}

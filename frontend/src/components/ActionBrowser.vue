@@ -45,8 +45,12 @@ export default {
         this.emitter.on('action_type-refresh-request', this.handleActionTypeRequest);
     },
     methods: {
-        handleActionRequest() {
-
+        handleActionRequest(context_uuid) {
+            ax_project.get(context_uuid+'/actions').then(response => {
+                this.actions = response.data['actions'];
+            }).catch(error => {
+                console.error("There was an error fetching action list:", error);
+            });
         },
         handleActionTypeRequest() {
             ax_project.get('types/action').then(response => {

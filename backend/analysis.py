@@ -1,4 +1,4 @@
-import os
+import os, json
 from os import path
 
 from flask import Flask, request, jsonify
@@ -23,8 +23,9 @@ app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
 CORS(app)
 
+current_plugin = "0.base.yaml"
 plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
-use_plugin(path.join(plugins_dir, "0.base.yaml"))
+use_plugin(path.join(plugins_dir, current_plugin))
 container = Container.parse_save_config({})
 
 # ----
@@ -33,7 +34,9 @@ container = Container.parse_save_config({})
 
 @app.route('/init', methods=['POST'])
 def init():
-    config = request.json
+    # config = request.json
+    with open('../doc/test.dac.json', mode='r') as fp:
+        config = json.load(fp)['dac']
     global container
     container = Container.parse_save_config(config)
 
@@ -46,19 +49,23 @@ def init():
 @app.route('/plugins', methods=['GET', 'POST'])
 def handle_plugins():
     # GET/POST => get list / activate
+    global current_plugin
     class FakeDACWin:
         def message(self, s):
             pass
 
     if request.method=="GET":
         return jsonify({
-            "plugins": os.listdir(plugins_dir)
-        })
+            "plugins": os.listdir(plugins_dir),
+            "current_plugin": current_plugin,
+        }), 200
     else:
         target_plugin = request.get_json().get("plugin")
         use_plugin(path.join(plugins_dir, target_plugin), dac_win=FakeDACWin())
+        current_plugin = target_plugin
         return jsonify({
-            "message": f"Switch to '{target_plugin}'"
+            "message": f"Switch to '{target_plugin}'",
+            "current_plugin": current_plugin,
         })
     
 # --------
@@ -69,12 +76,18 @@ def handle_plugins():
 def handle_contexts():
     # GET/POST => get list / create new
     if request.method == "GET":
+        contexts = [
+            {"name": node_name, "uuid": node.uuid}
+            for node_type, node_name, node
+            in container.context_keys.NodeIter
+        ]
+        contexts.insert(0, {
+            "name": "Global",
+            "uuid": GCK_ID
+        })
         return jsonify({
-            "contexts": [
-                {"name": node_name, "uuid": node.uuid}
-                for node_type, node_name, node
-                in container.context_keys.NodeIter
-            ]
+            "contexts": contexts,
+            "current_context": GCK_ID if container.current_key is GCK else container.current_key.uuid
         }), 200
     else:
         context_config = request.get_json().get("context_config")
@@ -156,7 +169,7 @@ def handle_data(context_key_id: str):
     
     return jsonify({
         "data": [
-            (node_type.__name__, node_name, node.uuid)
+            {"name": node_name, "uuid": node.uuid}
             for node_type, node_name, node
             in context.NodeIter
         ]
@@ -205,7 +218,7 @@ def handle_actions(context_key_id: str):
         })
     elif request.method == "GET":
         return jsonify({"actions": [
-            (type(action).__name__, action.name, action.uuid)
+            {"name": action.name, "uuid": action.uuid,}
             for action
             in container.actions
             if action.context_key is context_key
