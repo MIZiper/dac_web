@@ -218,7 +218,7 @@ def handle_actions(context_key_id: str):
         })
     elif request.method == "GET":
         return jsonify({"actions": [
-            {"name": action.name, "uuid": action.uuid,}
+            {"name": action.name, "uuid": action.uuid, "status": action.status}
             for action
             in container.actions
             if action.context_key is context_key

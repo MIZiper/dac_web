@@ -9,10 +9,13 @@
                         <v-icon>mdi-plus-circle</v-icon>
                     </v-btn>
                 </template>
-                <v-list>
-                    <v-list-item v-for="ctx_cls in context_types" :key="ctx_cls.type" @click="addContext(ctx_cls.type)">
+                <v-list density="compact">
+                    <template v-for="ctx_cls in context_types" :key="ctx_cls.type">
+                        <v-list-subheader v-if="typeof ctx_cls === 'string'">{{ ctx_cls }}</v-list-subheader>
+                        <v-list-item v-else @click="addContext(ctx_cls.type)">
                         <v-list-item-title>{{ ctx_cls.name }}</v-list-item-title>
                     </v-list-item>
+                    </template>
                 </v-list>
             </v-menu>
         </v-row>
@@ -62,7 +65,7 @@ export default {
             });
         },
         handleContextChange(context_uuid) {
-            ax_project.post('contexts/'+context_uuid, {}).then(response => {
+            ax_project.post('contexts/' + context_uuid, {}).then(response => {
                 console.log(response.data['message']);
                 // this.current_context = response.data['current_context'];
                 this.emitter.emit('data-refresh-request', this.current_context);
