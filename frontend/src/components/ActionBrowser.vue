@@ -15,8 +15,8 @@
                             <v-list-subheader v-if="act_cls !== '[<]'">{{ act_cls }}</v-list-subheader>
                         </template>
                         <v-list-item v-else @click="addAction(act_cls.type)">
-                        <v-list-item-title>{{ act_cls.name }}</v-list-item-title>
-                    </v-list-item>
+                            <v-list-item-title>{{ act_cls.name }}</v-list-item-title>
+                        </v-list-item>
                     </template>
                 </v-list>
             </v-menu>
@@ -79,6 +79,26 @@ export default {
             }).catch(error => {
                 console.error("There was an error fetching action type list:", error);
             });
+        },
+        addAction(action_type) {
+            ax_project.post(context_uuid + '/actions', {
+                action_config: {
+                    type: action_type,
+                    name: "[New action]",
+                }
+            }).then(response => {
+                console.log(response.data['message']);
+                this.actions.push({
+                    name: "[New action]",
+                    uuid: response.data['action_uuid'],
+                    status: 0,
+                });
+            }).catch(error => {
+                console.error("There was an error adding action:", error);
+            });
+        },
+        editAction(action_uuid) {
+
         },
     }
 }

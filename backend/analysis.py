@@ -93,6 +93,7 @@ def handle_contexts():
         context_config = request.get_json().get("context_config")
         context_key_type = Container.GetClass(context_config['type'])
         context_key = context_key_type(context_config['name'])
+        container.context_keys.add_node(context_key)
         
         return jsonify({
             "message": f"Create context '{context_key.name}'",

@@ -13,8 +13,8 @@
                     <template v-for="ctx_cls in context_types" :key="ctx_cls.type">
                         <v-list-subheader v-if="typeof ctx_cls === 'string'">{{ ctx_cls }}</v-list-subheader>
                         <v-list-item v-else @click="addContext(ctx_cls.type)">
-                        <v-list-item-title>{{ ctx_cls.name }}</v-list-item-title>
-                    </v-list-item>
+                            <v-list-item-title>{{ ctx_cls.name }}</v-list-item-title>
+                        </v-list-item>
                     </template>
                 </v-list>
             </v-menu>
@@ -73,6 +73,22 @@ export default {
                 this.emitter.emit('action_type-refresh-request');
             }).catch(error => {
                 console.error("There was an error switching context:", error);
+            });
+        },
+        addContext(context_type) {
+            ax_project.post('contexts', {
+                context_config: {
+                    type: context_type,
+                    name: "[New context]",
+                }
+            }).then(response => {
+                console.log(response.data['message']);
+                this.context_keys.push({
+                    name: "[New context]",
+                    uuid: response.data['context_uuid'],
+                });
+            }).catch(error => {
+                console.error("There was an error adding context:", error);
             });
         },
     }
