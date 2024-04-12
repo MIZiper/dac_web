@@ -11,7 +11,7 @@
                 <v-icon>mdi-fire-circle</v-icon>
             </v-btn>
         </v-row>
-        <v-card-text>
+        <v-card-text class="pt-0">
             <v-textarea v-model="yamlCode" rows="10"></v-textarea>
         </v-card-text>
     </v-card>
