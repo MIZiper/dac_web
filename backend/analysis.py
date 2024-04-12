@@ -170,7 +170,7 @@ def handle_data(context_key_id: str):
     
     return jsonify({
         "data": [
-            {"name": node_name, "uuid": node.uuid}
+            {"name": node_name, "uuid": node.uuid, "type": node_type.__qualname__}
             for node_type, node_name, node
             in context.NodeIter
         ]

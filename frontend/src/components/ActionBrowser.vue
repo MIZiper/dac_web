@@ -12,6 +12,8 @@
                 <v-list density="compact">
                     <template v-for="act_cls in action_types" :key="act_cls.type">
                         <template v-if="typeof act_cls === 'string'">
+                            <v-divider></v-divider>
+                            <!-- TODO: make [>] as subgroup -->
                             <v-list-subheader v-if="act_cls !== '[<]'">{{ act_cls }}</v-list-subheader>
                         </template>
                         <v-list-item v-else @click="addAction(act_cls.type)">
@@ -23,8 +25,9 @@
         </v-row>
         <v-card-text class="pt-0 pl-2 pr-0">
             <v-list density="compact">
-                <v-list-item v-for="act_itm in actions" :key="act_itm.uuid">
-                    <v-list-item-title @click="editAction(act_itm.uuid)">
+                <v-list-item v-for="act_itm in actions" @click="showContextMenu($event, act_itm.uuid)"
+                    :key="act_itm.uuid">
+                    <v-list-item-title>
                         <v-icon>
                             <template v-if="act_itm.status === 0">
                                 mdi-file-plus-outline
@@ -43,6 +46,14 @@
                     </v-list-item-title>
                 </v-list-item>
             </v-list>
+            <v-menu v-model="showMenu" :target="menuXY">
+                <v-list density="compact">
+                    <v-list-item @click="editAction"><v-list-item-title>Edit</v-list-item-title></v-list-item>
+                    <v-list-item @click="runAction"><v-list-item-title>Run</v-list-item-title></v-list-item>
+                    <v-divider></v-divider>
+                    <v-list-item @click="deleteAction"><v-list-item-title>Delete</v-list-item-title></v-list-item>
+                </v-list>
+            </v-menu>
         </v-card-text>
     </v-card>
 </template>
@@ -59,6 +70,10 @@ export default {
             action_types: [
                 { name: 'Action Type 1', type: 'action.type.1' }
             ],
+
+            selectedItemUUID: null,
+            showMenu: false,
+            menuXY: [0, 0],
         };
     },
     mounted() {
@@ -97,8 +112,22 @@ export default {
                 console.error("There was an error adding action:", error);
             });
         },
-        editAction(action_uuid) {
-
+        editAction() {
+            var action_uuid = this.selectedItemUUID;
+            console.log("Edit action", action_uuid);
+        },
+        runAction() {
+            var action_uuid = this.selectedItemUUID;
+            console.log("Run action", action_uuid);
+        },
+        deleteAction() {
+            var action_uuid = this.selectedItemUUID;
+            console.log("Delete action", action_uuid);
+        },
+        showContextMenu(event, action_uuid) {
+            this.menuXY = [event.clientX, event.clientY];
+            this.showMenu = true;
+            this.selectedItemUUID = action_uuid;
         },
     }
 }
