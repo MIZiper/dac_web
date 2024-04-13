@@ -114,8 +114,31 @@ export default {
                 console.error("There was an error adding action:", error);
             });
         },
+        updateAction(node, fire=false, context_uuid, action_uuid) {
+            ax_project.put(context_uuid + '/actions/' + action_uuid, {
+                action_config: node
+            }).then(response => {
+                this.actions = this.actions.map(action => { // this seems make closure unnecessary
+                    if (action.uuid === action_uuid) {
+                        action.name = node.name;
+                        action.status = 1;
+                    }
+                    return action;
+                });
+            }).catch(error => {
+                console.error("There was an error updating action:", error);
+            });
+        },
         editAction() {
-            console.log("Context:", this.current_context, ";", "Edit action:", this.selectedItemUUID);
+            ax_project.get(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+                this.emitter.emit('edit-node', [response.data['action_config'], function(context_uuid, action_uuid, callback){
+                    return (node, fire) => {
+                        callback(node, fire, context_uuid, action_uuid);
+                    }
+                }(this.current_context, this.selectedItemUUID, this.updateAction)]);
+            }).catch(error => {
+                console.error("There was an error fetching action:", error);
+            });
         },
         runAction() {
             console.log("Context:", this.current_context, ";", "Run action", this.selectedItemUUID);

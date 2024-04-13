@@ -115,6 +115,8 @@ def handle_context_of(context_key_id: str):
         })
     elif request.method == "PUT":
         context_config = request.get_json().get("context_config")
+        if (new_name:=context_config.get("name")) and new_name!=context_key.name:
+            container.context_keys.rename_node_to(context_key, new_name)
         context_key.apply_construct_config(context_config)
         return jsonify({
             "message": f"Update context '{context_key.name}'",
@@ -125,6 +127,8 @@ def handle_context_of(context_key_id: str):
             "message": f"Activate context '{context_key.name}'",
         })
     elif request.method == "DELETE":
+        if context_key is container.current_key:
+            container.activate_context(GCK)
         container.remove_context_key(context_key)
         return jsonify({
             "message": f"Delete context '{context_key.name}'",

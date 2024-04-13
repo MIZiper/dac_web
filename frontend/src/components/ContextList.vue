@@ -127,9 +127,27 @@ export default {
                 console.error("There was an error adding context:", error);
             });
         },
+        updateContext(node, fire=false, context_uuid) {
+            ax_project.put('contexts/' + context_uuid, {
+                context_config: node
+            }).then(response => {
+                this.context_keys = this.context_keys.map(context => {
+                    if (context.uuid === context_uuid) {
+                        context.name = node.name;
+                    }
+                    return context;
+                });
+            }).catch(error => {
+                console.error("There was an error updating context:", error);
+            });
+        },
         editContext() {
             ax_project.get('contexts/' + this.current_context).then(response => {
-                console.log(response.data['context_config']);
+                this.emitter.emit('edit-node', [response.data['context_config'], function(context_uuid, callback){
+                    return (node, fire) => {
+                        callback(node, fire, context_uuid);
+                    }
+                }(this.current_context, this.updateContext)]);
             }).catch(error => {
                 console.error("There was an error fetching context:", error);
             });
