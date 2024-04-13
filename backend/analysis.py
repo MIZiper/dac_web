@@ -248,7 +248,7 @@ def handle_action_of(context_key_id: str, action_id: str):
     elif request.method == "POST":
        action.exec()
     elif request.method == "DELETE":
-        container.remove_action(action)
+        container.actions.remove(action)
         return jsonify({
             "message": f"Delete action '{action.name}'",
         })

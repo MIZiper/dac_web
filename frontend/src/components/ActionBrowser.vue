@@ -16,7 +16,7 @@
                             <!-- TODO: make [>] as subgroup -->
                             <v-list-subheader v-if="act_cls !== '[<]'">{{ act_cls }}</v-list-subheader>
                         </template>
-                        <v-list-item v-else @click="addAction(act_cls.type)">
+                        <v-list-item v-else @click="addAction(act_cls)">
                             <v-list-item-title>{{ act_cls.name }}</v-list-item-title>
                         </v-list-item>
                     </template>
@@ -27,7 +27,7 @@
             <v-list density="compact">
                 <v-list-item v-for="act_itm in actions" @click="showContextMenu($event, act_itm.uuid)"
                     :key="act_itm.uuid">
-                    <v-list-item-title>
+                    <v-list-item-title :title="act_itm.name">
                         <v-icon>
                             <template v-if="act_itm.status === 0">
                                 mdi-file-plus-outline
@@ -74,6 +74,7 @@ export default {
             selectedItemUUID: null,
             showMenu: false,
             menuXY: [0, 0],
+            current_context: null,
         };
     },
     mounted() {
@@ -84,6 +85,7 @@ export default {
         handleActionRequest(context_uuid) {
             ax_project.get(context_uuid + '/actions').then(response => {
                 this.actions = response.data['actions'];
+                this.current_context = context_uuid;
             }).catch(error => {
                 console.error("There was an error fetching action list:", error);
             });
@@ -96,15 +98,15 @@ export default {
             });
         },
         addAction(action_type) {
-            ax_project.post(context_uuid + '/actions', {
+            ax_project.post(this.current_context + '/actions', {
                 action_config: {
-                    type: action_type,
-                    name: "[New action]",
+                    type: action_type.type,
+                    name: action_type.name,
                 }
             }).then(response => {
                 console.log(response.data['message']);
                 this.actions.push({
-                    name: "[New action]",
+                    name: action_type.name,
                     uuid: response.data['action_uuid'],
                     status: 0,
                 });
@@ -113,16 +115,18 @@ export default {
             });
         },
         editAction() {
-            var action_uuid = this.selectedItemUUID;
-            console.log("Edit action", action_uuid);
+            console.log("Context:", this.current_context, ";", "Edit action:", this.selectedItemUUID);
         },
         runAction() {
-            var action_uuid = this.selectedItemUUID;
-            console.log("Run action", action_uuid);
+            console.log("Context:", this.current_context, ";", "Run action", this.selectedItemUUID);
         },
         deleteAction() {
-            var action_uuid = this.selectedItemUUID;
-            console.log("Delete action", action_uuid);
+            ax_project.delete(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+                console.log(response.data['message']);
+                this.actions = this.actions.filter(action => action.uuid !== this.selectedItemUUID);
+            }).catch(error => {
+                console.error("There was an error deleting action:", error);
+            });
         },
         showContextMenu(event, action_uuid) {
             this.menuXY = [event.clientX, event.clientY];
