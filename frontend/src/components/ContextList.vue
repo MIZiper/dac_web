@@ -5,6 +5,25 @@
             <v-spacer></v-spacer>
             <v-menu>
                 <template v-slot:activator="{ props }">
+                    <v-btn variant="text" v-bind="props" title="Current context">
+                        <v-icon>mdi-dots-horizontal-circle</v-icon>
+                    </v-btn>
+                </template>
+                <v-list density="compact">
+                    <v-list-item v-if="current_context !== GCK_ID" @click="editContext(current_context)">
+                        <v-list-item-title>Edit</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item disabled @click="runContext(current_context)">
+                        <v-list-item-title>Run all</v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                    <v-list-item v-if="current_context !== GCK_ID" @click="deleteContext(current_context)">
+                        <v-list-item-title>Delete</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
+            <v-menu>
+                <template v-slot:activator="{ props }">
                     <v-btn variant="text" v-bind="props" title="Add context">
                         <v-icon>mdi-plus-circle</v-icon>
                     </v-btn>
@@ -28,6 +47,8 @@
 
 <script>
 import { ax_base, ax_project } from '@/utils';
+const GCK_ID = 'global';
+const DEFAULT_NAME = '[New Context]';
 
 export default {
     data() {
@@ -39,6 +60,8 @@ export default {
             context_types: [
                 { name: 'Context Type 1', type: 'context.type.1' }
             ],
+
+            GCK_ID: GCK_ID,
         };
     },
     mounted() {
@@ -72,7 +95,7 @@ export default {
         handleContextChange(context_uuid) {
             ax_project.post('contexts/' + context_uuid, {}).then(response => {
                 console.log(response.data['message']);
-                // this.current_context = response.data['current_context'];
+
                 this.emitter.emit('data-refresh-request', this.current_context);
                 this.emitter.emit('action-refresh-request', this.current_context);
                 this.emitter.emit('action_type-refresh-request');
@@ -84,12 +107,12 @@ export default {
             ax_project.post('contexts', {
                 context_config: {
                     type: context_type,
-                    name: "[New context]",
+                    name: DEFAULT_NAME,
                 }
             }).then(response => {
                 console.log(response.data['message']);
                 this.context_keys.push({
-                    name: "[New context]",
+                    name: DEFAULT_NAME,
                     uuid: response.data['context_uuid'],
                     type: context_type.split('.').pop(),
                 }); // error if name is same
@@ -97,6 +120,27 @@ export default {
                 console.error("There was an error adding context:", error);
             });
         },
+        editContext() {
+            ax_project.get('contexts/' + this.current_context).then(response => {
+                console.log(response.data['context_config']);
+            }).catch(error => {
+                console.error("There was an error fetching context:", error);
+            });
+        },
+        runContext() {
+        },
+        deleteContext() {
+            ax_project.delete('contexts/' + this.current_context).then(response => {
+                console.log(response.data['message']);
+                this.context_keys = this.context_keys.filter(context => context.uuid !== this.current_context);
+                this.current_context = GCK_ID;
+                
+                this.emitter.emit('action-refresh-request', this.current_context);
+                this.emitter.emit('data-refresh-request', this.current_context);
+            }).catch(error => {
+                console.error("There was an error deleting context:", error);
+           });
+        }
     }
 }
 </script>
