@@ -6,7 +6,8 @@ from werkzeug.routing import UnicodeConverter
 from flask_cors import CORS # to be removed in final container
 
 import dac
-from dac.core import Container, GCK, NodeBase
+from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
+from dac.core.actions import PAB, VAB, SAB
 from dac.core.plugin import use_plugin
 GCK_ID = 'global'
 
@@ -215,8 +216,8 @@ def handle_actions(context_key_id: str):
     if request.method == "POST":
         action_config = request.get_json().get("action_config")
         action_type = Container.GetClass(action_config['type'])
-        action = action_type(action_config['name'])
-        action.context_key = context_key
+        action = action_type(context_key=context_key)
+        
         container.actions.append(action)
         return jsonify({
             "message": f"Create action '{action.name}'",
@@ -250,7 +251,12 @@ def handle_action_of(context_key_id: str, action_id: str):
             "message": f"Update action '{action.name}'",
         })
     elif request.method == "POST":
-       action.exec()
+       msg, signal, status = run_action(action)
+       return jsonify({
+            "message": msg,
+            "data_updated": signal,
+            "status": status
+       })
     elif request.method == "DELETE":
         container.actions.remove(action)
         return jsonify({
@@ -272,6 +278,51 @@ def get_context_key(context_key_id: str):
 
 def get_nodetype_path(node_type: type[NodeBase]):
     return f"{node_type.__module__}.{node_type.__qualname__}"
+
+def run_action(action: ActionNode, complete_cb: callable=None):
+    params = container.prepare_params_for_action(action._SIGNATURE, action._construct_config)
+
+    def completed(rst):
+        current_context = container.CurrentContext
+        if isinstance(rst, DataNode):
+            rst.name = action.out_name # what if out_name is None?
+            current_context.add_node(rst)
+            signal = True
+        elif isinstance(rst, list):
+            for e_rst in rst:
+                e_rst: DataNode # cautious if e_rst is not DataNode
+                current_context.add_node(e_rst)
+            signal = True
+        else:
+            signal = False
+
+        action.status = ActionNode.ActionStatus.COMPLETE # TODO: update accordingly
+        
+        if callable(complete_cb):
+            complete_cb()
+
+        return signal, action.status
+
+    action.container = container
+
+    if isinstance(action, VAB):
+        return f"Visualize action '{action.name}'", False, ActionNode.ActionStatus.COMPLETE
+        
+        action.figure = dac_win.figure # skip for now
+
+    # if isinstance(action, PAB):
+        def fn(p, progress_emitter, logger):
+            action._progress = progress_emitter
+            action._message = logger
+            action.pre_run()
+            rst = action(**p)
+            action.post_run()
+            return rst
+    else:
+        action.pre_run()
+        rst = action(**params)
+        action.post_run()
+        return f"Run action '{action.name}'", *completed(rst)
 
 # @app.route("/progress")
 # @app.route("/terminate")

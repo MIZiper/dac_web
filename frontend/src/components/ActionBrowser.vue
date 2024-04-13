@@ -101,7 +101,7 @@ export default {
             ax_project.post(this.current_context + '/actions', {
                 action_config: {
                     type: action_type.type,
-                    name: action_type.name,
+                    name: action_type.name, // this is actually ignored
                 }
             }).then(response => {
                 console.log(response.data['message']);
@@ -141,7 +141,20 @@ export default {
             });
         },
         runAction() {
-            console.log("Context:", this.current_context, ";", "Run action", this.selectedItemUUID);
+            ax_project.post(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+                console.log(response.data['message']);
+                if (response.data['data_updated']) {
+                    this.emitter.emit('data-refresh-request', this.current_context);
+                }
+                this.actions = this.actions.map(action => {
+                    if (action.uuid === this.selectedItemUUID) {
+                        action.status = response.data['status'];
+                    }
+                    return action;
+                });
+            }).catch(error => {
+                console.error("There was an error running action:", error);
+            });
         },
         deleteAction() {
             ax_project.delete(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
