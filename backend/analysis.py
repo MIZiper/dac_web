@@ -6,7 +6,7 @@ from werkzeug.routing import UnicodeConverter
 from flask_cors import CORS # to be removed in final container
 
 import dac
-from dac.core import Container, GCK
+from dac.core import Container, GCK, NodeBase
 from dac.core.plugin import use_plugin
 GCK_ID = 'global'
 
@@ -77,14 +77,14 @@ def handle_contexts():
     # GET/POST => get list / create new
     if request.method == "GET":
         contexts = [
-            {"name": node_name, "uuid": node.uuid, "type": node_type.__qualname__}
+            {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
             for node_type, node_name, node
             in container.context_keys.NodeIter
         ]
         contexts.insert(0, {
             "name": "Global",
             "uuid": GCK_ID,
-            "type": GCK.__class__.__qualname__,
+            "type": get_nodetype_path(GCK.__class__),
         })
         return jsonify({
             "contexts": contexts,
@@ -135,7 +135,7 @@ def get_available_types(option: str):
     if option == 'context':
         return jsonify({
             "context_types": [
-                {"name": data_type.__name__, "type": f"{data_type.__module__}.{data_type.__qualname__}"}
+                {"name": data_type.__name__, "type": get_nodetype_path(data_type)}
                 if not isinstance(data_type, str) else
                 data_type
                 for data_type
@@ -145,7 +145,7 @@ def get_available_types(option: str):
     elif option == 'action':
         return jsonify({
             "action_types": [
-                {"name": action_type.CAPTION, "type": f"{action_type.__module__}.{action_type.__qualname__}"}
+                {"name": action_type.CAPTION, "type": get_nodetype_path(action_type)}
                 if not isinstance(action_type, str) else
                 action_type
                 for action_type
@@ -171,7 +171,7 @@ def handle_data(context_key_id: str):
     
     return jsonify({
         "data": [
-            {"name": node_name, "uuid": node.uuid, "type": node_type.__qualname__}
+            {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
             for node_type, node_name, node
             in context.NodeIter
         ]
@@ -265,6 +265,9 @@ def get_context_key(context_key_id: str):
             return container.context_keys.get_node_by_uuid(context_key_id)
         except:
             return None
+
+def get_nodetype_path(node_type: type[NodeBase]):
+    return f"{node_type.__module__}.{node_type.__qualname__}"
 
 # @app.route("/progress")
 # @app.route("/terminate")

@@ -5,7 +5,7 @@
             <v-list density="compact">
                 <v-list-item v-for="dt_itm in data_items" :key="dt_itm.uuid">
                     <v-list-item-title>{{ dt_itm.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ dt_itm.type }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ dt_itm.type.split('.').pop() }}</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
         </v-card-text>
@@ -19,7 +19,7 @@ export default {
     data() {
         return {
             data_items: [
-                { name: "Data 1", uuid: "uuid1", type: "data.type.1" }
+                { name: "Data 1", uuid: "uuid1", type: "mod.data_type_1" }
             ],
         }
     },

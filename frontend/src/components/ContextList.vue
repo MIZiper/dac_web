@@ -55,10 +55,10 @@ export default {
         return {
             current_context: null,
             context_keys: [
-                { name: 'Context 1', uuid: 'uuid1', type: 'context.type.1' }
+                { name: 'Context 1', uuid: 'uuid1', type: 'mod.context_type_1' }
             ],
             context_types: [
-                { name: 'Context Type 1', type: 'context.type.1' }
+                { name: 'Context Type 1', type: 'mod.context_type_1' }
             ],
 
             GCK_ID: GCK_ID,
@@ -71,7 +71,7 @@ export default {
     methods: {
         itemProps(item) {
             return {
-                'subtitle': item.type,
+                'subtitle': item.type.split('.').pop(),
             };
         },
         handleContextRequest() {
@@ -104,6 +104,13 @@ export default {
             });
         },
         addContext(context_type) {
+            if (this.context_keys.find(
+                context => (context.type === context_type) && (context.name === DEFAULT_NAME)
+            )) {
+                console.log("Context already exists");
+                return;
+            }
+
             ax_project.post('contexts', {
                 context_config: {
                     type: context_type,
@@ -114,8 +121,8 @@ export default {
                 this.context_keys.push({
                     name: DEFAULT_NAME,
                     uuid: response.data['context_uuid'],
-                    type: context_type.split('.').pop(),
-                }); // error if name is same
+                    type: context_type,
+                });
             }).catch(error => {
                 console.error("There was an error adding context:", error);
             });
