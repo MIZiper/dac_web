@@ -77,13 +77,14 @@ def handle_contexts():
     # GET/POST => get list / create new
     if request.method == "GET":
         contexts = [
-            {"name": node_name, "uuid": node.uuid}
+            {"name": node_name, "uuid": node.uuid, "type": node_type.__qualname__}
             for node_type, node_name, node
             in container.context_keys.NodeIter
         ]
         contexts.insert(0, {
             "name": "Global",
-            "uuid": GCK_ID
+            "uuid": GCK_ID,
+            "type": GCK.__class__.__qualname__,
         })
         return jsonify({
             "contexts": contexts,

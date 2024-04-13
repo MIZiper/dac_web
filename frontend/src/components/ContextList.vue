@@ -20,7 +20,7 @@
             </v-menu>
         </v-row>
         <v-card-text class="pb-0 pt-0">
-            <v-select v-model="current_context" :items="context_keys" item-title="name" item-value="uuid"
+            <v-select v-model="current_context" :item-props="itemProps" :items="context_keys" item-title="name" item-value="uuid"
                 density="compact" label="Select a context" @update:model-value="handleContextChange"></v-select>
         </v-card-text>
     </v-card>
@@ -34,7 +34,7 @@ export default {
         return {
             current_context: null,
             context_keys: [
-                { name: 'Context 1', uuid: 'uuid1' }
+                { name: 'Context 1', uuid: 'uuid1', type: 'context.type.1' }
             ],
             context_types: [
                 { name: 'Context Type 1', type: 'context.type.1' }
@@ -46,6 +46,11 @@ export default {
         this.emitter.on('context_type-refresh-request', this.handleContextTypeRequest);
     },
     methods: {
+        itemProps(item) {
+            return {
+                'subtitle': item.type,
+            };
+        },
         handleContextRequest() {
             ax_project.get('contexts').then(response => {
                 this.context_keys = response.data['contexts'];
@@ -86,7 +91,8 @@ export default {
                 this.context_keys.push({
                     name: "[New context]",
                     uuid: response.data['context_uuid'],
-                });
+                    type: context_type.split('.').pop(),
+                }); // error if name is same
             }).catch(error => {
                 console.error("There was an error adding context:", error);
             });
