@@ -4,6 +4,12 @@ from os import path
 from flask import Flask, request, jsonify
 from werkzeug.routing import UnicodeConverter
 from flask_cors import CORS # to be removed in final container
+from flask_socketio import SocketIO, emit
+
+from mpl_bp import mpl_bp, MplWebSocket
+from matplotlib.figure import Figure
+import matplotlib as mpl
+from matplotlib.backends.backend_webagg_core import FigureManagerWebAgg, FigureCanvasWebAggCore
 
 import dac
 from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
@@ -23,6 +29,13 @@ app = Flask(__name__)
 app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
 CORS(app)
+app.register_blueprint(mpl_bp, url_prefix='/mpl')
+socketio = SocketIO(app)
+
+figure = Figure()
+canvas = FigureCanvasWebAggCore(figure=figure)
+manager = FigureManagerWebAgg(canvas, 1)
+socketio.on_namespace(MplWebSocket('/mpl', manager))
 
 current_plugin = "0.base.yaml"
 plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
@@ -329,4 +342,4 @@ def run_action(action: ActionNode, complete_cb: callable=None):
 # @app.route("/query")
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
