@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const base_url = "http://localhost:5000/"
+const host_port = "localhost:5000";
+const base_url = "http://" + host_port + "/"
 
 export const ax_base = axios.create({
     baseURL: base_url,
@@ -19,3 +20,6 @@ export const ax_project = axios.create({
         "Accept": "application/json",
     },
 });
+
+export const mpl_ws = "ws://" + host_port + "/mpl";
+export const mpl_js = base_url + "mpl/mpl.js";

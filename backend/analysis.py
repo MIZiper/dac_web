@@ -30,7 +30,7 @@ app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
 CORS(app)
 app.register_blueprint(mpl_bp, url_prefix='/mpl')
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 figure = Figure()
 canvas = FigureCanvasWebAggCore(figure=figure)
