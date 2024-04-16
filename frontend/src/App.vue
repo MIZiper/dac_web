@@ -30,7 +30,7 @@
 
     <v-container fluid class="mt-16">
       <v-row>
-        <v-col cols="4">
+        <v-col>
           <ContextList class="mb-4" />
           <v-row style="height: 65vh;" class="ma-0">
             <DataBrowser style="width: 49%;" />
@@ -39,7 +39,7 @@
           </v-row>
           <YamlEditor class="mt-4" />
         </v-col>
-        <v-col cols="8">
+        <v-col>
           <MainContent class="mb-4" />
           <MessageZone />
         </v-col>

@@ -1,4 +1,5 @@
 <template>
+    <!--
     <v-card :class="{ 'fullscreen-component': isFullscreen }">
         <v-row class="ma-0">
             <v-card-title>Main Content</v-card-title>
@@ -8,12 +9,12 @@
             </v-btn>
         </v-row>
         <v-card-text class="pt-0">
-            <!--
             <v-img src="https://via.placeholder.com/800x600" contain></v-img>
-            -->
-            <div id="figure"></div>
         </v-card-text>
     </v-card>
+    -->
+    <!---->
+    <div id="figure"></div>
 </template>
 
 <script>

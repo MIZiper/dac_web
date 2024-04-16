@@ -64,7 +64,7 @@ class MyApplication(WebAggApplication):
         )
 
 application = MyApplication(url_prefix="/mpl")
-figure = Figure(figsize=(9, 5))
+figure = Figure(figsize=(10, 6))
 manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figure=figure)
 Gcf.set_active(manager)
 
