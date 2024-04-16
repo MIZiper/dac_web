@@ -4,18 +4,17 @@ from os import path
 from flask import Flask, request, jsonify
 from werkzeug.routing import UnicodeConverter
 from flask_cors import CORS # to be removed in final container
-from flask_socketio import SocketIO, emit
 
-from mpl_bp import mpl_bp, MplWebSocket
 from matplotlib.figure import Figure
 import matplotlib as mpl
-from matplotlib.backends.backend_webagg_core import FigureManagerWebAgg, FigureCanvasWebAggCore
+from matplotlib.backends.backend_webagg import Gcf
 
 import dac
 from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
 from dac.core.actions import PAB, VAB, SAB
 from dac.core.plugin import use_plugin
 GCK_ID = 'global'
+FIG_NUM = 1
 
 class ContextKeyConverter(UnicodeConverter):
     # context key uuid or 'global'
@@ -29,13 +28,6 @@ app = Flask(__name__)
 app.url_map.converters['ctx'] = ContextKeyConverter
 app.url_map.converters['node'] = ContextKeyConverter
 CORS(app)
-app.register_blueprint(mpl_bp, url_prefix='/mpl')
-socketio = SocketIO(app, cors_allowed_origins="*")
-
-figure = Figure()
-canvas = FigureCanvasWebAggCore(figure=figure)
-manager = FigureManagerWebAgg(canvas, 1)
-socketio.on_namespace(MplWebSocket('/mpl', manager))
 
 current_plugin = "0.base.yaml"
 plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
@@ -292,7 +284,7 @@ def get_context_key(context_key_id: str):
 def get_nodetype_path(node_type: type[NodeBase]):
     return f"{node_type.__module__}.{node_type.__qualname__}"
 
-def run_action(action: ActionNode, complete_cb: callable=None):
+def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, bool, int]:
     params = container.prepare_params_for_action(action._SIGNATURE, action._construct_config)
 
     def completed(rst):
@@ -319,11 +311,16 @@ def run_action(action: ActionNode, complete_cb: callable=None):
     action.container = container
 
     if isinstance(action, VAB):
-        return f"Visualize action '{action.name}'", False, ActionNode.ActionStatus.COMPLETE
+        manager = Gcf.get_fig_manager(FIG_NUM)
+        if manager is None:
+            figure = Figure()
+            # canvas not set?
+        else:
+            figure = manager.canvas.figure
         
-        action.figure = dac_win.figure # skip for now
+        action.figure = figure
 
-    # if isinstance(action, PAB):
+    if False: # isinstance(action, PAB):
         def fn(p, progress_emitter, logger):
             action._progress = progress_emitter
             action._message = logger
@@ -342,4 +339,4 @@ def run_action(action: ActionNode, complete_cb: callable=None):
 # @app.route("/query")
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -17,8 +17,7 @@
 </template>
 
 <script>
-import { mpl_ws, mpl_js } from '@/utils';
-import { io } from 'socket.io-client';
+import { mpl_urn, FIG_NUM } from '@/utils';
 
 export default {
     data() {
@@ -49,65 +48,37 @@ export default {
         },
     },
     mounted() {
-        ['page', 'boilerplate', 'fbm', 'mpl'].forEach(function(name){
+        ['page', 'boilerplate', 'fbm', 'mpl'].forEach(function (name) {
             let link = document.createElement('link');
             link.rel = 'stylesheet';
-            link.href = mpl_js.replace('mpl.js', '_static/css/' + name + '.css');
+            link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css';
             document.head.appendChild(link);
         });
+        
+        function ondownload(figure, format) {
+            window.open("http://" + mpl_urn + "/" + figure.id + '/download.' + format, '_blank');
+        };
+
         let script = document.createElement('script');
         script.type = 'text/javascript';
-        script.src = mpl_js;
-        document.body.appendChild(script);
+        script.src = "http://" + mpl_urn + '/js/mpl.js';
         script.onload = () => {
+            var websocket_type = mpl.get_websocket_type();
+            var websocket = new websocket_type("ws://" + mpl_urn + "/" + FIG_NUM + "/ws");
 
-        /* It is up to the application to provide a websocket that the figure
-            will use to communicate to the server.  This websocket object can
-            also be a "fake" websocket that underneath multiplexes messages
-            from multiple figures, if necessary. */
-        
-        var websocket = io(mpl_ws);
+            var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
 
-        // mpl.figure creates a new figure on the webpage.
-        var fig = new mpl.figure(
-            // A unique numeric identifier for the figure
-            1,
-            // A websocket object (or something that behaves like one)
-            websocket,
-            // A function called when a file type is selected for download
-            ondownload,
-            // The HTML element in which to place the figure
-            document.getElementById("figure")
-        );
-
+            // the mpl.figure() create toolbar but not link to server resources
+            const widgetImages = document.querySelectorAll("button.mpl-widget img");
+            widgetImages.forEach((img) => {
+                var fname = img.src.split("/").pop();
+                img.src = "http://" + mpl_urn + "/_images/" + fname;
+            });
         };
+        document.body.appendChild(script);
     },
 }
-
-/* This is a callback that is called when the user saves
-    (downloads) a file.  Its purpose is really to map from a
-    figure and file format to a url in the application. */
-function ondownload(figure, format) {
-    window.open('download.' + format, '_blank');
-};
-
 </script>
-
-<!--
-
-function ready(fn) {
-    if (document.readyState != "loading") {
-        fn();
-    } else {
-        document.addEventListener("DOMContentLoaded", fn);
-    }
-}
-
-ready(
-    function() {
-    }
-);
--->
 
 <style scoped>
 .fullscreen-component {
