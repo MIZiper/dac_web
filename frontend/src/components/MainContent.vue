@@ -14,7 +14,9 @@
     </v-card>
     -->
     <!---->
-    <div id="figure"></div>
+    <div id="figure">
+        <img v-if="!figure" src="https://via.placeholder.com/1000x600" />
+    </div>
 </template>
 
 <script>
@@ -24,6 +26,7 @@ export default {
     data() {
         return {
             isFullscreen: false,
+            figure: null,
         };
     },
     methods: {
@@ -49,7 +52,7 @@ export default {
         },
     },
     mounted() {
-        ['page', 'boilerplate', 'fbm', 'mpl'].forEach(function (name) {
+        ['mpl'].forEach(function (name) { // ['page', 'boilerplate', 'fbm', ]
             let link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css';
@@ -68,12 +71,15 @@ export default {
             var websocket = new websocket_type("ws://" + mpl_urn + "/" + FIG_NUM + "/ws");
 
             var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
+            this.figure = fig;
 
             // the mpl.figure() create toolbar but not link to server resources
             const widgetImages = document.querySelectorAll("button.mpl-widget img");
             widgetImages.forEach((img) => {
                 var fname = img.src.split("/").pop();
+                var fname_2x = img.srcset.split("/").pop();
                 img.src = "http://" + mpl_urn + "/_images/" + fname;
+                img.srcset = "http://" + mpl_urn + "/_images/" + fname_2x;
             });
         };
         document.body.appendChild(script);

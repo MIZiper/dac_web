@@ -16,7 +16,7 @@
                     <v-list-item disabled @click="runContext(current_context)">
                         <v-list-item-title>Run all</v-list-item-title>
                     </v-list-item>
-                    <v-divider></v-divider>
+                    <v-divider v-if="current_context !== GCK_ID"></v-divider>
                     <v-list-item v-if="current_context !== GCK_ID" @click="deleteContext(current_context)">
                         <v-list-item-title>Delete</v-list-item-title>
                     </v-list-item>
