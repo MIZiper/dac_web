@@ -1,28 +1,27 @@
 <template>
-    <!--
-    <v-card :class="{ 'fullscreen-component': isFullscreen }">
-        <v-row class="ma-0">
-            <v-card-title>Main Content</v-card-title>
-            <v-spacer></v-spacer>
-            <v-btn variant="text" title="Toggle fullscreen" @click="toggleFullscreen">
-                <v-icon>{{ isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen' }}</v-icon>
-            </v-btn>
-        </v-row>
-        <v-card-text class="pt-0">
-            <v-img src="https://via.placeholder.com/800x600" contain></v-img>
-        </v-card-text>
+    <v-card variant="flat" :class="{ 'fullscreen-component': isFullscreen }">
+        <v-fab v-if="figure" location="top right" absolute variant="text" title="Toggle fullscreen"
+            @click="toggleFullscreen">
+            <v-icon>{{ isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen' }}</v-icon>
+        </v-fab>
+        <v-fab v-if="!isFullscreen && figure" location="top left" absolute variant="text" title="Auto resize"
+            @click="autoScaleCanvas">
+            <v-icon>mdi-refresh-auto</v-icon>
+        </v-fab>
+        <div id="figure">
+            <img v-if="!figure" src="https://via.placeholder.com/1000x600" />
+        </div>
     </v-card>
-    -->
-    <!---->
-    <div id="figure">
-        <img v-if="!figure" src="https://via.placeholder.com/1000x600" />
-    </div>
 </template>
 
 <script>
 import { mpl_urn, FIG_NUM } from '@/utils';
+import { VFab } from 'vuetify/labs/VFab';
 
 export default {
+    components: {
+        VFab,
+    },
     data() {
         return {
             isFullscreen: false,
@@ -49,6 +48,14 @@ export default {
             }
             */
             this.isFullscreen = !this.isFullscreen;
+            this.autoScaleCanvas();
+        },
+        autoScaleCanvas() {
+            if (this.isFullscreen) {
+                this.figure._resize_canvas(window.innerWidth, window.innerHeight * 0.9, true);
+            } else {
+                this.figure._resize_canvas(window.innerWidth * 0.66, window.innerHeight * 0.7, true);
+            }
         },
     },
     mounted() {
@@ -58,7 +65,7 @@ export default {
             link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css';
             document.head.appendChild(link);
         });
-        
+
         function ondownload(figure, format) {
             window.open("http://" + mpl_urn + "/" + figure.id + '/download.' + format, '_blank');
         };
@@ -83,6 +90,7 @@ export default {
             });
         };
         document.body.appendChild(script);
+        window.addEventListener('resize', this.autoScaleCanvas);
     },
 }
 </script>
