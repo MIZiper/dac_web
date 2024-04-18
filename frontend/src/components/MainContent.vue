@@ -51,6 +51,8 @@ export default {
             this.autoScaleCanvas();
         },
         autoScaleCanvas() {
+            if (!this.figure) return;
+            
             if (this.isFullscreen) {
                 this.figure._resize_canvas(window.innerWidth, window.innerHeight * 0.9, true);
             } else {
