@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 import uuid
 from podman import PodmanClient
-from podman.errors import NotFound
+from podman.errors import NotFound, APIError
 
 app = Flask(__name__, static_folder="../frontend/dist/")
 analysis_entry = "backend/analysis.py"
@@ -12,16 +12,30 @@ container_image = "dac_web:latest"
 
 # Placeholder for tracking user containers
 user_containers = {}
+SESSID_KEY = "dac-sess_id"
+
+def found(project_id):
+    return True
 
 with PodmanClient(base_url=podman_url) as client:
-
     @app.route("/")
     def index():
         return send_from_directory(app.static_folder, "index.html")
     
     @app.route("/<path:filename>")
     def static_files(filename):
+        # should let analysis container to serve static files?
+        # so the dependencies can be maintained by container versions
         return send_from_directory(app.static_folder, filename)
+
+    @app.route('/projects/<string:project_id>', methods=['GET'])
+    def load_project(project_id):
+        # projects_dir = app.config.get("PROJ_DIR", "./projects")
+        if found(project_id):
+            return index()
+        else:
+            return jsonify({"error": "Project not found"}), 404
+            # redirect to index.html and notify user 404
 
     @app.route('/new', methods=['POST'])
     def new_session():
@@ -38,50 +52,49 @@ with PodmanClient(base_url=podman_url) as client:
         try:
             container = client.containers.run(
                 container_image,
-                ["python", analysis_entry],
+                ["python", analysis_entry], # pass sock file
                 name=f"analysis_{sess_id}", # volumes=volumes,
                 remove=True, detach=True
             )
             user_containers[sess_id] = container.id
 
             # TODO: and return project_id?
-            return jsonify({"message": "Analysis started", "dac-sess_id": sess_id}), 200
+            return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
+        except APIError:
+            # subproc = subprocess.Popen(["python", analysis_entry]) # and pass sock file
+            pass
         except Exception as e:
             return jsonify({"error": f"Failed to start analysis: {str(e)}"}), 500
-        
-    @app.route('/projects/<uuid:project_id', methods=['GET'])
-    def load_project(project_id):
-        sess_id = request.headers.get('dac-sess_id')
-        if sess_id:
-            pass
-        else: # newly created, start a container
-            pass
 
-    @app.route('/progress', methods=['GET'])
-    def get_progress():
-        user_id = request.args.get('user_id')
-        if not user_id or user_id not in user_containers:
-            return jsonify({"error": "Invalid or missing User ID"}), 400
-
-        # Logic to retrieve progress for the user's analysis task
-        progress = "50%"  # Placeholder for actual progress tracking mechanism
-        return jsonify({"user_id": user_id, "progress": progress}), 200
-
-    @app.route('/terminate', methods=['POST'])
-    def terminate_analysis():
-        user_id = request.json.get('user_id')
-        if not user_id or user_id not in user_containers:
-            return jsonify({"error": "Invalid or missing User ID"}), 400
+    @app.route('/term', methods=['POST'])
+    def terminate_session():
+        sess_id = request.headers.get(SESSID_KEY)
+        if not sess_id or sess_id not in user_containers:
+            return jsonify({"error": "Invalid or missing session ID"}), 400
 
         try:
-            container = client.containers.get(user_containers[user_id])
+            container = client.containers.get(user_containers[sess_id])
             container.remove(force=True)
-            del user_containers[user_id]
+            del user_containers[sess_id]
+
+            # or kill subprocess
+
+            # remove sock file
+
             return jsonify({"message": "Analysis terminated"}), 200
         except NotFound:
             return jsonify({"error": "Container not found"}), 404
         except Exception as e:
             return jsonify({"error": f"Failed to terminate analysis: {str(e)}"}), 500
+        
+    @app.route('/app/<path:filename>', methods=None)
+    def app_forward(filename):
+        sess_id = request.headers.get(SESSID_KEY)
+        if not sess_id or sess_id not in user_containers:
+            return jsonify({"error": "Invalid or missing session ID"}), 400
+        
+        app = user_containers.get(sess_id)
 
 if __name__ == '__main__':
+    # app.config['PROJ_DIR']
     app.run(debug=True, host='0.0.0.0', port=5000)
