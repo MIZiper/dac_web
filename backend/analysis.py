@@ -34,9 +34,9 @@ plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
 use_plugin(path.join(plugins_dir, current_plugin))
 container = Container.parse_save_config({})
 
-# ----
-# init
-# ----
+# -----------
+# init & save
+# -----------
 
 @app.route('/init', methods=['POST'])
 def init():
@@ -47,6 +47,13 @@ def init():
     container = Container.parse_save_config(config)
 
     return jsonify({"message": "Init done"}), 200
+
+@app.route('/save', methods=['GET'])
+def get_save():
+    return jsonify({
+        "message": "Save done",
+        "config": container.get_save_config(), # end user won't get this
+    })
 
 # -------
 # plugins
