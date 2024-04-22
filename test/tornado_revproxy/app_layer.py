@@ -10,8 +10,10 @@ from matplotlib.figure import Figure
 
 FIG_NUM = 1
 
-application = WebAggApplication("/mpl")
+application = WebAggApplication("/app/mpl")
 figure = Figure(figsize=(10, 6))
+ax = figure.gca()
+ax.plot([1, 2, 1, 3, 8])
 manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figure=figure)
 Gcf.set_active(manager)
 
@@ -26,8 +28,8 @@ if __name__=="__main__":
         help="Port to listen on"
     )
     parser.add_argument(
-        '-a', '--address', type=str, default='localhost',
-        help="Address to listen on"
+        '--host', type=str, default='localhost',
+        help="Host to listen on"
     )
     args = parser.parse_args()
 
@@ -35,10 +37,11 @@ if __name__=="__main__":
     if args.sock_file:
         sockets = [bind_unix_socket(args.sock_file)]
     else:
-        sockets = bind_sockets(args.port, '')
+        sockets = bind_sockets(args.port, args.host)
     server.add_sockets(sockets)
     for s in sockets:
-        print(s)
+        host, port = s.getsockname()
+        print(f"[App] {host}:{port}")
 
     ioloop = tornado.ioloop.IOLoop.instance()
     ioloop.start()
