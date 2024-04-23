@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import tornado
 from tornado.wsgi import WSGIContainer
 from tornado.web import FallbackHandler
@@ -7,9 +9,11 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_webagg import WebAggApplication, new_figure_manager_given_figure, FigureManagerWebAgg, Gcf
 import matplotlib.backends.backend_webagg_core as core
 
-from analysis import app, FIG_NUM
-from pathlib import Path
+from app_handler import app, FIG_NUM
 
+
+
+mpl_prefix = "/mpl"
 tr = WSGIContainer(app)
 
 class MyApplication(WebAggApplication):
@@ -63,16 +67,16 @@ class MyApplication(WebAggApplication):
             template_path=core.FigureManagerWebAgg.get_static_file_path()
         )
 
-application = MyApplication(url_prefix="/mpl")
+application = MyApplication(url_prefix=mpl_prefix)
 figure = Figure(figsize=(10, 6))
 manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figure=figure)
 Gcf.set_active(manager)
 
 if __name__=="__main__":
     server = tornado.httpserver.HTTPServer(application)
-    sockets = tornado.netutil.bind_sockets(5000)
+    sockets = tornado.netutil.bind_sockets(port=5000)
     server.add_sockets(sockets)
+    for s in sockets:
+        print(f"[App] Listening on {s.getsockname()}")
 
-    ioloop = tornado.ioloop.IOLoop.instance()
-    ioloop.start()
-    # WebAggApplication.start()
+    tornado.ioloop.IOLoop.current().start()

@@ -1,21 +1,44 @@
+from os import path
+from uuid import uuid4
+import socket
+
 from flask import Flask, request, jsonify, send_from_directory
-import uuid
 from podman import PodmanClient
 from podman.errors import NotFound, APIError
+import subprocess
+
+
 
 app = Flask(__name__, static_folder="../frontend/dist/")
-analysis_entry = "backend/analysis.py"
+app_entry = "backend/app_entry.py"
 
-# Podman configuration
 podman_url = 'unix:///run/podman/podman.sock'
 container_image = "dac_web:latest"
 
-# Placeholder for tracking user containers
-user_containers = {}
 SESSID_KEY = "dac-sess_id"
 
-def found(project_id):
-    return True
+class UserManager(dict):
+    def validate_sess(self, sess_id):
+        return sess_id is not None and sess_id in self
+
+    def set_sess(self, sess_id, conn_str, app_obj):
+        self[sess_id] = conn_str, app_obj
+
+    def get_sess_conn(self, sess_id):
+        conn_str, app_obj = self[sess_id]
+        return conn_str
+
+    def get_sess_obj(self, sess_id):
+        conn_str, app_obj = self[sess_id]
+        return app_obj
+
+    def remove_sess(self, sess_id):
+        if sess_id in self:
+            del self[sess_id]
+
+user_manager = UserManager()
+
+
 
 with PodmanClient(base_url=podman_url) as client:
     @app.route("/")
@@ -37,9 +60,9 @@ with PodmanClient(base_url=podman_url) as client:
             return jsonify({"error": "Project not found"}), 404
             # redirect to index.html and notify user 404
 
-    @app.route('/new', methods=['POST'])
-    def new_session():
-        sess_id = str(uuid.uuid4())
+    @app.route('/_new_', methods=['POST'])
+    def new_container_session():
+        sess_id = uuid4().hex
 
         # # Define the path for the progress file or a shared volume
         # # This example uses a file-based approach for simplicity
@@ -52,33 +75,50 @@ with PodmanClient(base_url=podman_url) as client:
         try:
             container = client.containers.run(
                 container_image,
-                ["python", analysis_entry], # pass sock file
-                name=f"analysis_{sess_id}", # volumes=volumes,
+                ["python", app_entry],
+                name=f"dac_{sess_id}", # volumes=volumes, bind port
                 remove=True, detach=True
             )
-            user_containers[sess_id] = container.id
+            user_manager.set_sess(sess_id, "conn", container.id)
 
             # TODO: and return project_id?
             return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
         except APIError:
-            # subproc = subprocess.Popen(["python", analysis_entry]) # and pass sock file
+            # subproc = subprocess.Popen(["python", app_entry]) # and pass port
             pass
         except Exception as e:
             return jsonify({"error": f"Failed to start analysis: {str(e)}"}), 500
+    
+    @app.route("/new", methods=['POST'])
+    def new_process_session():
+        sess_id = uuid4().hex
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('localhost', 0))
+        host, port = s.getsockname()
+
+        p_inst = subprocess.Popen(
+            ["python", path.join(path.dirname(__file__), "..", app_entry),
+            "-p", f"{port}", "--host", host],
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE,
+        )
+        user_manager.set_sess(sess_id, f"{host}:{port}", p_inst)
+
+        return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
 
     @app.route('/term', methods=['POST'])
     def terminate_session():
         sess_id = request.headers.get(SESSID_KEY)
-        if not sess_id or sess_id not in user_containers:
+        if user_manager.validate_sess(sess_id):
             return jsonify({"error": "Invalid or missing session ID"}), 400
 
         try:
-            container = client.containers.get(user_containers[sess_id])
+            container = client.containers.get(user_manager.get_sess_obj(sess_id))
             container.remove(force=True)
-            del user_containers[sess_id]
+            user_manager.remove_sess(sess_id)
 
             # or kill subprocess
-
             # remove sock file
 
             return jsonify({"message": "Analysis terminated"}), 200
@@ -86,14 +126,13 @@ with PodmanClient(base_url=podman_url) as client:
             return jsonify({"error": "Container not found"}), 404
         except Exception as e:
             return jsonify({"error": f"Failed to terminate analysis: {str(e)}"}), 500
-        
-    @app.route('/app/<path:filename>', methods=None)
-    def app_forward(filename):
-        sess_id = request.headers.get(SESSID_KEY)
-        if not sess_id or sess_id not in user_containers:
-            return jsonify({"error": "Invalid or missing session ID"}), 400
-        
-        app = user_containers.get(sess_id)
+
+# ------
+# Others
+# ------
+
+def found(project_id):
+    return True
 
 if __name__ == '__main__':
     # app.config['PROJ_DIR']
