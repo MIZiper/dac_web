@@ -65,10 +65,12 @@ class AppWebSocketHandler(WebSocketHandler):
         target_url = f"ws://{conn}"
         self.backend_ws = await websocket_connect(
             target_url + self.request.uri,
-            on_message_callback=self.write_
+            on_message_callback=self._write_message
         )
 
-    def write_(self, message: str | bytes):
+    def _write_message(self, message: str | bytes | None):
+        if message is None:
+            return
         self.write_message(message, binary=isinstance(message, bytes))
     
     def on_message(self, message: str | bytes) -> Awaitable[None] | None:
@@ -80,7 +82,7 @@ class AppWebSocketHandler(WebSocketHandler):
         self.backend_ws.close()
     
 class AppHTTPHandler(tornado.web.RequestHandler):
-    async def forward_request(self, uri: str):
+    async def forward_request(self):
         try:
             uuid = self.get_cookie(SESSID)
             if uuid not in containers:
@@ -94,7 +96,7 @@ class AppHTTPHandler(tornado.web.RequestHandler):
             
             target_url = f"http://{conn}"
             proxy_request = tornado.httpclient.HTTPRequest(
-                url=target_url + self.request.uri, # uri,
+                url=target_url + self.request.uri,
                 method=self.request.method,
                 body=self.request.body,
                 headers=self.request.headers,
@@ -118,19 +120,19 @@ class AppHTTPHandler(tornado.web.RequestHandler):
 
     async def get(self, *args: str, **kwargs: str):
         print(f"[HTTP/get] Handle {args}, {kwargs}")
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def post(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def put(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def delete(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def patch(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def options(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
     async def head(self, *args: str, **kwargs: str):
-        await self.forward_request(args[0])
+        await self.forward_request()
 
 application = Application([
     (r"/app/(.*)/ws", AppWebSocketHandler),

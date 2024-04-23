@@ -69,5 +69,10 @@ manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figu
 Gcf.set_active(manager)
 
 if __name__=="__main__":
-    application.listen(5000)
-    WebAggApplication.start()
+    server = tornado.httpserver.HTTPServer(application)
+    sockets = tornado.netutil.bind_sockets(5000)
+    server.add_sockets(sockets)
+
+    ioloop = tornado.ioloop.IOLoop.instance()
+    ioloop.start()
+    # WebAggApplication.start()
