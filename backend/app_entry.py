@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 
 import tornado
 from tornado.wsgi import WSGIContainer
@@ -73,8 +74,19 @@ manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figu
 Gcf.set_active(manager)
 
 if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-p', '--port', type=int, default=5000,
+        help="Port to listen on"
+    )
+    parser.add_argument(
+        '--host', type=str, default='localhost',
+        help="Host to listen on"
+    )
+    args = parser.parse_args()
+    
     server = tornado.httpserver.HTTPServer(application)
-    sockets = tornado.netutil.bind_sockets(port=5000)
+    sockets = tornado.netutil.bind_sockets(args.port, args.host)
     server.add_sockets(sockets)
     for s in sockets:
         print(f"[App] Listening on {s.getsockname()}")

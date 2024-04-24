@@ -110,8 +110,8 @@ with PodmanClient(base_url=podman_url) as client:
     @app.route('/term', methods=['POST'])
     def terminate_session():
         sess_id = request.headers.get(SESSID_KEY)
-        if user_manager.validate_sess(sess_id):
-            return jsonify({"error": "Invalid or missing session ID"}), 400
+        if not user_manager.validate_sess(sess_id):
+            return jsonify({"error": "Invalid or missing session ID"}), 401
 
         try:
             container = client.containers.get(user_manager.get_sess_obj(sess_id))

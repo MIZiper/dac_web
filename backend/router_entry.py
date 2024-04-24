@@ -24,7 +24,7 @@ class AppWebSocketHandler(WebSocketHandler):
         uuid = self.request.headers.get(SESSID_KEY)
         self.backend_ws = None
 
-        if user_manager.validate_sess(uuid):
+        if not user_manager.validate_sess(uuid):
             self.write_message("Session not found, connection close")
             self.close()
             return
@@ -52,9 +52,9 @@ class AppHTTPHandler(RequestHandler):
     async def forward_request(self):
         try:
             uuid = self.request.headers.get(SESSID_KEY)
-            if user_manager.validate_sess(uuid):
-                self.set_status(404)
-                self.write("Session not found")
+            if not user_manager.validate_sess(uuid):
+                self.set_status(401)
+                self.write("Session not found, unauth")
                 return
             else:
                 conn = user_manager.get_sess_conn(uuid)
