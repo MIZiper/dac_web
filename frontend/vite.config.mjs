@@ -26,6 +26,7 @@ export default defineConfig({
       },
     }),
   ],
+  // base: '/dac/',
   define: { 'process.env': {} },
   resolve: {
     alias: {

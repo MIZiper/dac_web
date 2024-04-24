@@ -56,6 +56,7 @@
           <v-spacer></v-spacer>
           <v-btn color="green darken-1" text @click="startOption('new')">New</v-btn>
           <v-btn color="green darken-1" text @click="startOption('load')">Load</v-btn>
+          <v-btn color="green darken-1" text @click="startOption('test')">TestApp</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -97,24 +98,30 @@ export default {
     startOption(option) {
       if (option == 'new') {
         ax_router.post('/new').then(response => {
-          console.log(response.data);
+          console.log(response.data['message']);
           ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
           setTimeout(() => {
-          this.start_dialog = false;
-          this.initAnalysis(response.data[SESSID_KEY]);
-          }, 5000);
+            this.start_dialog = false;
+            this.initAnalysis(response.data[SESSID_KEY]);
+          }, 5000); // temp force waiting app to start
         }).catch(error => {
           console.error("There was an error creating new session:", error);
         });
+      } else if (option == 'load') {
+        // display project browser
+        // ax_router.post('/load') // or redirect to /projects/xxxx-yy-zzzz
       } else {
+        // directly go to app_entry.py, for dev/debug
+        // change in utils.js the url
+
         ax_app.post('/init', {}).then(response => {
           console.log(response.data['message']);
 
           this.start_dialog = false;
           this.initAnalysis();
         }).catch(error => {
-          console.error("There was an error loading project:", error);
+          console.error("There was an error:", error);
         });
       }
     },

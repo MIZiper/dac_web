@@ -4,9 +4,10 @@ Pass the request to backend app.
 """
 
 import sys
-from typing import Awaitable
+from typing import Awaitable, Callable
 
 import tornado
+from tornado.httputil import HTTPServerRequest
 from tornado.web import Application, RequestHandler, FallbackHandler
 from tornado.websocket import WebSocketClientConnection, WebSocketHandler, websocket_connect
 from tornado.wsgi import WSGIContainer
@@ -15,8 +16,9 @@ from router_handler import SESSID_KEY, app, user_manager
 
 
 
+site_prefix = "" # "/dac" #
 app_prefix = "/app"
-_N = len(app_prefix)
+_N = len(site_prefix) + len(app_prefix)
 tr = WSGIContainer(app)
 
 class AppWebSocketHandler(WebSocketHandler):
@@ -106,10 +108,21 @@ class AppHTTPHandler(RequestHandler):
     async def head(self, *args: str, **kwargs: str):
         await self.forward_request()
 
+class AppFallbackHandler(FallbackHandler):
+    def initialize(self, fallback: Callable[[HTTPServerRequest], None], prefix: str) -> None:
+        self._prefix = prefix
+        return super().initialize(fallback)
+    
+    def prepare(self) -> None:
+        n = len(self._prefix)
+        self.request.path = self.request.path[n:]
+        self.request.uri = self.request.uri[n:]
+        return super().prepare()
+
 application = Application([
-    (rf"{app_prefix}/(.*)/ws", AppWebSocketHandler),
-    (rf"{app_prefix}/(.*)(?<!\/ws)", AppHTTPHandler),
-    (r".*", FallbackHandler, dict(fallback=tr)),
+    (rf"{site_prefix}{app_prefix}/(.*)/ws", AppWebSocketHandler),
+    (rf"{site_prefix}{app_prefix}/(.*)(?<!\/ws)", AppHTTPHandler),
+    (rf"{site_prefix}.*", AppFallbackHandler, dict(fallback=tr, prefix=site_prefix)),
 ])
 
 if __name__=="__main__":
