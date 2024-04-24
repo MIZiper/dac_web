@@ -96,7 +96,7 @@ export default {
   methods: {
     startOption(option) {
       if (option == 'new') {
-        ax_router.post('new').then(response => {
+        ax_router.post('/new').then(response => {
           console.log(response.data);
           ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
@@ -108,7 +108,7 @@ export default {
           console.error("There was an error creating new session:", error);
         });
       } else {
-        ax_app.post('init', {}).then(response => {
+        ax_app.post('/init', {}).then(response => {
           console.log(response.data['message']);
 
           this.start_dialog = false;
@@ -127,7 +127,7 @@ export default {
     },
 
     handlePluginRequest() {
-      ax_app.get('plugins').then(response => {
+      ax_app.get('/plugins').then(response => {
         this.plugins = response.data['plugins'];
         this.current_plugin = response.data['current_plugin'];
       }).catch(error => {
@@ -135,7 +135,7 @@ export default {
       });
     },
     switchPlugin(plugin) {
-      ax_app.post("plugins", {
+      ax_app.post("/plugins", {
         plugin: plugin
       }).then(response => {
         console.log(response.data['message']);

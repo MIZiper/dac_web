@@ -83,7 +83,7 @@ export default {
     },
     methods: {
         handleActionRequest(context_uuid) {
-            ax_app.get(context_uuid + '/actions').then(response => {
+            ax_app.get(`/${context_uuid}/actions`).then(response => {
                 this.actions = response.data['actions'];
                 this.current_context = context_uuid;
             }).catch(error => {
@@ -91,14 +91,14 @@ export default {
             });
         },
         handleActionTypeRequest() {
-            ax_app.get('types/action').then(response => {
+            ax_app.get('/types/action').then(response => {
                 this.action_types = response.data['action_types'];
             }).catch(error => {
                 console.error("There was an error fetching action type list:", error);
             });
         },
         addAction(action_type) {
-            ax_app.post(this.current_context + '/actions', {
+            ax_app.post(`/${this.current_context}/actions`, {
                 action_config: {
                     type: action_type.type,
                     name: action_type.name, // this is actually ignored
@@ -115,7 +115,7 @@ export default {
             });
         },
         updateAction(node, fire=false, context_uuid, action_uuid) {
-            ax_app.put(context_uuid + '/actions/' + action_uuid, {
+            ax_app.put(`/${context_uuid}/actions/${action_uuid}`, {
                 action_config: node
             }).then(response => {
                 this.actions = this.actions.map(action => { // this seems make closure unnecessary
@@ -130,7 +130,7 @@ export default {
             });
         },
         editAction() {
-            ax_app.get(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+            ax_app.get(`/${this.current_context}/actions/${this.selectedItemUUID}`).then(response => {
                 this.emitter.emit('edit-node', [response.data['action_config'], function(context_uuid, action_uuid, callback){
                     return (node, fire) => {
                         callback(node, fire, context_uuid, action_uuid);
@@ -141,7 +141,7 @@ export default {
             });
         },
         runAction() {
-            ax_app.post(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+            ax_app.post(`/${this.current_context}/actions/${this.selectedItemUUID}`).then(response => {
                 console.log(response.data['message']);
                 if (response.data['data_updated']) {
                     this.emitter.emit('data-refresh-request', this.current_context);
@@ -157,7 +157,7 @@ export default {
             });
         },
         deleteAction() {
-            ax_app.delete(this.current_context + '/actions/' + this.selectedItemUUID).then(response => {
+            ax_app.delete(`/${this.current_context}/actions/${this.selectedItemUUID}`).then(response => {
                 console.log(response.data['message']);
                 this.actions = this.actions.filter(action => action.uuid !== this.selectedItemUUID);
             }).catch(error => {

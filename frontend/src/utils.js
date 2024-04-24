@@ -7,7 +7,7 @@ export const mpl_urn = host_port + "/app/mpl";
 export const SESSID_KEY = "dac-sess_id";
 
 export const ax_router = axios.create({
-    baseURL: "http://" + host_port + "/",
+    baseURL: `http://${host_port}`,
     responseType: "json",
     headers: {
         "Content-Type": "application/json",
@@ -16,7 +16,7 @@ export const ax_router = axios.create({
 });
 
 export const ax_app = axios.create({
-    baseURL: "http://" + host_port + "/app/",
+    baseURL: `http://${host_port}/app`,
     responseType: "json",
     headers: {
         "Content-Type": "application/json",

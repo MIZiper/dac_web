@@ -28,7 +28,7 @@ export default {
     },
     methods: {
         handleDataRequest(context_uuid) {
-            ax_app.get(context_uuid+'/data').then(response => {
+            ax_app.get(`/${context_uuid}/data`).then(response => {
                 this.data_items = response.data['data'];
             }).catch(error => {
                 console.error("There was an error fetching data list:", error);

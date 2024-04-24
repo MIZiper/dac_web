@@ -60,25 +60,25 @@ export default {
             }
         },
         initMpl(sess_id) {
-            let query_str = '?' + SESSID_KEY + "=" + sess_id;
+            let query_str = `${SESSID_KEY}=${sess_id}`;
 
-            ['mpl'].forEach(function (name) { // ['page', 'boilerplate', 'fbm', ]
+            ['mpl.css'].forEach(function (name) { // ['page.css', 'boilerplate.css', 'fbm.css', ]
                 let link = document.createElement('link');
                 link.rel = 'stylesheet';
-                link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css' + query_str;
+                link.href = `http://${mpl_urn}/_static/css/${name}?${query_str}`;
                 document.head.appendChild(link);
             });
 
             function ondownload(figure, format) {
-                window.open("http://" + mpl_urn + "/" + figure.id + '/download.' + format, '_blank');
+                window.open(`http://${mpl_urn}/${figure.id}/download.${format}?${query_str}`, '_blank');
             };
 
             let script = document.createElement('script');
             script.type = 'text/javascript';
-            script.src = "http://" + mpl_urn + '/js/mpl.js' + query_str;
+            script.src = `http://${mpl_urn}/js/mpl.js?${query_str}`;
             script.onload = () => {
                 var websocket_type = mpl.get_websocket_type();
-                var websocket = new websocket_type("ws://" + mpl_urn + "/" + FIG_NUM + "/ws" + query_str);
+                var websocket = new websocket_type(`ws://${mpl_urn}/${FIG_NUM}/ws?${query_str}`);
 
                 var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
                 this.figure = fig;
@@ -88,8 +88,8 @@ export default {
                 widgetImages.forEach((img) => {
                     var fname = img.src.split("/").pop();
                     var fname_2x = img.srcset.split("/").pop();
-                    img.src = "http://" + mpl_urn + "/_images/" + fname + query_str;
-                    img.srcset = "http://" + mpl_urn + "/_images/" + fname_2x + query_str;
+                    img.src = `http://${mpl_urn}/_images/${fname}?${query_str}`;
+                    img.srcset = `http://${mpl_urn}/_images/${fname_2x}?${query_str}`;
                 });
             };
             document.body.appendChild(script);
