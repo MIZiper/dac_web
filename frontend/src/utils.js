@@ -1,12 +1,13 @@
 import axios from "axios";
 
 const host_port = "localhost:5000";
-const base_url = "http://" + host_port + "/"
-export const FIG_NUM = 1;
-export const mpl_urn = host_port + "/mpl"
 
-export const ax_base = axios.create({
-    baseURL: base_url,
+export const FIG_NUM = 1;
+export const mpl_urn = host_port + "/app/mpl";
+export const SESSID_KEY = "dac-sess_id";
+
+export const ax_router = axios.create({
+    baseURL: "http://" + host_port + "/",
     responseType: "json",
     headers: {
         "Content-Type": "application/json",
@@ -14,8 +15,8 @@ export const ax_base = axios.create({
     },
 });
 
-export const ax_project = axios.create({
-    baseURL: base_url, // + "projects/xxxx-yyyy-zzzz/"
+export const ax_app = axios.create({
+    baseURL: "http://" + host_port + "/app/",
     responseType: "json",
     headers: {
         "Content-Type": "application/json",

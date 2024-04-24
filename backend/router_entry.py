@@ -20,8 +20,11 @@ _N = len(app_prefix)
 tr = WSGIContainer(app)
 
 class AppWebSocketHandler(WebSocketHandler):
+    def check_origin(self, origin: str) -> bool:
+        return True
+    
     async def open(self, *args: str, **kwargs: str) -> Awaitable[None] | None:
-        uuid = self.request.headers.get(SESSID_KEY)
+        uuid = self.request.headers.get(SESSID_KEY) or self.get_query_argument(SESSID_KEY)
         self.backend_ws = None
 
         if not user_manager.validate_sess(uuid):
@@ -49,9 +52,16 @@ class AppWebSocketHandler(WebSocketHandler):
         self.backend_ws.close()
     
 class AppHTTPHandler(RequestHandler):
+    def set_default_headers(self) -> None:
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
+        
+        self.set_header("Access-Control-Allow-Headers", "access-control-allow-origin,authorization,content-type,x-requested-with")
+        self.add_header("Access-Control-Allow-Headers", SESSID_KEY)
+
     async def forward_request(self):
         try:
-            uuid = self.request.headers.get(SESSID_KEY)
+            uuid = self.request.headers.get(SESSID_KEY) or self.get_query_argument(SESSID_KEY)
             if not user_manager.validate_sess(uuid):
                 self.set_status(401)
                 self.write("Session not found, unauth")
@@ -90,7 +100,9 @@ class AppHTTPHandler(RequestHandler):
     async def patch(self, *args: str, **kwargs: str):
         await self.forward_request()
     async def options(self, *args: str, **kwargs: str):
-        await self.forward_request()
+        self.set_status(204)
+        self.finish()
+    
     async def head(self, *args: str, **kwargs: str):
         await self.forward_request()
 

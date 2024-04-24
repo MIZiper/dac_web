@@ -70,7 +70,7 @@ import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
 import axios from 'axios'
-import { ax_base, ax_project } from '@/utils';
+import { ax_router, ax_app, SESSID_KEY } from '@/utils';
 
 export default {
   components: {
@@ -96,31 +96,21 @@ export default {
   methods: {
     startOption(option) {
       if (option == 'new') {
-        /*
-        ax_base.post('/new').then(response => {
-          sess_id = response.data['dac-sess_id'];
-          sessionStorage.setItem('sess_id', sess_id);
+        ax_router.post('new').then(response => {
+          console.log(response.data);
+          ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
+
+          setTimeout(() => {
           this.start_dialog = false;
+          this.initAnalysis(response.data[SESSID_KEY]);
+          }, 5000);
         }).catch(error => {
           console.error("There was an error creating new session:", error);
         });
-        */
-        this.start_dialog = false;
-        this.initAnalysis();
       } else {
-        /*
-        ax_base.get('/projects/', {
-          headers: {
-            'dac-sess_id': sessionStorage.getItem('sess_id')
-          }
-        }).then(response => {
-
-        }).catch(error => {
-          console.error("There was an error loading project:", error);
-        });
-        */
-        ax_project.post('init', {}).then(response => {
+        ax_app.post('init', {}).then(response => {
           console.log(response.data['message']);
+
           this.start_dialog = false;
           this.initAnalysis();
         }).catch(error => {
@@ -128,15 +118,16 @@ export default {
         });
       }
     },
-    initAnalysis() {
+    initAnalysis(sess_id) {
       this.emitter.emit('context-refresh-request');
       this.emitter.emit('plugin-refresh-request');
       this.emitter.emit('context_type-refresh-request');
       this.emitter.emit('action_type-refresh-request');
+      this.emitter.emit('mpl-init-request', sess_id);
     },
 
     handlePluginRequest() {
-      ax_project.get('plugins').then(response => {
+      ax_app.get('plugins').then(response => {
         this.plugins = response.data['plugins'];
         this.current_plugin = response.data['current_plugin'];
       }).catch(error => {
@@ -144,7 +135,7 @@ export default {
       });
     },
     switchPlugin(plugin) {
-      ax_project.post("plugins", {
+      ax_app.post("plugins", {
         plugin: plugin
       }).then(response => {
         console.log(response.data['message']);

@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import { mpl_urn, FIG_NUM } from '@/utils';
+import { mpl_urn, FIG_NUM, SESSID_KEY } from '@/utils';
 import { VFab } from 'vuetify/labs/VFab';
 
 export default {
@@ -59,40 +59,45 @@ export default {
                 this.figure._resize_canvas(window.innerWidth * 0.66, window.innerHeight * 0.7, true);
             }
         },
+        initMpl(sess_id) {
+            let query_str = '?' + SESSID_KEY + "=" + sess_id;
+
+            ['mpl'].forEach(function (name) { // ['page', 'boilerplate', 'fbm', ]
+                let link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css' + query_str;
+                document.head.appendChild(link);
+            });
+
+            function ondownload(figure, format) {
+                window.open("http://" + mpl_urn + "/" + figure.id + '/download.' + format, '_blank');
+            };
+
+            let script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = "http://" + mpl_urn + '/js/mpl.js' + query_str;
+            script.onload = () => {
+                var websocket_type = mpl.get_websocket_type();
+                var websocket = new websocket_type("ws://" + mpl_urn + "/" + FIG_NUM + "/ws" + query_str);
+
+                var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
+                this.figure = fig;
+
+                // the mpl.figure() create toolbar but not link to server resources
+                const widgetImages = document.querySelectorAll("button.mpl-widget img");
+                widgetImages.forEach((img) => {
+                    var fname = img.src.split("/").pop();
+                    var fname_2x = img.srcset.split("/").pop();
+                    img.src = "http://" + mpl_urn + "/_images/" + fname + query_str;
+                    img.srcset = "http://" + mpl_urn + "/_images/" + fname_2x + query_str;
+                });
+            };
+            document.body.appendChild(script);
+            window.addEventListener('resize', this.autoScaleCanvas);
+        },
     },
     mounted() {
-        ['mpl'].forEach(function (name) { // ['page', 'boilerplate', 'fbm', ]
-            let link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = "http://" + mpl_urn + '/_static/css/' + name + '.css';
-            document.head.appendChild(link);
-        });
-
-        function ondownload(figure, format) {
-            window.open("http://" + mpl_urn + "/" + figure.id + '/download.' + format, '_blank');
-        };
-
-        let script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = "http://" + mpl_urn + '/js/mpl.js';
-        script.onload = () => {
-            var websocket_type = mpl.get_websocket_type();
-            var websocket = new websocket_type("ws://" + mpl_urn + "/" + FIG_NUM + "/ws");
-
-            var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
-            this.figure = fig;
-
-            // the mpl.figure() create toolbar but not link to server resources
-            const widgetImages = document.querySelectorAll("button.mpl-widget img");
-            widgetImages.forEach((img) => {
-                var fname = img.src.split("/").pop();
-                var fname_2x = img.srcset.split("/").pop();
-                img.src = "http://" + mpl_urn + "/_images/" + fname;
-                img.srcset = "http://" + mpl_urn + "/_images/" + fname_2x;
-            });
-        };
-        document.body.appendChild(script);
-        window.addEventListener('resize', this.autoScaleCanvas);
+        this.emitter.on('mpl-init-request', this.initMpl);
     },
 }
 </script>

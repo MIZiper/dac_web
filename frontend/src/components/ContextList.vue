@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import { ax_base, ax_project } from '@/utils';
+import { ax_router, ax_app } from '@/utils';
 const GCK_ID = 'global';
 const DEFAULT_NAME = '[New Context]';
 
@@ -75,7 +75,7 @@ export default {
             };
         },
         handleContextRequest() {
-            ax_project.get('contexts').then(response => {
+            ax_app.get('contexts').then(response => {
                 this.context_keys = response.data['contexts'];
                 this.current_context = response.data['current_context'];
 
@@ -86,14 +86,14 @@ export default {
             });
         },
         handleContextTypeRequest() {
-            ax_project.get('types/context').then(response => {
+            ax_app.get('types/context').then(response => {
                 this.context_types = response.data['context_types'];
             }).catch(error => {
                 console.error("There was an error fetching context type list:", error);
             });
         },
         handleContextChange(context_uuid) {
-            ax_project.post('contexts/' + context_uuid, {}).then(response => {
+            ax_app.post('contexts/' + context_uuid, {}).then(response => {
                 console.log(response.data['message']);
 
                 this.emitter.emit('data-refresh-request', this.current_context);
@@ -111,7 +111,7 @@ export default {
                 return;
             }
 
-            ax_project.post('contexts', {
+            ax_app.post('contexts', {
                 context_config: {
                     type: context_type,
                     name: DEFAULT_NAME,
@@ -128,7 +128,7 @@ export default {
             });
         },
         updateContext(node, fire=false, context_uuid) {
-            ax_project.put('contexts/' + context_uuid, {
+            ax_app.put('contexts/' + context_uuid, {
                 context_config: node
             }).then(response => {
                 this.context_keys = this.context_keys.map(context => {
@@ -142,7 +142,7 @@ export default {
             });
         },
         editContext() {
-            ax_project.get('contexts/' + this.current_context).then(response => {
+            ax_app.get('contexts/' + this.current_context).then(response => {
                 this.emitter.emit('edit-node', [response.data['context_config'], function(context_uuid, callback){
                     return (node, fire) => {
                         callback(node, fire, context_uuid);
@@ -155,7 +155,7 @@ export default {
         runContext() {
         },
         deleteContext() {
-            ax_project.delete('contexts/' + this.current_context).then(response => {
+            ax_app.delete('contexts/' + this.current_context).then(response => {
                 console.log(response.data['message']);
                 this.context_keys = this.context_keys.filter(context => context.uuid !== this.current_context);
                 this.current_context = GCK_ID;

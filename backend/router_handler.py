@@ -3,6 +3,7 @@ from uuid import uuid4
 import socket
 
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS # to be removed in final container
 from podman import PodmanClient
 from podman.errors import NotFound, APIError
 import subprocess
@@ -10,6 +11,7 @@ import subprocess
 
 
 app = Flask(__name__, static_folder="../frontend/dist/")
+CORS(app)
 app_entry = "backend/app_entry.py"
 
 podman_url = 'unix:///run/podman/podman.sock'

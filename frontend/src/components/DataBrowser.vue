@@ -13,7 +13,7 @@
 </template>
 
 <script>
-import { ax_base, ax_project } from '@/utils';
+import { ax_router, ax_app } from '@/utils';
 
 export default {
     data() {
@@ -28,7 +28,7 @@ export default {
     },
     methods: {
         handleDataRequest(context_uuid) {
-            ax_project.get(context_uuid+'/data').then(response => {
+            ax_app.get(context_uuid+'/data').then(response => {
                 this.data_items = response.data['data'];
             }).catch(error => {
                 console.error("There was an error fetching data list:", error);
