@@ -279,6 +279,10 @@ def handle_action_of(context_key_id: str, action_id: str):
 # others
 # ------
 
+@app.route("/ready")
+def ready():
+    return {}, 204
+
 def get_context_key(context_key_id: str):
     if context_key_id == GCK_ID:
         return GCK

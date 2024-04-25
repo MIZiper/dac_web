@@ -1,6 +1,5 @@
 from os import path
 from uuid import uuid4
-import socket
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS # to be removed in final container
@@ -95,18 +94,28 @@ with PodmanClient(base_url=podman_url) as client:
     def new_process_session():
         sess_id = uuid4().hex
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('localhost', 0))
-        host, port = s.getsockname()
-
         p_inst = subprocess.Popen(
-            ["python", path.join(path.dirname(__file__), "..", app_entry),
-            "-p", f"{port}", "--host", host],
-            # stdout=subprocess.PIPE,
+            ["python", path.join(path.dirname(__file__), "..", app_entry), "-p", "0"],
+            stdout=subprocess.PIPE,
             # stderr=subprocess.PIPE,
         )
-        user_manager.set_sess(sess_id, f"{host}:{port}", p_inst)
-
+        host_port = p_inst.stdout.readline().decode().split("...")[-1].strip()
+        user_manager.set_sess(sess_id, host_port, p_inst)
+        
+        # Make sure the service is ready
+        # 1)
+        # print(p_inst.stdout.readline()) # >> ready <<
+        # return {}, 200
+        # 
+        # 2)
+        # import requests, time
+        # for i in range(5):
+        #     time.sleep(0.01)
+        #     response = requests.get(f"http://{host_port}/ready")
+        #     if response.status_code == 204:
+        #         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
+        # return jsonify({"error": "failed to connect app"}), 500
+    
         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
 
     @app.route('/term', methods=['POST'])

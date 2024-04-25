@@ -89,6 +89,9 @@ if __name__=="__main__":
     sockets = tornado.netutil.bind_sockets(args.port, args.host)
     server.add_sockets(sockets)
     for s in sockets:
-        print(f"[App] Listening on {s.getsockname()}")
+        host, port = s.getsockname()
+        print(f"[App] Listening on ... {host}:{port}")
 
-    tornado.ioloop.IOLoop.current().start()
+    ioloop = tornado.ioloop.IOLoop.current()
+    ioloop.add_callback(lambda: print(">> Ready <<"))
+    ioloop.start()

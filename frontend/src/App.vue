@@ -101,10 +101,8 @@ export default {
           console.log(response.data['message']);
           ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
-          setTimeout(() => {
-            this.start_dialog = false;
-            this.initAnalysis(response.data[SESSID_KEY]);
-          }, 5000); // temp force waiting app to start
+          this.start_dialog = false;
+          this.initAnalysis(response.data[SESSID_KEY]);
         }).catch(error => {
           console.error("There was an error creating new session:", error);
         });
