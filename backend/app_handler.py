@@ -40,10 +40,8 @@ container = Container.parse_save_config({})
 
 @app.route('/init', methods=['POST'])
 def init():
-    # config = request.json
-    with open('../doc/test.dac.json', mode='r') as fp:
-        config = json.load(fp)['dac']
     global container
+    config = request.get_json()
     container = Container.parse_save_config(config)
 
     return jsonify({"message": "Init done"}), 200

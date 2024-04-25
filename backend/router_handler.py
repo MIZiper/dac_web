@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS # to be removed in final container
 from podman import PodmanClient
 from podman.errors import NotFound, APIError
-import subprocess
+import subprocess, requests, json
 
 
 
@@ -53,13 +53,32 @@ with PodmanClient(base_url=podman_url) as client:
         return send_from_directory(app.static_folder, filename)
 
     @app.route('/projects/<string:project_id>', methods=['GET'])
-    def load_project(project_id):
+    def index_project(project_id):
         # projects_dir = app.config.get("PROJ_DIR", "./projects")
         if found(project_id):
             return index()
         else:
             return jsonify({"error": "Project not found"}), 404
             # redirect to index.html and notify user 404
+
+    @app.route('/load', methods=['POST'])
+    def load_project():
+        project_id = request.get_json().get("project_id")
+
+        if found(project_id):
+
+            with open('../doc/test.dac.json', mode='r') as fp:
+                config = json.load(fp)['dac']
+
+            sess_id = start_process_session()
+            conn = user_manager.get_sess_conn(sess_id)
+            resp = requests.post(f"http://{conn}/init", json=config)
+            if resp.status_code == 200:
+                return jsonify({"message": "Project loaded", SESSID_KEY: sess_id}), 200
+            else:
+                return jsonify({"error": "Project load failed"}), 500
+        else:
+            return jsonify({"error": "Project not found"}), 404
 
     @app.route('/_new_', methods=['POST'])
     def new_container_session():
@@ -92,30 +111,7 @@ with PodmanClient(base_url=podman_url) as client:
     
     @app.route("/new", methods=['POST'])
     def new_process_session():
-        sess_id = uuid4().hex
-
-        p_inst = subprocess.Popen(
-            ["python", path.join(path.dirname(__file__), "..", app_entry), "-p", "0"],
-            stdout=subprocess.PIPE,
-            # stderr=subprocess.PIPE,
-        )
-        host_port = p_inst.stdout.readline().decode().split("...")[-1].strip()
-        user_manager.set_sess(sess_id, host_port, p_inst)
-        
-        # Make sure the service is ready
-        # 1)
-        # print(p_inst.stdout.readline()) # >> ready <<
-        # return {}, 200
-        # 
-        # 2)
-        # import requests, time
-        # for i in range(5):
-        #     time.sleep(0.01)
-        #     response = requests.get(f"http://{host_port}/ready")
-        #     if response.status_code == 204:
-        #         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
-        # return jsonify({"error": "failed to connect app"}), 500
-    
+        sess_id = start_process_session()
         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
 
     @app.route('/term', methods=['POST'])
@@ -144,6 +140,33 @@ with PodmanClient(base_url=podman_url) as client:
 
 def found(project_id):
     return True
+
+def start_process_session():
+    sess_id = uuid4().hex
+
+    p_inst = subprocess.Popen(
+        ["python", path.join(path.dirname(__file__), "..", app_entry), "-p", "0"],
+        stdout=subprocess.PIPE,
+        # stderr=subprocess.PIPE,
+    )
+    host_port = p_inst.stdout.readline().decode().split("...")[-1].strip()
+    user_manager.set_sess(sess_id, host_port, p_inst)
+    
+    # Make sure the service is ready
+    # 1)
+    # print(p_inst.stdout.readline()) # >> ready <<
+    # return {}, 200
+    # 
+    # 2)
+    # import requests, time
+    # for i in range(5):
+    #     time.sleep(0.01)
+    #     response = requests.get(f"http://{host_port}/ready")
+    #     if response.status_code == 204:
+    #         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
+    # return jsonify({"error": "failed to connect app"}), 500
+
+    return sess_id
 
 if __name__ == '__main__':
     # app.config['PROJ_DIR']

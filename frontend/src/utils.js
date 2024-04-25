@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const host_port = "localhost:5000";
-const site_prefix = ""; // "/dac"; //
+export const site_prefix = ""; // "/dac"; //
 const app_prefix = "/app"; // ""; //
 const mpl_prefix = "/mpl";
 

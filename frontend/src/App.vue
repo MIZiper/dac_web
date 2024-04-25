@@ -70,8 +70,7 @@ import ContextList from './components/ContextList.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
-import axios from 'axios'
-import { ax_router, ax_app, SESSID_KEY } from '@/utils';
+import { ax_router, ax_app, SESSID_KEY, site_prefix } from '@/utils';
 
 export default {
   components: {
@@ -93,6 +92,21 @@ export default {
   },
   mounted() {
     this.emitter.on('plugin-refresh-request', this.handlePluginRequest);
+
+    let pathname = window.location.pathname;
+    const project_prefix = site_prefix + "/projects/";
+    if (pathname.startsWith(project_prefix)) {
+      let project_id = pathname.substring(project_prefix.length);
+      ax_router.post('/load', {project_id: project_id}).then(response => {
+        console.log(response.data['message']);
+        ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
+
+        this.start_dialog = false;
+        this.initAnalysis(response.data[SESSID_KEY]);
+      }).catch(error => {
+        console.error("There was an error loading project:", error);
+      });
+    }
   },
   methods: {
     startOption(option) {
