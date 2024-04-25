@@ -71,7 +71,7 @@ class MyApplication(WebAggApplication):
 application = MyApplication(url_prefix=mpl_prefix)
 figure = Figure(figsize=(10, 6))
 manager: FigureManagerWebAgg = new_figure_manager_given_figure(num=FIG_NUM, figure=figure)
-Gcf.set_active(manager)
+Gcf._set_new_active_manager(manager)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
