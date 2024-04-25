@@ -90,7 +90,7 @@ if __name__=="__main__":
     server.add_sockets(sockets)
     for s in sockets:
         host, port = s.getsockname()
-        print(f"[App] Listening on ... {host}:{port}")
+        print(f"[App] Listening on ... {host}:{port}", flush=True) # force flush, otherwise router may wait and block
 
     ioloop = tornado.ioloop.IOLoop.current()
     ioloop.add_callback(lambda: print(">> Ready <<"))
