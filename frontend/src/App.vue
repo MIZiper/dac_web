@@ -49,8 +49,6 @@
     <v-dialog v-model="start_dialog" persistent max-width="600px">
       <v-card>
         <v-card-title>Start analysis</v-card-title>
-        <v-card-text style="color: red; font-weight: bold;">Site under development, service not yet
-          available</v-card-text>
         <v-card-text>Choose the options below to start analysis</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -58,6 +56,14 @@
           <v-btn color="green darken-1" text @click="startOption('load')">Load</v-btn>
           <v-btn color="green darken-1" text @click="startOption('test')">TestApp</v-btn>
         </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="load_dialog" persistent max-width="600px">
+      <v-card>
+        <v-progress-linear color="green darken-1" indeterminate></v-progress-linear>
+        <v-card-title>Load project</v-card-title>
+        <v-card-text>Loading project ...</v-card-text>
       </v-card>
     </v-dialog>
   </v-app>
@@ -85,6 +91,7 @@ export default {
     return {
       title: "DAC analysis frame",
       start_dialog: true,
+      load_dialog: false,
 
       current_plugin: 'Plugin 0',
       plugins: ['Plugin 1', 'Plugin 2', 'Plugin 3'],
@@ -97,11 +104,14 @@ export default {
     const project_prefix = site_prefix + "/projects/";
     if (pathname.startsWith(project_prefix)) {
       let project_id = pathname.substring(project_prefix.length);
+      
+      this.start_dialog = false;
+      this.load_dialog = true;
+
       ax_router.post('/load', {project_id: project_id}).then(response => {
         console.log(response.data['message']);
         ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
-
-        this.start_dialog = false;
+        this.load_dialog = false;
         this.initAnalysis(response.data[SESSID_KEY]);
       }).catch(error => {
         console.error("There was an error loading project:", error);
@@ -131,7 +141,7 @@ export default {
           console.log(response.data['message']);
 
           this.start_dialog = false;
-          this.initAnalysis();
+          this.initAnalysis("not-mandatory");
         }).catch(error => {
           console.error("There was an error:", error);
         });
