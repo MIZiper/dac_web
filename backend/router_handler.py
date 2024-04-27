@@ -1,5 +1,6 @@
 from os import path
 from uuid import uuid4
+import os
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS # to be removed in final container
@@ -17,6 +18,10 @@ podman_url = 'unix:///run/podman/podman.sock'
 container_image = "dac_web:latest"
 
 SESSID_KEY = "dac-sess_id"
+PROJDIR_KEY = "project_folder"
+SAVEDIR_KEY = "save_folder"
+
+
 
 class UserManager(dict):
     def validate_sess(self, sess_id):
@@ -54,7 +59,6 @@ with PodmanClient(base_url=podman_url) as client:
 
     @app.route('/projects/<string:project_id>', methods=['GET'])
     def index_project(project_id):
-        # projects_dir = app.config.get("PROJ_DIR", "./projects")
         if found(project_id):
             return index()
         else:
@@ -133,6 +137,16 @@ with PodmanClient(base_url=podman_url) as client:
             return jsonify({"error": "Container not found"}), 404
         except Exception as e:
             return jsonify({"error": f"Failed to terminate analysis: {str(e)}"}), 500
+        
+    @app.route("/project_files", methods=['POST'])
+    def get_project_files():
+        relpath = request.get_json().get("relpath").strip("/")
+        node_dir = path.join(app.config[SAVEDIR_KEY], relpath)
+
+        dirpath, dirnames, filenames = next(os.walk(node_dir))
+        return jsonify({"dirnames": dirnames, "filenames": filenames}), 200
+
+
 
 # ------
 # Others
@@ -169,5 +183,4 @@ def start_process_session():
     return sess_id
 
 if __name__ == '__main__':
-    # app.config['PROJ_DIR']
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -12,7 +12,7 @@ from tornado.web import Application, RequestHandler, FallbackHandler
 from tornado.websocket import WebSocketClientConnection, WebSocketHandler, websocket_connect
 from tornado.wsgi import WSGIContainer
 
-from router_handler import SESSID_KEY, app, user_manager
+from router_handler import SESSID_KEY, app, user_manager, PROJDIR_KEY, SAVEDIR_KEY
 
 
 
@@ -126,8 +126,19 @@ application = Application([
 ])
 
 if __name__=="__main__":
+    import argparse
+    from os import path
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--project-folder", type=str, default=path.join(path.dirname(__file__), "../projects"))
+    parser.add_argument("--save-folder", type=str, default=path.join(path.dirname(__file__), "../projects_save"))
+    args = parser.parse_args()
+    app.config[PROJDIR_KEY] = args.project_folder
+    app.config[SAVEDIR_KEY] = args.save_folder
+
     server = tornado.httpserver.HTTPServer(application)
-    sockets = tornado.netutil.bind_sockets(port=5000)
+    sockets = tornado.netutil.bind_sockets(port=args.port)
     server.add_sockets(sockets)
     for s in sockets:
         print(f"[Router] Listening on {s.getsockname()}")

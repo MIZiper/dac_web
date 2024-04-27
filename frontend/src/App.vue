@@ -49,13 +49,20 @@
     <v-dialog v-model="start_dialog" persistent max-width="600px">
       <v-card>
         <v-card-title>Start analysis</v-card-title>
-        <v-card-text>Choose the options below to start analysis</v-card-text>
+        <v-card-text>Start a new analysis or load an existing project</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="green darken-1" text @click="startOption('new')">New</v-btn>
-          <v-btn color="green darken-1" text @click="startOption('load')">Load</v-btn>
-          <v-btn color="green darken-1" text @click="startOption('test')">TestApp</v-btn>
+          <v-btn color="green darken-1" text :disabled="!actives.length" @click="startOption('load')">Load</v-btn>
+          <!-- <v-btn color="green darken-1" text @click="startOption('test')">TestApp</v-btn> -->
         </v-card-actions>
+        <v-treeview :items="files" :load-children="fetchProjects" v-model:activated="actives" density="compact"
+          item-title="name" item-value="relpath" open-on-click activatable>
+          <template v-slot:prepend="{ item }">
+            <v-icon v-if="item.children">mdi-folder</v-icon>
+            <v-icon v-else>mdi-file</v-icon>
+          </template>
+        </v-treeview>
       </v-card>
     </v-dialog>
 
@@ -76,6 +83,7 @@ import ContextList from './components/ContextList.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
+import { VTreeview } from 'vuetify/labs/VTreeview';
 import { ax_router, ax_app, SESSID_KEY, site_prefix } from '@/utils';
 
 export default {
@@ -85,13 +93,23 @@ export default {
     ContextList,
     YamlEditor,
     MainContent,
-    MessageZone
+    MessageZone,
+    VTreeview,
   },
   data() {
     return {
       title: "DAC analysis frame",
       start_dialog: true,
       load_dialog: false,
+
+      actives: [],
+      files: [
+        {
+          relpath: "/",
+          name: "Projects",
+          children: [],
+        },
+      ],
 
       current_plugin: 'Plugin 0',
       plugins: ['Plugin 1', 'Plugin 2', 'Plugin 3'],
@@ -104,11 +122,11 @@ export default {
     const project_prefix = site_prefix + "/projects/";
     if (pathname.startsWith(project_prefix)) {
       let project_id = pathname.substring(project_prefix.length);
-      
+
       this.start_dialog = false;
       this.load_dialog = true;
 
-      ax_router.post('/load', {project_id: project_id}).then(response => {
+      ax_router.post('/load', { project_id: project_id }).then(response => {
         console.log(response.data['message']);
         ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
         this.load_dialog = false;
@@ -174,7 +192,36 @@ export default {
       }).catch(error => {
         console.error("There was an error switching plugin:", error);
       });
-    }
+    },
+
+    fetchProjects(item) {
+      if (item.children.length > 0) {
+        return;
+      }
+
+      // If I return code below, only folders-in-one-chain can be opened
+      // no idea how to solve
+
+      ax_router.post('/project_files', {
+        relpath: item.relpath,
+      }).then(response => {
+        response.data['dirnames'].forEach(d => {
+          item.children.push({
+            relpath: item.relpath + d + "/",
+            name: d,
+            children: [],
+          });
+        });
+        response.data['filenames'].forEach(f => {
+          item.children.push({
+            relpath: item.relpath + f,
+            name: f,
+          });
+        });
+      }).catch(error => {
+        console.error("There was an error fetching projects:", error);
+      })
+    },
   }
 }
 </script>
