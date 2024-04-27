@@ -66,23 +66,29 @@ with PodmanClient(base_url=podman_url) as client:
             # redirect to index.html and notify user 404
 
     @app.route('/load', methods=['POST'])
-    def load_project():
-        project_id = request.get_json().get("project_id")
+    def load_project(project_id: str=None):
+        if project_id is None:
+            project_id = request.get_json().get("project_id")
 
         if found(project_id):
 
-            with open('../doc/test.dac.json', mode='r') as fp:
+            with open(path.join(app.config[PROJDIR_KEY], project_id), mode='r') as fp:
                 config = json.load(fp)['dac']
 
             sess_id = start_process_session()
             conn = user_manager.get_sess_conn(sess_id)
             resp = requests.post(f"http://{conn}/init", json=config)
             if resp.status_code == 200:
-                return jsonify({"message": "Project loaded", SESSID_KEY: sess_id}), 200
+                return jsonify({"message": "Project loaded", SESSID_KEY: sess_id, "project_id": project_id}), 200
             else:
                 return jsonify({"error": "Project load failed"}), 500
         else:
             return jsonify({"error": "Project not found"}), 404
+        
+    @app.route('/load_saved', methods=['POST'])
+    def load_saved_project():
+        project_id = get_project_id_by_path(request.get_json().get("project_path"))
+        return load_project(project_id)
 
     @app.route('/_new_', methods=['POST'])
     def new_container_session():
@@ -153,7 +159,13 @@ with PodmanClient(base_url=podman_url) as client:
 # ------
 
 def found(project_id):
-    return True
+    return path.isfile(path.join(app.config[PROJDIR_KEY], project_id))
+
+def get_project_id_by_path(project_path):
+    with open(path.join(app.config[SAVEDIR_KEY], project_path.strip("/")), mode='r') as fp:
+        project_id = fp.readline().split(";")[0].strip()
+    
+    return project_id
 
 def start_process_session():
     sess_id = uuid4().hex

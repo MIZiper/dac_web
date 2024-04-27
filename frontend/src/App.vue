@@ -86,6 +86,8 @@ import MessageZone from './components/MessageZone.vue';
 import { VTreeview } from 'vuetify/labs/VTreeview';
 import { ax_router, ax_app, SESSID_KEY, site_prefix } from '@/utils';
 
+const project_prefix = site_prefix + "/projects/";
+
 export default {
   components: {
     DataBrowser,
@@ -119,7 +121,6 @@ export default {
     this.emitter.on('plugin-refresh-request', this.handlePluginRequest);
 
     let pathname = window.location.pathname;
-    const project_prefix = site_prefix + "/projects/";
     if (pathname.startsWith(project_prefix)) {
       let project_id = pathname.substring(project_prefix.length);
 
@@ -132,6 +133,15 @@ export default {
         this.load_dialog = false;
         this.initAnalysis(response.data[SESSID_KEY]);
       }).catch(error => {
+        if (error.response.status == 404) {
+        //   this.start_dialog = true;
+        // } else {
+        //   this.start_dialog = false;
+
+        // show message
+        // redirect to home
+        // change url
+        }
         console.error("There was an error loading project:", error);
       });
     }
@@ -149,8 +159,15 @@ export default {
           console.error("There was an error creating new session:", error);
         });
       } else if (option == 'load') {
-        // display project browser
-        // ax_router.post('/load') // or redirect to /projects/xxxx-yy-zzzz
+        ax_router.post('/load_saved', { project_path: this.actives[0] }).then(response => {
+          console.log(response.data['message']);
+          ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
+          this.start_dialog = false;
+          window.history.replaceState(null, null, project_prefix + response.data['project_id']);
+          this.initAnalysis(response.data[SESSID_KEY]);
+        }).catch(error => {
+          console.error("There was an error loading project:", error);
+        });
       } else {
         // directly go to app_entry.py, for dev/debug
         // change in utils.js the url
