@@ -1,6 +1,9 @@
 # TODO: change to Makefile
 
 # build frontend
+cd ./frontend
+npm run build
+cd ..
 
 # build
 podman build -t dac_web:latest .
