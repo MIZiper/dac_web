@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const host_port = "localhost:5000";
+const host_port = import.meta.env.MODE === "development" ? "localhost:5000" : window.location.host;
 export const site_prefix = ""; // "/dac"; //
 const app_prefix = "/app"; // ""; //
 const mpl_prefix = "/mpl";

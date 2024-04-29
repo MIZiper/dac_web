@@ -23,8 +23,8 @@
       <v-btn title="Import data"> <!-- save project, publish project -->
         <v-icon>mdi-download</v-icon>
       </v-btn>
-      <v-btn title="Open project">
-        <v-icon>mdi-folder-open</v-icon>
+      <v-btn title="Save project">
+        <v-icon>mdi-content-save</v-icon>
       </v-btn>
     </v-app-bar>
 

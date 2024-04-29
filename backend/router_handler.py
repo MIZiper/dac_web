@@ -49,7 +49,7 @@ user_manager = UserManager()
 with PodmanClient(base_url=podman_url) as client:
     @app.route("/")
     @app.route('/projects/<string:project_id>', methods=['GET']) # let frontend to load and judge
-    def index():
+    def index(project_id: str=None):
         return send_from_directory(app.static_folder, "index.html")
     
     @app.route("/<path:filename>")
