@@ -200,6 +200,14 @@ export default {
       this.emitter.emit('context_type-refresh-request');
       this.emitter.emit('action_type-refresh-request');
       this.emitter.emit('mpl-init-request', sess_id);
+
+      window.addEventListener("beforeunload", function (e) {
+        ax_router.post('/term', {}, {headers: {[SESSID_KEY]: sess_id}}).then(response => {
+          console.log(response.data['message']);
+        }).catch(error => {
+          console.error("There was an error:", error);
+        });
+      }, false);
     },
 
     handlePluginRequest() {

@@ -107,7 +107,6 @@ with PodmanClient(base_url=podman_url) as client:
             # TODO: and return project_id?
             return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
         except APIError:
-            # subproc = subprocess.Popen(["python", app_entry]) # and pass port
             pass
         except Exception as e:
             return jsonify({"error": f"Failed to start analysis: {str(e)}"}), 500
@@ -117,8 +116,8 @@ with PodmanClient(base_url=podman_url) as client:
         sess_id = start_process_session()
         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
 
-    @app.route('/term', methods=['POST'])
-    def terminate_session():
+    @app.route('/_term_', methods=['POST'])
+    def terminate_container_session():
         sess_id = request.headers.get(SESSID_KEY)
         if not user_manager.validate_sess(sess_id):
             return jsonify({"error": "Invalid or missing session ID"}), 401
@@ -128,12 +127,22 @@ with PodmanClient(base_url=podman_url) as client:
             container.remove(force=True)
             user_manager.remove_sess(sess_id)
 
-            # or kill subprocess
-            # remove sock file
-
             return jsonify({"message": "Analysis terminated"}), 200
         except NotFound:
             return jsonify({"error": "Container not found"}), 404
+        except Exception as e:
+            return jsonify({"error": f"Failed to terminate analysis: {str(e)}"}), 500
+        
+    @app.route('/term', methods=['POST'])
+    def terminate_process_session():
+        sess_id = request.headers.get(SESSID_KEY)
+        if not user_manager.validate_sess(sess_id):
+            return jsonify({"error": "Invalid or missing session ID"}), 401
+        
+        try:
+            user_manager.get_sess_obj(sess_id).terminate()
+            user_manager.remove_sess(sess_id)
+            return jsonify({"message": "Analysis terminated"}), 200
         except Exception as e:
             return jsonify({"error": f"Failed to terminate analysis: {str(e)}"}), 500
         
