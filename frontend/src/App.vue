@@ -46,10 +46,14 @@
       </v-row>
     </v-container>
 
-    <v-dialog v-model="start_dialog" persistent max-width="600px">
+    <v-dialog v-model="start_dialog.is_show" persistent max-width="600px">
       <v-card>
-        <v-card-title>Start analysis</v-card-title>
-        <v-card-text>Start a new analysis or load an existing project</v-card-text>
+        <v-progress-linear v-if="start_dialog.progress_bar" color="green darken-1" indeterminate></v-progress-linear>
+        <v-card-title>{{ start_dialog.title }}</v-card-title>
+        <v-card-text>
+          {{ start_dialog.desc }}
+          <span v-if="start_dialog.error" style="color: red; font-weight: bold;">{{ start_dialog.error }}</span>
+        </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="green darken-1" text @click="startOption('new')">New</v-btn>
@@ -63,14 +67,6 @@
             <v-icon v-else>mdi-file</v-icon>
           </template>
         </v-treeview>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="load_dialog" persistent max-width="600px">
-      <v-card>
-        <v-progress-linear color="green darken-1" indeterminate></v-progress-linear>
-        <v-card-title>Load project</v-card-title>
-        <v-card-text>Loading project ...</v-card-text>
       </v-card>
     </v-dialog>
   </v-app>
@@ -101,8 +97,14 @@ export default {
   data() {
     return {
       title: "DAC analysis frame",
-      start_dialog: true,
-      load_dialog: false,
+
+      start_dialog: {
+        is_show: true,
+        progress_bar: true,
+        title: "Welcome to DAC",
+        desc: "Initializing DAC ...",
+        error: "",
+      },
 
       actives: [],
       files: [
@@ -124,48 +126,58 @@ export default {
     if (pathname.startsWith(project_prefix)) {
       let project_id = pathname.substring(project_prefix.length);
 
-      this.start_dialog = false;
-      this.load_dialog = true;
+      this.start_dialog.desc = "Loading project ...";
+      this.start_dialog.progress_bar = true;
+      this.start_dialog.error = "";
 
       ax_router.post('/load', { project_id: project_id }).then(response => {
         console.log(response.data['message']);
         ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
-        this.load_dialog = false;
+
+        this.start_dialog.is_show = false;
+
         this.initAnalysis(response.data[SESSID_KEY]);
       }).catch(error => {
+        this.start_dialog.progress_bar = false;
         if (error.response.status == 404) {
-        //   this.start_dialog = true;
-        // } else {
-        //   this.start_dialog = false;
-
-        // show message
-        // redirect to home
-        // change url
+          this.start_dialog.error = "Project not found, create or load one.";
+        } else {
+          this.start_dialog.error = "Unknown error.";
         }
         console.error("There was an error loading project:", error);
       });
+    } else {
+      this.start_dialog.progress_bar = false;
+      this.start_dialog.desc = "Start a new project or load existing one.";
     }
   },
   methods: {
     startOption(option) {
+      this.start_dialog.progress_bar = true;
       if (option == 'new') {
         ax_router.post('/new').then(response => {
           console.log(response.data['message']);
           ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
-          this.start_dialog = false;
+          this.start_dialog.is_show = false;
+          window.history.replaceState(null, null, site_prefix+"/"); // reset to empty, including case for unfound project
           this.initAnalysis(response.data[SESSID_KEY]);
         }).catch(error => {
+          this.start_dialog.progress_bar = false;
+          this.start_dialog.error = "Error while creating new session.";
           console.error("There was an error creating new session:", error);
         });
       } else if (option == 'load') {
         ax_router.post('/load_saved', { project_path: this.actives[0] }).then(response => {
           console.log(response.data['message']);
           ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
-          this.start_dialog = false;
+
+          this.start_dialog.is_show = false;
           window.history.replaceState(null, null, project_prefix + response.data['project_id']);
           this.initAnalysis(response.data[SESSID_KEY]);
         }).catch(error => {
+          this.start_dialog.progress_bar = false;
+          this.start_dialog.error = "Error while loading project.";
           console.error("There was an error loading project:", error);
         });
       } else {

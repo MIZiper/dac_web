@@ -48,6 +48,7 @@ user_manager = UserManager()
 
 with PodmanClient(base_url=podman_url) as client:
     @app.route("/")
+    @app.route('/projects/<string:project_id>', methods=['GET']) # let frontend to load and judge
     def index():
         return send_from_directory(app.static_folder, "index.html")
     
@@ -56,14 +57,6 @@ with PodmanClient(base_url=podman_url) as client:
         # should let analysis container to serve static files?
         # so the dependencies can be maintained by container versions
         return send_from_directory(app.static_folder, filename)
-
-    @app.route('/projects/<string:project_id>', methods=['GET'])
-    def index_project(project_id):
-        if found(project_id):
-            return index()
-        else:
-            return jsonify({"error": "Project not found"}), 404
-            # redirect to index.html and notify user 404
 
     @app.route('/load', methods=['POST'])
     def load_project(project_id: str=None):
