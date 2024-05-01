@@ -4,6 +4,7 @@ const host_port = import.meta.env.MODE === "development" ? "localhost:5000" : wi
 export const site_prefix = ""; // "/dac"; //
 const app_prefix = "/app"; // ""; //
 const mpl_prefix = "/mpl";
+export const project_prefix = site_prefix + "/projects/";
 
 export const FIG_NUM = 1;
 export const SESSID_KEY = "dac-sess_id";

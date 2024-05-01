@@ -21,11 +21,9 @@
       </v-menu>
 
       <v-btn title="Import data"> <!-- save project, publish project -->
-        <v-icon>mdi-download</v-icon>
+        <v-icon>mdi-database-import</v-icon>
       </v-btn>
-      <v-btn title="Save project">
-        <v-icon>mdi-content-save</v-icon>
-      </v-btn>
+      <SavePublish />
     </v-app-bar>
 
     <v-container fluid class="mt-16">
@@ -79,10 +77,9 @@ import ContextList from './components/ContextList.vue';
 import YamlEditor from './components/YamlEditor.vue';
 import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
+import SavePublish from './components/SavePublish.vue';
 import { VTreeview } from 'vuetify/labs/VTreeview';
-import { ax_router, ax_app, SESSID_KEY, site_prefix } from '@/utils';
-
-const project_prefix = site_prefix + "/projects/";
+import { ax_router, ax_app, SESSID_KEY, site_prefix, project_prefix } from '@/utils';
 
 export default {
   components: {
@@ -132,7 +129,6 @@ export default {
 
       ax_router.post('/load', { project_id: project_id }).then(response => {
         console.log(response.data['message']);
-        ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
         this.start_dialog.is_show = false;
 
@@ -148,7 +144,7 @@ export default {
       });
     } else {
       this.start_dialog.progress_bar = false;
-      this.start_dialog.desc = "Start a new project or load existing one.";
+      this.start_dialog.desc = "Start a new analysis project or load from list below.";
     }
   },
   methods: {
@@ -157,10 +153,9 @@ export default {
       if (option == 'new') {
         ax_router.post('/new').then(response => {
           console.log(response.data['message']);
-          ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
           this.start_dialog.is_show = false;
-          window.history.replaceState(null, null, site_prefix+"/"); // reset to empty, including case for unfound project
+          window.history.replaceState(null, null, site_prefix + "/"); // reset to empty, including case for unfound project
           this.initAnalysis(response.data[SESSID_KEY]);
         }).catch(error => {
           this.start_dialog.progress_bar = false;
@@ -170,7 +165,6 @@ export default {
       } else if (option == 'load') {
         ax_router.post('/load_saved', { project_path: this.actives[0] }).then(response => {
           console.log(response.data['message']);
-          ax_app.defaults.headers.common[SESSID_KEY] = response.data[SESSID_KEY];
 
           this.start_dialog.is_show = false;
           window.history.replaceState(null, null, project_prefix + response.data['project_id']);
@@ -195,6 +189,9 @@ export default {
       }
     },
     initAnalysis(sess_id) {
+      ax_app.defaults.headers.common[SESSID_KEY] = sess_id;
+      ax_router.defaults.headers.common[SESSID_KEY] = sess_id;
+
       this.emitter.emit('context-refresh-request');
       this.emitter.emit('plugin-refresh-request');
       this.emitter.emit('context_type-refresh-request');
@@ -202,7 +199,7 @@ export default {
       this.emitter.emit('mpl-init-request', sess_id);
 
       window.addEventListener("beforeunload", function (e) {
-        ax_router.post('/term', {}, {headers: {[SESSID_KEY]: sess_id}}).then(response => {
+        ax_router.post('/term', {}).then(response => {
           console.log(response.data['message']);
         }).catch(error => {
           console.error("There was an error:", error);
