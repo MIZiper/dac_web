@@ -21,7 +21,7 @@ container_image = "dac_web:latest"
 SESSID_KEY = "dac-sess_id"
 PROJDIR_KEY = "project_folder"
 SAVEDIR_KEY = "save_folder"
-__VERSION__ = "0.0.1"
+__VERSION__ = "0.0.2"
 
 
 
