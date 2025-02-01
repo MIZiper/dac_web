@@ -3,5 +3,4 @@ flask_cors
 podman
 matplotlib
 tornado
-# dac>=0.3
-https://github.com/MIZiper/dac/archive/refs/heads/master.zip
+miz-dac
