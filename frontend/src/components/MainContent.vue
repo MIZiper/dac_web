@@ -9,7 +9,7 @@
             <v-icon>mdi-refresh-auto</v-icon>
         </v-fab>
         <div id="figure">
-            <img v-if="!figure" src="https://via.placeholder.com/1000x600" />
+            <img v-if="!figure" src="https://placehold.co/1000x600?text=Loading+matplotlib" />
         </div>
     </v-card>
 </template>
