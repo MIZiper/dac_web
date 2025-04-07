@@ -2,7 +2,7 @@
 
 ![DAC logo](./frontend/src/assets/logo.png)
 
-[DAC](http://githhub.com/miziper/dac.git) web version, which enables data processing via web browser with DAC frame way of working.
+[DAC](http://github.com/miziper/dac.git) web version, which enables data processing via web browser with DAC frame way of working.
 
 ## Introduction
 
