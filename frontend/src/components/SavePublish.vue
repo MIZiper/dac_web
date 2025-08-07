@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import { ax_router } from '@/utils';
+import { ax_api } from '@/utils';
 import Hashes from 'jshashes';
 import { site_prefix, project_prefix } from '@/utils';
 
@@ -78,7 +78,7 @@ export default {
                 data["publish_name"] = publish_name
             }
 
-            ax_router.post("/save", data).then(response => {
+            ax_api.post("/save", data).then(response => {
                 console.log(response.data['message']);
                 window.history.replaceState(null, null, project_prefix + response.data['project_id']);
                 this.menu = false;

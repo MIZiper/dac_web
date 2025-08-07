@@ -79,7 +79,7 @@ import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
 import SavePublish from './components/SavePublish.vue';
 import { VTreeview } from 'vuetify/labs/VTreeview';
-import { ax_router, ax_app, SESSID_KEY, site_prefix, project_prefix } from '@/utils';
+import { ax_api, ax_app, SESSID_KEY, site_prefix, project_prefix } from '@/utils';
 
 export default {
   components: {
@@ -127,7 +127,7 @@ export default {
       this.start_dialog.progress_bar = true;
       this.start_dialog.error = "";
 
-      ax_router.post('/load', { project_id: project_id }).then(response => {
+      ax_api.post('/load', { project_id: project_id }).then(response => {
         console.log(response.data['message']);
 
         this.start_dialog.is_show = false;
@@ -151,7 +151,7 @@ export default {
     startOption(option) {
       this.start_dialog.progress_bar = true;
       if (option == 'new') {
-        ax_router.post('/new').then(response => {
+        ax_api.post('/new').then(response => {
           console.log(response.data['message']);
 
           this.start_dialog.is_show = false;
@@ -163,7 +163,7 @@ export default {
           console.error("There was an error creating new session:", error);
         });
       } else if (option == 'load') {
-        ax_router.post('/load_saved', { project_path: this.actives[0] }).then(response => {
+        ax_api.post('/load_saved', { project_path: this.actives[0] }).then(response => {
           console.log(response.data['message']);
 
           this.start_dialog.is_show = false;
@@ -190,7 +190,7 @@ export default {
     },
     initAnalysis(sess_id) {
       ax_app.defaults.headers.common[SESSID_KEY] = sess_id;
-      ax_router.defaults.headers.common[SESSID_KEY] = sess_id;
+      ax_api.defaults.headers.common[SESSID_KEY] = sess_id;
 
       this.emitter.emit('context-refresh-request');
       this.emitter.emit('plugin-refresh-request');
@@ -199,7 +199,7 @@ export default {
       this.emitter.emit('mpl-init-request', sess_id);
 
       window.addEventListener("beforeunload", function (e) {
-        ax_router.post('/term', {}).then(response => {
+        ax_api.post('/term', {}).then(response => {
           console.log(response.data['message']);
         }).catch(error => {
           console.error("There was an error:", error);
@@ -236,7 +236,7 @@ export default {
       // If I return code below, only folders-in-one-chain can be opened
       // no idea how to solve
 
-      ax_router.post('/project_files', {
+      ax_api.post('/project_files', {
         relpath: item.relpath,
       }).then(response => {
         response.data['dirnames'].forEach(d => {

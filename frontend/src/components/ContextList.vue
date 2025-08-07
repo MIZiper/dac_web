@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import { ax_router, ax_app } from '@/utils';
+import { ax_api, ax_app } from '@/utils';
 const GCK_ID = 'global';
 const DEFAULT_NAME = '[New Context]';
 

@@ -26,7 +26,6 @@ export default defineConfig({
       },
     }),
   ],
-  // base: '/dac/',
   define: { 'process.env': {} },
   resolve: {
     alias: {
@@ -46,6 +45,10 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/app': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
