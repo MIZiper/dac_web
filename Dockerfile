@@ -21,8 +21,8 @@ COPY backend/ /app/backend/
 # Install Python dependencies
 RUN pip install -r /app/backend/requirements.txt
 
-# Expose the port the app runs on
-EXPOSE 5000
+ENV FRONTEND_DIST=/app/frontend/dist
+EXPOSE 8000
 
 # Command to run the router module by default
 CMD ["python", "/app/backend/router_entry.py"]
