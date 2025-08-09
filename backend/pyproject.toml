@@ -9,7 +9,10 @@ dependencies = [
     "httpx>=0.28.1",
     "matplotlib>=3.10.5",
     "miz-dac>=0.3.4",
-    "tornado>=6.5.1",
+    "nest-asyncio>=1.6.0",
+    "starlette>=0.47.2",
+    "uvicorn>=0.35.0",
+    "websockets>=15.0.1",
 ]
 
 [tool.setuptools.package-dir]
