@@ -16,7 +16,7 @@ app_entry = "backend/app_entry.py"
 SESSID_KEY = "dac-sess_id"
 PROJDIR_KEY = "project_folder"
 SAVEDIR_KEY = "save_folder"
-__VERSION__ = "0.0.2"
+__VERSION__ = "0.0.3"
 
 
 
