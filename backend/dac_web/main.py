@@ -33,5 +33,3 @@ def main():
 
 if __name__=="__main__":
     main()
-    # parser.add_argument("--project-folder", type=str, default=path.join(path.dirname(__file__), "../projects"))
-    # parser.add_argument("--save-folder", type=str, default=path.join(path.dirname(__file__), "../projects_save"))

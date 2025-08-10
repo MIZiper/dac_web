@@ -19,7 +19,7 @@ app.mount("", dac_app)
 
 def main():
     import uvicorn
-    uvicorn.run("dac_web.app:app")
+    uvicorn.run("dac_web.app:app", host='localhost', port=0)
 
 
 if __name__=="__main__":

@@ -6,13 +6,12 @@ Pass all "/app" requests to internal app services.
 import asyncio
 import websockets
 import httpx
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import Response
 
-app = FastAPI()
+from dac_web.router.handler import user_manager, SESSID_KEY
 
-INTERNAL_HTTP_URL = "http://localhost:9000"
-INTERNAL_WS_URL = "ws://localhost:9000"
+app = FastAPI()
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def proxy_http(request: Request, path: str):
@@ -21,15 +20,13 @@ async def proxy_http(request: Request, path: str):
     # self.add_header("Access-Control-Allow-Headers", SESSID_KEY)
 
     async with httpx.AsyncClient() as client:
-        # uuid = self.request.headers.get(SESSID_KEY) or self.get_query_argument(SESSID_KEY)
-        # if not user_manager.validate_sess(uuid):
-        #     self.set_status(401)
-        #     self.write("Session not found, unauth")
-        #     return
-        # else:
-        #     conn = user_manager.get_sess_conn(uuid)
+        uuid = request.headers.get(SESSID_KEY) or request.url.get_query_argument(SESSID_KEY)
+        if not user_manager.validate_sess(uuid):
+            raise HTTPException(status_code=401, detail="Invalid or missing session ID")
+        else:
+            conn = user_manager.get_sess_conn(uuid)
             
-        url = f"{INTERNAL_HTTP_URL}/{path}"
+        url = f"http://{conn}/{path}"
         headers = dict(request.headers)
         body = await request.body()
 
@@ -48,16 +45,15 @@ async def proxy_http(request: Request, path: str):
 
 @app.websocket("/{path:path}")
 async def proxy_websocket(websocket: WebSocket, path: str):
-    # uuid = websocket.headers.get(SESSID_KEY) or websocket.get_query_argument(SESSID_KEY)
+    uuid = websocket.headers.get(SESSID_KEY) or websocket.get_query_argument(SESSID_KEY)
 
-    # if not user_manager.validate_sess(uuid):
-    #     await websocket.write_message("Session not found, connection close")
-    #     await websocket.send_denial_response()
-    #     return
-    # conn = user_manager.get_sess_conn(uuid)
+    if not user_manager.validate_sess(uuid):
+        await websocket.send_denial_response()
+        return
+    conn = user_manager.get_sess_conn(uuid)
 
     await websocket.accept()
-    internal_url = f"{INTERNAL_WS_URL}/{path}"
+    internal_url = f"ws://{conn}/{path}"
 
     async with websockets.connect(internal_url) as internal_ws:
         async def client_to_target():

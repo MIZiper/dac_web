@@ -1,42 +1,44 @@
+"""Router for applications
+
+Create, read, save, terminate app services.
+"""
+
+import os, asyncio, httpx, json
 from os import path
 from uuid import uuid4
-import os
 from datetime import datetime
-import asyncio
 from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body
-from fastapi.responses import JSONResponse, FileResponse
-import subprocess, httpx, json
 
 
 
 app = FastAPI()
-app_entry = "dac_web.app:app"
 
+APPMOD_ENTRY = "dac_web.app:app"
 SESSID_KEY = "dac-sess_id"
-PROJDIR = os.getenv("PROJECT_DIR")
-SAVEDIR = os.getenv("PROJECT_SAVE_DIR")
+PROJDIR = os.getenv("PROJECT_DIR", "./projects")
+SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./projects_save")
 __VERSION__ = version("dac_web-backend")
 
 
 
 class UserManager(dict):
-    def validate_sess(self, sess_id):
+    def validate_sess(self, sess_id: str):
         return sess_id is not None and sess_id in self
 
-    def set_sess(self, sess_id, conn_str, app_obj):
+    def set_sess(self, sess_id: str, conn_str: str, app_obj: asyncio.subprocess.Process):
         self[sess_id] = conn_str, app_obj
 
-    def get_sess_conn(self, sess_id):
+    def get_sess_conn(self, sess_id: str) -> str:
         conn_str, app_obj = self[sess_id]
         return conn_str
 
-    def get_sess_obj(self, sess_id):
+    def get_sess_obj(self, sess_id: str) -> asyncio.subprocess.Process:
         conn_str, app_obj = self[sess_id]
         return app_obj
 
-    def remove_sess(self, sess_id):
+    def remove_sess(self, sess_id: str):
         if sess_id in self:
             del self[sess_id]
 
@@ -50,7 +52,7 @@ async def load_project(data: dict = Body(...)):
         with open(project_fpath, mode='r') as fp:
             config = json.load(fp)['dac']
 
-        sess_id = start_process_session()
+        sess_id = await start_process_session()
         conn = user_manager.get_sess_conn(sess_id)
         async with httpx.AsyncClient() as client:
             resp = await client.post(f"http://{conn}/init", json=config)
@@ -68,7 +70,7 @@ async def load_saved_project(data: dict = Body(...)):
 
 @app.post("/new")
 async def new_process_session():
-    sess_id = start_process_session()
+    sess_id = await start_process_session()
     return {"message": "Analysis started", SESSID_KEY: sess_id}
 
 @app.post('/term')
@@ -154,44 +156,19 @@ def get_project_id_by_path(project_path):
     
     return project_id
 
-def start_process_session():
+async def start_process_session():
     sess_id = uuid4().hex
 
-    p_inst = subprocess.Popen(
-        ["python", path.join(path.dirname(__file__), "..", app_entry), "-p", "0"],
-        stdout=subprocess.PIPE,
-        # stderr=subprocess.PIPE,
+    process = await asyncio.create_subprocess_exec(
+        "python", "-m", APPMOD_ENTRY,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
     )
-    host_port = p_inst.stdout.readline().decode().split("...")[-1].strip()
-    user_manager.set_sess(sess_id, host_port, p_inst)
 
+    # make a place to log
 
-
-    # process = await asyncio.create_subprocess_exec(
-    #     'ls', '-l',
-    #     stdout=asyncio.subprocess.PIPE,
-    #     stderr=asyncio.subprocess.PIPE
-    # )
-
-    # stdout, stderr = await process.communicate()
-
-    # print(f'[stdout]\n{stdout.decode()}')
-    # print(f'[stderr]\n{stderr.decode()}')
-
-    
-    
-    # Make sure the service is ready
-    # 1)
-    # print(p_inst.stdout.readline()) # >> ready <<
-    # return {}, 200
-    # 
-    # 2)
-    # import requests, time
-    # for i in range(5):
-    #     time.sleep(0.01)
-    #     response = requests.get(f"http://{host_port}/ready")
-    #     if response.status_code == 204:
-    #         return jsonify({"message": "Analysis started", SESSID_KEY: sess_id}), 200
-    # return jsonify({"error": "failed to connect app"}), 500
+    firstline = await process.stdout.readline()
+    host_port = firstline.decode().split("...")[-1].strip()
+    user_manager.set_sess(sess_id, host_port, process)
 
     return sess_id
