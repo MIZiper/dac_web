@@ -1,11 +1,7 @@
-"""Router entry
+"""Reverse proxy
 
-Pass the request to backend app.
+Pass all "/app" requests to internal app services.
 """
-
-
-from router_handler import SESSID_KEY, app, user_manager, PROJDIR_KEY, SAVEDIR_KEY
-
 
 import asyncio
 import websockets
@@ -52,13 +48,13 @@ async def proxy_http(request: Request, path: str):
 
 @app.websocket("/{path:path}")
 async def proxy_websocket(websocket: WebSocket, path: str):
-    uuid = websocket.headers.get(SESSID_KEY) or websocket.get_query_argument(SESSID_KEY)
+    # uuid = websocket.headers.get(SESSID_KEY) or websocket.get_query_argument(SESSID_KEY)
 
-    if not user_manager.validate_sess(uuid):
-        await websocket.write_message("Session not found, connection close")
-        await websocket.send_denial_response()
-        return
-    conn = user_manager.get_sess_conn(uuid)
+    # if not user_manager.validate_sess(uuid):
+    #     await websocket.write_message("Session not found, connection close")
+    #     await websocket.send_denial_response()
+    #     return
+    # conn = user_manager.get_sess_conn(uuid)
 
     await websocket.accept()
     internal_url = f"{INTERNAL_WS_URL}/{path}"

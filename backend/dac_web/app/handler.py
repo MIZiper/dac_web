@@ -5,8 +5,7 @@ from fastapi import FastAPI, Request, HTTPException, Body, Path as FPath
 from fastapi.responses import JSONResponse
 
 from matplotlib.figure import Figure
-import matplotlib as mpl
-from matplotlib.backends.backend_webagg import Gcf
+from matplotlib._pylab_helpers import Gcf
 
 import dac
 from dac.core import Container, GCK, NodeBase, ActionNode, DataNode

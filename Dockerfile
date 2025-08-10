@@ -22,6 +22,8 @@ COPY backend/ /app/backend/
 RUN pip install -r /app/backend/requirements.txt
 
 ENV FRONTEND_DIST=/app/frontend/dist
+ENV PROJECT_DIR=/app/projects
+ENV PROJECT_SAVE_DIR=/app/projects_save
 EXPOSE 8000
 
 # Command to run the router module by default

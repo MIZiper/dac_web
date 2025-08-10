@@ -2,6 +2,8 @@ from os import path
 from uuid import uuid4
 import os
 from datetime import datetime
+import asyncio
+from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body
 from fastapi.responses import JSONResponse, FileResponse
@@ -10,12 +12,12 @@ import subprocess, httpx, json
 
 
 app = FastAPI()
-app_entry = "backend/app_entry.py"
+app_entry = "dac_web.app:app"
 
 SESSID_KEY = "dac-sess_id"
-PROJDIR_KEY = "project_folder"
-SAVEDIR_KEY = "save_folder"
-__VERSION__ = "0.0.2"
+PROJDIR = os.getenv("PROJECT_DIR")
+SAVEDIR = os.getenv("PROJECT_SAVE_DIR")
+__VERSION__ = version("dac_web-backend")
 
 
 
@@ -40,37 +42,10 @@ class UserManager(dict):
 
 user_manager = UserManager()
 
-import asyncio
-
-async def run_command():
-    process = await asyncio.create_subprocess_exec(
-        'ls', '-l',
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-
-    stdout, stderr = await process.communicate()
-
-    print(f'[stdout]\n{stdout.decode()}')
-    print(f'[stderr]\n{stderr.decode()}')
-
-asyncio.run(run_command())
-
-
-
-@app.get("/")
-@app.get('/projects/{project_id}')
-async def index(project_id: str = None):
-    return FileResponse(path=path.join(app.root_path, "../frontend/dist/index.html"))
-
-@app.get("/{filename:path}")
-async def static_files(filename: str):
-    return FileResponse(path=path.join(app.root_path, "../frontend/dist", filename))
-
 @app.post('/load')
 async def load_project(data: dict = Body(...)):
     project_id = data.get("project_id")
-    project_fpath = path.join(app.extra[PROJDIR_KEY], project_id)
+    project_fpath = path.join(PROJDIR, project_id)
     if path.isfile(project_fpath):
         with open(project_fpath, mode='r') as fp:
             config = json.load(fp)['dac']
@@ -123,7 +98,7 @@ async def save_project(request: Request, data: dict = Body(...)):
     }
 
     if project_id:
-        project_fpath = path.join(app.extra[PROJDIR_KEY], project_id)
+        project_fpath = path.join(PROJDIR, project_id)
         if path.isfile(project_fpath):
             with open(project_fpath, mode='r') as fp:
                 config = json.load(fp)
@@ -138,7 +113,7 @@ async def save_project(request: Request, data: dict = Body(...)):
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"http://{conn}/save")
     if resp.status_code == 200:
-        project_fpath = path.join(app.extra[PROJDIR_KEY], project_id)
+        project_fpath = path.join(PROJDIR, project_id)
         config = resp.json()
         with open(project_fpath, mode="w") as fp:
             json.dump({
@@ -147,7 +122,7 @@ async def save_project(request: Request, data: dict = Body(...)):
             }, fp, indent=2)
 
         if publish_name:
-            save_fpath = path.join(app.extra[SAVEDIR_KEY], publish_name)
+            save_fpath = path.join(SAVEDIR, publish_name)
             lines = ""
             if path.isfile(save_fpath):
                 with open(save_fpath, mode="r") as fp:
@@ -163,7 +138,7 @@ async def save_project(request: Request, data: dict = Body(...)):
 @app.post("/project_files")
 async def get_project_files(data: dict = Body(...)):
     relpath = data.get("relpath").strip("./")
-    node_dir = path.join(app.extra[SAVEDIR_KEY], relpath)
+    node_dir = path.join(SAVEDIR, relpath)
     dirpath, dirnames, filenames = next(os.walk(node_dir))
     return {"dirnames": dirnames, "filenames": filenames}
 
@@ -174,7 +149,7 @@ async def get_project_files(data: dict = Body(...)):
 # ------
 
 def get_project_id_by_path(project_path):
-    with open(path.join(app.extra[SAVEDIR_KEY], project_path.strip("./")), mode='r') as fp:
+    with open(path.join(SAVEDIR, project_path.strip("./")), mode='r') as fp:
         project_id = fp.readline().split(";")[0].strip()
     
     return project_id
@@ -189,6 +164,21 @@ def start_process_session():
     )
     host_port = p_inst.stdout.readline().decode().split("...")[-1].strip()
     user_manager.set_sess(sess_id, host_port, p_inst)
+
+
+
+    # process = await asyncio.create_subprocess_exec(
+    #     'ls', '-l',
+    #     stdout=asyncio.subprocess.PIPE,
+    #     stderr=asyncio.subprocess.PIPE
+    # )
+
+    # stdout, stderr = await process.communicate()
+
+    # print(f'[stdout]\n{stdout.decode()}')
+    # print(f'[stderr]\n{stderr.decode()}')
+
+    
     
     # Make sure the service is ready
     # 1)
