@@ -25,7 +25,7 @@ podman pull docker.io/miziper/dac_web
 ### Command to setup
 
 ```bash
-podman run -p 5000:5000 dac_web
+podman run -p 8000:8000 dac_web
 ```
 
 ### Storage structure

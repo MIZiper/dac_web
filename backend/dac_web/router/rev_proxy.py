@@ -74,6 +74,6 @@ async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = 
                     elif isinstance(data, bytes):
                         await websocket.send_bytes(data)
             except Exception:
-                await websocket.close()
+                await websocket.close() # TODO: issue here, error again when client is already closed.
 
         await asyncio.gather(client_to_target(), target_to_client())

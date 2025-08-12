@@ -119,7 +119,7 @@ async def put_context_of(context_key_id: str, data: dict = Body(...)):
     }
 
 @app.post('/contexts/{context_key_id}')
-async def post_context_of(context_key_id: str):
+async def post_context_of(context_key_id: str): # TODO: seems issue here when switching context
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
