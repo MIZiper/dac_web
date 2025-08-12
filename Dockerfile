@@ -9,18 +9,17 @@ RUN npm run build
 # Stage 2: Set up the Python environment
 FROM python:3.12-slim
 WORKDIR /app
-
-# Copy the built frontend files
-COPY --from=frontend-builder /app/dist /app/frontend/dist
 RUN mkdir -p /app/logs
 RUN mkdir -p /app/projects
 RUN mkdir -p /app/projects_save
+RUN pip install pip-tools
+COPY backend/pyproject.toml ./
+RUN pip-compile pyproject.toml --output-file=requirements.txt
+RUN pip install -r requirements.txt
 
-# Copy the Python script and API files
+COPY --from=frontend-builder /app/dist /app/frontend/dist
 COPY backend/ /app/backend/
-
-# Install Python dependencies
-RUN pip install -r /app/backend/requirements.txt
+RUN pip install ./backend
 
 ENV FRONTEND_DIST=/app/frontend/dist
 ENV LOG_DIR=/app/logs
