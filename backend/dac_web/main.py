@@ -29,7 +29,7 @@ if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):
 
 def main():
     import uvicorn
-    uvicorn.run("dac_web.main:app")
+    uvicorn.run("dac_web.main:app", host="0.0.0.0", port=8000)
 
 if __name__=="__main__":
     main()
