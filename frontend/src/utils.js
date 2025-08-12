@@ -1,17 +1,16 @@
 import axios from "axios";
 
-const host_port = import.meta.env.MODE === "development" ? "localhost:5000" : window.location.host;
-export const site_prefix = ""; // "/dac"; //
-const app_prefix = "/app"; // ""; //
+const app_prefix = "/app";
+const api_prefix = "/api";
 const mpl_prefix = "/mpl";
-export const project_prefix = site_prefix + "/projects/";
+export const project_prefix = "/projects/";
 
 export const FIG_NUM = 1;
 export const SESSID_KEY = "dac-sess_id";
-export const mpl_urn = `${host_port}${site_prefix}${app_prefix}${mpl_prefix}`; // http://localhost:5000/dac/app/mpl
+export const mpl_urn = `${app_prefix}${mpl_prefix}`; // /app/mpl
 
-export const ax_router = axios.create({
-    baseURL: `http://${host_port}${site_prefix}`, // http://localhost:5000/dac
+export const ax_api = axios.create({
+    baseURL: api_prefix,
     responseType: "json",
     headers: {
         "Content-Type": "application/json",
@@ -20,7 +19,7 @@ export const ax_router = axios.create({
 });
 
 export const ax_app = axios.create({
-    baseURL: `http://${host_port}${site_prefix}${app_prefix}`, // http://localhost:5000/dac/app
+    baseURL: app_prefix,
     responseType: "json",
     headers: {
         "Content-Type": "application/json",

@@ -13,7 +13,7 @@
 </template>
 
 <script>
-import { ax_router, ax_app } from '@/utils';
+import { ax_api, ax_app } from '@/utils';
 
 export default {
     data() {

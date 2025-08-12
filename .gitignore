@@ -2,3 +2,10 @@ test*/
 venv*/
 
 __pycache__/
+.env
+.egg-info/
+*.egg-info/
+
+projects_save/
+projects/
+logs/
