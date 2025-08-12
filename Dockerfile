@@ -12,6 +12,7 @@ WORKDIR /app
 
 # Copy the built frontend files
 COPY --from=frontend-builder /app/dist /app/frontend/dist
+RUN mkdir -p /app/logs
 RUN mkdir -p /app/projects
 RUN mkdir -p /app/projects_save
 
@@ -22,9 +23,10 @@ COPY backend/ /app/backend/
 RUN pip install -r /app/backend/requirements.txt
 
 ENV FRONTEND_DIST=/app/frontend/dist
+ENV LOG_DIR=/app/logs
 ENV PROJECT_DIR=/app/projects
 ENV PROJECT_SAVE_DIR=/app/projects_save
 EXPOSE 8000
 
 # Command to run the router module by default
-CMD ["python", "/app/backend/router_entry.py"]
+CMD ["python", "-m", "dac_web.main"]

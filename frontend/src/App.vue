@@ -79,7 +79,7 @@ import MainContent from './components/MainContent.vue';
 import MessageZone from './components/MessageZone.vue';
 import SavePublish from './components/SavePublish.vue';
 import { VTreeview } from 'vuetify/labs/VTreeview';
-import { ax_api, ax_app, SESSID_KEY, site_prefix, project_prefix } from '@/utils';
+import { ax_api, ax_app, SESSID_KEY, project_prefix } from '@/utils';
 
 export default {
   components: {
@@ -155,7 +155,7 @@ export default {
           console.log(response.data['message']);
 
           this.start_dialog.is_show = false;
-          window.history.replaceState(null, null, site_prefix + "/"); // reset to empty, including case for unfound project
+          window.history.replaceState(null, null, "/"); // reset to empty, including case for unfound project
           this.initAnalysis(response.data[SESSID_KEY]);
         }).catch(error => {
           this.start_dialog.progress_bar = false;

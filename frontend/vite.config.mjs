@@ -51,6 +51,7 @@ export default defineConfig({
       '/app': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        ws: true,
       },
     },
   },

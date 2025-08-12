@@ -41,7 +41,7 @@
 <script>
 import { ax_api } from '@/utils';
 import Hashes from 'jshashes';
-import { site_prefix, project_prefix } from '@/utils';
+import { project_prefix } from '@/utils';
 
 const sha1 = new Hashes.SHA1();
 

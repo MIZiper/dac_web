@@ -3,7 +3,7 @@
 Create, read, save, terminate app services.
 """
 
-import os, asyncio, httpx, json
+import os, asyncio, httpx, json, socket
 from os import path
 from uuid import uuid4
 from datetime import datetime
@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request, HTTPException, Body
 
 app = FastAPI()
 
-APPMOD_ENTRY = "dac_web.app:app"
+APPMOD_ENTRY = "dac_web.app.__init__"
 SESSID_KEY = "dac-sess_id"
 PROJDIR = os.getenv("PROJECT_DIR", "./projects")
 SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./projects_save")
@@ -142,7 +142,7 @@ async def get_project_files(data: dict = Body(...)):
     relpath = data.get("relpath").strip("./")
     node_dir = path.join(SAVEDIR, relpath)
     dirpath, dirnames, filenames = next(os.walk(node_dir))
-    return {"dirnames": dirnames, "filenames": filenames}
+    return {"dirnames": dirnames, "filenames": filenames} # TODO: filter out .gitkeep
 
 
 
@@ -159,16 +159,22 @@ def get_project_id_by_path(project_path):
 async def start_process_session():
     sess_id = uuid4().hex
 
+    # This is stupid, create a port and close, because I cannot get the output from FastAPI
+    sock = socket.socket()
+    sock.bind(('localhost', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    env = os.environ.copy()
+    env['APP_PORT'] = str(port)
+    env['APP_SESSID'] = sess_id
+
     process = await asyncio.create_subprocess_exec(
         "python", "-m", APPMOD_ENTRY,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        env=env,
     )
 
-    # make a place to log
+    await asyncio.sleep(3) # TODO: change to something smarter, need to get an indication that uvicorn has started.
 
-    firstline = await process.stdout.readline()
-    host_port = firstline.decode().split("...")[-1].strip()
-    user_manager.set_sess(sess_id, host_port, process)
+    user_manager.set_sess(sess_id, f"localhost:{port}", process)
 
     return sess_id

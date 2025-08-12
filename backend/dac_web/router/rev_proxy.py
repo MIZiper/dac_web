@@ -6,7 +6,7 @@ Pass all "/app" requests to internal app services.
 import asyncio
 import websockets
 import httpx
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.responses import Response
 
 from dac_web.router.handler import user_manager, SESSID_KEY
@@ -14,14 +14,10 @@ from dac_web.router.handler import user_manager, SESSID_KEY
 app = FastAPI()
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def proxy_http(request: Request, path: str):
-    # self.set_header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
-    # self.set_header("Access-Control-Allow-Headers", "access-control-allow-origin,authorization,content-type,x-requested-with")
-    # self.add_header("Access-Control-Allow-Headers", SESSID_KEY)
-
-    async with httpx.AsyncClient() as client:
-        uuid = request.headers.get(SESSID_KEY) or request.url.get_query_argument(SESSID_KEY)
-        if not user_manager.validate_sess(uuid):
+async def proxy_http(request: Request, path: str, sessid: str | None = Query(None, alias=SESSID_KEY)):
+    async with httpx.AsyncClient() as client: # TODO: try to reuse the client, otherwise every http request is a new connection to internal service
+        uuid = sessid or request.headers.get(SESSID_KEY)
+        if uuid is None or not user_manager.validate_sess(uuid):
             raise HTTPException(status_code=401, detail="Invalid or missing session ID")
         else:
             conn = user_manager.get_sess_conn(uuid)
@@ -44,15 +40,15 @@ async def proxy_http(request: Request, path: str):
         )
 
 @app.websocket("/{path:path}")
-async def proxy_websocket(websocket: WebSocket, path: str):
-    uuid = websocket.headers.get(SESSID_KEY) or websocket.get_query_argument(SESSID_KEY)
+async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = Query(None, alias=SESSID_KEY)):
+    await websocket.accept()
+    uuid = sessid or websocket.headers.get(SESSID_KEY)
 
-    if not user_manager.validate_sess(uuid):
-        await websocket.send_denial_response()
+    if uuid is None or not user_manager.validate_sess(uuid):
+        await websocket.close(code=1008, reason="Invalid or missing session ID")
         return
     conn = user_manager.get_sess_conn(uuid)
 
-    await websocket.accept()
     internal_url = f"ws://{conn}/{path}"
 
     async with websockets.connect(internal_url) as internal_ws:
