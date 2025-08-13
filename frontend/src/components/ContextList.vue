@@ -93,7 +93,9 @@ export default {
             });
         },
         handleContextChange(context_uuid) {
-            ax_app.post(`/contexts/${context_uuid}`, {}).then(response => {
+            ax_app.post(`/contexts/${context_uuid}`).then(response => {
+                // (issue 20250813-1) a weird issue, if with `{}` as config, http error can occur occasionally
+                // perhaps due to the reverse proxy
                 console.log(response.data['message']);
 
                 this.emitter.emit('data-refresh-request', this.current_context);
