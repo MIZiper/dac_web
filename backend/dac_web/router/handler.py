@@ -159,8 +159,12 @@ def get_project_id_by_path(project_path):
 async def start_process_session():
     sess_id = uuid4().hex
 
+    # env = os.environ.copy()
+    # env['APP_SESSID'] = sess_id
+
     process = await asyncio.create_subprocess_exec(
         "python", "-m", APPMOD_ENTRY,
+        # env=env,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
