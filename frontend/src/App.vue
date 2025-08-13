@@ -199,12 +199,10 @@ export default {
       this.emitter.emit('mpl-init-request', sess_id);
 
       window.addEventListener("beforeunload", function (e) {
-        ax_api.post('/term', {}).then(response => {
-          console.log(response.data['message']);
-        }).catch(error => {
-          console.error("There was an error:", error);
-        });
-      }, false);
+        navigator.sendBeacon('/api/term', JSON.stringify({[SESSID_KEY]: sess_id}));
+        // POST only triggered when refreshing page or to same domain or with the prevent dialog
+        // navigator.sendBeacon is async and works
+      });
     },
 
     handlePluginRequest() {

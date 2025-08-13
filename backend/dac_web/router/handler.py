@@ -75,7 +75,7 @@ async def new_process_session():
 
 @app.post('/term')
 async def terminate_process_session(request: Request):
-    sess_id = request.headers.get(SESSID_KEY)
+    sess_id = (await request.json()).get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
     try:
