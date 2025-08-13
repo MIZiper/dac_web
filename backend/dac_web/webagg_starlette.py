@@ -141,7 +141,7 @@ routes = [
     Mount('/_images', StaticFiles(directory=IMAGES_PATH), name='images'),
 ]
 
-app = Starlette(debug=True, routes=routes)
+app = Starlette(debug=False, routes=routes)
 
 """
 I don't like current implementation, there are some issues.

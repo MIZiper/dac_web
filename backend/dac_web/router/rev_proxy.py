@@ -5,6 +5,7 @@ Pass all "/app" requests to internal app services.
 
 import asyncio
 import websockets
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 import httpx
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.responses import Response
@@ -60,10 +61,10 @@ async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = 
                         await internal_ws.send(message["text"])
                     elif "bytes" in message:
                         await internal_ws.send(message["bytes"])
-            except WebSocketDisconnect:
-                await internal_ws.close()
-            except Exception:
-                await internal_ws.close()
+            except RuntimeError: # from `websocket`
+                print("Client to target, RuntimeError")
+            except (ConnectionClosedOK, ConnectionClosedError): # from `internal_ws`
+                print("Client to target, ConnectionClosed")
 
         async def target_to_client():
             try:
@@ -73,7 +74,9 @@ async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = 
                         await websocket.send_text(data)
                     elif isinstance(data, bytes):
                         await websocket.send_bytes(data)
-            except Exception:
-                await websocket.close() # TODO: issue here, error again when client is already closed.
+            except WebSocketDisconnect: # from `websocket`
+                print("Target to client, WebSocketDisconnect")
+            except (ConnectionClosedOK, ConnectionClosedError): # from `internal_ws`
+                print("Target to client, ConnectionClosed")
 
         await asyncio.gather(client_to_target(), target_to_client())

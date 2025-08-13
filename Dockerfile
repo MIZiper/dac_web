@@ -25,6 +25,7 @@ ENV FRONTEND_DIST=/app/frontend/dist
 ENV LOG_DIR=/app/logs
 ENV PROJECT_DIR=/app/projects
 ENV PROJECT_SAVE_DIR=/app/projects_save
+ENV APP_LOG_ON=1
 EXPOSE 8000
 
 # Command to run the router module by default
