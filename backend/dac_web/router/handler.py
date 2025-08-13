@@ -159,22 +159,14 @@ def get_project_id_by_path(project_path):
 async def start_process_session():
     sess_id = uuid4().hex
 
-    # This is stupid, create a port and close, because I cannot get the output from FastAPI
-    sock = socket.socket()
-    sock.bind(('localhost', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    env = os.environ.copy()
-    env['APP_PORT'] = str(port)
-    env['APP_SESSID'] = sess_id
-
     process = await asyncio.create_subprocess_exec(
         "python", "-m", APPMOD_ENTRY,
-        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
 
-    await asyncio.sleep(3) # TODO: change to something smarter, need to get an indication that uvicorn has started.
-
+    bline = await process.stdout.readline()
+    port = bline.decode().split("...")[-1].strip()
     user_manager.set_sess(sess_id, f"localhost:{port}", process)
 
     return sess_id
