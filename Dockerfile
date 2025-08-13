@@ -9,9 +9,9 @@ RUN npm run build
 # Stage 2: Set up the Python environment
 FROM python:3.12-slim
 WORKDIR /app
-RUN mkdir -p /app/logs
-RUN mkdir -p /app/projects
-RUN mkdir -p /app/projects_save
+RUN mkdir -p /app/storage/logs
+RUN mkdir -p /app/storage/projects
+RUN mkdir -p /app/storage/projects_save
 RUN pip install pip-tools
 COPY backend/pyproject.toml ./
 RUN pip-compile pyproject.toml --output-file=requirements.txt
@@ -22,9 +22,9 @@ COPY backend/ /app/backend/
 RUN pip install ./backend
 
 ENV FRONTEND_DIST=/app/frontend/dist
-ENV LOG_DIR=/app/logs
-ENV PROJECT_DIR=/app/projects
-ENV PROJECT_SAVE_DIR=/app/projects_save
+ENV LOG_DIR=/app/storage/logs
+ENV PROJECT_DIR=/app/storage/projects
+ENV PROJECT_SAVE_DIR=/app/storage/projects_save
 ENV APP_LOG_ON=1
 EXPOSE 8000
 
