@@ -10,16 +10,16 @@ from matplotlib._pylab_helpers import Gcf
 import dac
 from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
 from dac.core.actions import PAB, VAB, SAB
-from dac.core.plugin import use_plugin
+from dac.core.scenario import use_scenario
 
 GCK_ID = 'global'
 FIG_NUM = 1
 
 app = FastAPI()
 
-current_plugin = "0.base.yaml"
-plugins_dir = path.join(path.dirname(dac.__file__), "plugins")
-use_plugin(path.join(plugins_dir, current_plugin))
+current_scenario = "0.base.yaml"
+scenarios_dir = path.join(path.dirname(dac.__file__), "scenarios")
+use_scenario(path.join(scenarios_dir, current_scenario))
 container = Container.parse_save_config({})
 
 # -----------
@@ -40,28 +40,28 @@ async def get_save():
     }
 
 # -------
-# plugins
+# scenarios
 # -------
 
-@app.get('/plugins')
-async def get_plugins():
+@app.get('/scenarios')
+async def get_scenarios():
     return {
-        "plugins": os.listdir(plugins_dir),
-        "current_plugin": current_plugin,
+        "scenarios": os.listdir(scenarios_dir),
+        "current_scenario": current_scenario,
     }
 
-@app.post('/plugins')
-async def post_plugins(data: dict = Body(...)):
-    global current_plugin
+@app.post('/scenarios')
+async def post_scenarios(data: dict = Body(...)):
+    global current_scenario
     class FakeDACWin:
         def message(self, s):
             pass
-    target_plugin = data.get("plugin")
-    use_plugin(path.join(plugins_dir, target_plugin), dac_win=FakeDACWin())
-    current_plugin = target_plugin
+    target_scenario = data.get("scenario")
+    use_scenario(path.join(scenarios_dir, target_scenario), dac_win=FakeDACWin())
+    current_scenario = target_scenario
     return {
-        "message": f"Switch to '{target_plugin}'",
-        "current_plugin": current_plugin,
+        "message": f"Switch to '{target_scenario}'",
+        "current_scenario": current_scenario,
     }
 
 # --------

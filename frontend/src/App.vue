@@ -8,14 +8,14 @@
 
       <v-menu>
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" title="Plugins">
+          <v-btn v-bind="props" title="Scenarios">
             <v-icon>mdi-view-list</v-icon>
-            {{ current_plugin }}
+            {{ current_scenario }}
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="plugin in plugins" :key="plugin" @click="switchPlugin(plugin)">
-            <v-list-item-title>{{ plugin }}</v-list-item-title>
+          <v-list-item v-for="scenario in scenarios" :key="scenario" @click="switchScenario(scenario)">
+            <v-list-item-title>{{ scenario }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
@@ -112,12 +112,12 @@ export default {
         },
       ],
 
-      current_plugin: 'Plugin 0',
-      plugins: ['Plugin 1', 'Plugin 2', 'Plugin 3'],
+      current_scenario: 'Scenario 0',
+      scenarios: ['Scenario 1', 'Scenario 2', 'Scenario 3'],
     }
   },
   mounted() {
-    this.emitter.on('plugin-refresh-request', this.handlePluginRequest);
+    this.emitter.on('scenario-refresh-request', this.handleScenarioRequest);
 
     let pathname = window.location.pathname;
     if (pathname.startsWith(project_prefix)) {
@@ -193,7 +193,7 @@ export default {
       ax_api.defaults.headers.common[SESSID_KEY] = sess_id;
 
       this.emitter.emit('context-refresh-request');
-      this.emitter.emit('plugin-refresh-request');
+      this.emitter.emit('scenario-refresh-request');
       this.emitter.emit('context_type-refresh-request');
       this.emitter.emit('action_type-refresh-request');
       this.emitter.emit('mpl-init-request', sess_id);
@@ -205,24 +205,24 @@ export default {
       });
     },
 
-    handlePluginRequest() {
-      ax_app.get('/plugins').then(response => {
-        this.plugins = response.data['plugins'];
-        this.current_plugin = response.data['current_plugin'];
+    handleScenarioRequest() {
+      ax_app.get('/scenarios').then(response => {
+        this.scenarios = response.data['scenarios'];
+        this.current_scenario = response.data['current_scenario'];
       }).catch(error => {
-        console.error("There was an error fetching plugin list:", error);
+        console.error("There was an error fetching scenario list:", error);
       });
     },
-    switchPlugin(plugin) {
-      ax_app.post("/plugins", {
-        plugin: plugin
+    switchScenario(scenario) {
+      ax_app.post("/scenarios", {
+        scenario: scenario
       }).then(response => {
         console.log(response.data['message']);
-        this.current_plugin = response.data['current_plugin'];
+        this.current_scenario = response.data['current_scenario'];
         this.emitter.emit('context_type-refresh-request');
         this.emitter.emit('action_type-refresh-request');
       }).catch(error => {
-        console.error("There was an error switching plugin:", error);
+        console.error("There was an error switching scenario:", error);
       });
     },
 

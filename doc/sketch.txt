@@ -22,7 +22,7 @@ Home: (nginx)
         # get_config/set_config/...
       /{context id}/actions/{action id}
         # get_config/set_config/run_action
-      /plugins/{plugin name}
+      /scenarios/{scenario name}
 
 ## storage
 
