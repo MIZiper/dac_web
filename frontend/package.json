@@ -1,6 +1,6 @@
 {
   "name": "dac_web-frontend",
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
