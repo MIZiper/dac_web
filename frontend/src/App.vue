@@ -2,7 +2,9 @@
   <v-app>
     <v-app-bar app color="primary">
       <v-img src="./assets/logo-w.png" max-height="48" max-width="48" class="ml-4"></v-img>
-      <v-toolbar-title>{{ title }}</v-toolbar-title>
+      <a class="ml-4" title="New analysis" href="/" target="_blank" style="text-decoration: none; color: white;">
+        <v-toolbar-title>{{ title }}</v-toolbar-title>
+      </a>
 
       <v-spacer> </v-spacer>
 
@@ -20,7 +22,7 @@
         </v-list>
       </v-menu>
 
-      <v-btn title="Import data"> <!-- save project, publish project -->
+      <v-btn title="Import data">
         <v-icon>mdi-database-import</v-icon>
       </v-btn>
       <SavePublish />
