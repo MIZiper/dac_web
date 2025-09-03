@@ -9,7 +9,7 @@ from matplotlib._pylab_helpers import Gcf
 
 import dac
 from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
-from dac.core.actions import PAB, VAB, SAB
+from dac.core.actions import PAB, VAB, SAB, TAB
 from dac.core.scenario import use_scenario
 
 GCK_ID = 'global'
@@ -277,11 +277,12 @@ async def post_action_of(context_key_id: str, action_id: str):
     action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
-    msg, signal, status = run_action(action)
+    msg, signal, status, stats = run_action(action)
     return {
         "message": msg,
         "data_updated": signal,
-        "status": status
+        "status": status,
+        "stats": stats
     }
 
 @app.delete('/{context_key_id}/actions/{action_id}')
@@ -317,7 +318,7 @@ def get_context_key(context_key_id: str):
 def get_nodetype_path(node_type: type[NodeBase]):
     return f"{node_type.__module__}.{node_type.__qualname__}"
 
-def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, bool, int]:
+def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, bool, int, object]:
     params = container.prepare_params_for_action(action._SIGNATURE, action._construct_config)
 
     def completed(rst):
@@ -349,6 +350,14 @@ def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, boo
             figure = manager.canvas.figure
         action.figure = figure
 
+    stats = None
+    def pass_stats(data):
+        nonlocal stats
+        stats = data
+
+    if isinstance(action, TAB):
+        action.renderer = pass_stats
+
     if False:
         def fn(p, progress_emitter, logger):
             action._progress = progress_emitter
@@ -361,4 +370,5 @@ def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, boo
         action.pre_run()
         rst = action(**params)
         action.post_run()
-        return f"Run action '{action.name}'", *completed(rst)
+        data_updated, action_status = completed(rst)
+        return f"Run action '{action.name}'", data_updated, action_status, stats

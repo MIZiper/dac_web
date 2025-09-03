@@ -152,6 +152,9 @@ export default {
                     }
                     return action;
                 });
+                if (response.data['stats']) {
+                    this.emitter.emit('show-stats-request', response.data['stats']);
+                }
             }).catch(error => {
                 console.error("There was an error running action:", error);
             });

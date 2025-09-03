@@ -69,6 +69,30 @@
         </v-treeview>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showStats" persistent max-width="600px">
+      <v-card>
+        <v-card-title>{{ stats.title }}</v-card-title>
+        <v-table>
+          <thead>
+            <tr>
+              <th></th>
+              <th class="text-right" v-for="col in stats.headers.col" :key="col">{{ col }}</th>
+            </tr>
+          </thead>
+          <tbody class="text-right">
+            <tr v-for="(row, key) in stats.headers.row" :key="key">
+              <td>{{ row }}</td>
+              <td v-for="value in stats.data[key]">{{ value }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" text @click="showStats = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -105,6 +129,9 @@ export default {
         error: "",
       },
 
+      stats: null,
+      showStats: false,
+
       actives: [],
       files: [
         {
@@ -120,6 +147,7 @@ export default {
   },
   mounted() {
     this.emitter.on('scenario-refresh-request', this.handleScenarioRequest);
+    this.emitter.on('show-stats-request', this.handleShowStatsRequest);
 
     let pathname = window.location.pathname;
     if (pathname.startsWith(project_prefix)) {
@@ -226,6 +254,10 @@ export default {
       }).catch(error => {
         console.error("There was an error switching scenario:", error);
       });
+    },
+    handleShowStatsRequest(stats) {
+      this.stats = stats;
+      this.showStats = true;
     },
 
     fetchProjects(item) {
