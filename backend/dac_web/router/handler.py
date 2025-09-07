@@ -10,10 +10,12 @@ from datetime import datetime
 from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body
+from dac_web.webagg_starlette import app as mpl_app
 
 
 
 app = FastAPI()
+app.mount("/mpl", mpl_app)
 
 APPMOD_ENTRY = "dac_web.app.__init__"
 SESSID_KEY = "dac-sess_id"

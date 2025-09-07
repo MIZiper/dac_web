@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import { mpl_urn, FIG_NUM, SESSID_KEY } from '@/utils';
+import { app_mpl, api_mpl, FIG_NUM, SESSID_KEY } from '@/utils';
 import { VFab } from 'vuetify/labs/VFab';
 
 export default {
@@ -65,20 +65,20 @@ export default {
             ['mpl.css'].forEach(function (name) { // ['page.css', 'boilerplate.css', 'fbm.css', ]
                 let link = document.createElement('link');
                 link.rel = 'stylesheet';
-                link.href = `${mpl_urn}/_static/css/${name}?${query_str}`;
+                link.href = `${api_mpl}/_static/css/${name}`;
                 document.head.appendChild(link);
             });
 
             function ondownload(figure, format) {
-                window.open(`${mpl_urn}/${figure.id}/download.${format}?${query_str}`, '_blank');
+                window.open(`${app_mpl}/${figure.id}/download.${format}?${query_str}`, '_blank');
             };
 
             let script = document.createElement('script');
             script.type = 'text/javascript';
-            script.src = `${mpl_urn}/js/mpl.js?${query_str}`;
+            script.src = `${api_mpl}/js/mpl.js`;
             script.onload = () => {
                 var websocket_type = mpl.get_websocket_type();
-                var websocket = new websocket_type(`${mpl_urn}/${FIG_NUM}/ws?${query_str}`);
+                var websocket = new websocket_type(`${app_mpl}/${FIG_NUM}/ws?${query_str}`);
 
                 var fig = new mpl.figure(FIG_NUM, websocket, ondownload, document.getElementById("figure"));
                 this.figure = fig;
@@ -88,8 +88,8 @@ export default {
                 widgetImages.forEach((img) => {
                     var fname = img.src.split("/").pop();
                     var fname_2x = img.srcset.split("/").pop();
-                    img.src = `${mpl_urn}/_images/${fname}?${query_str}`;
-                    img.srcset = `${mpl_urn}/_images/${fname_2x}?${query_str}`;
+                    img.src = `${api_mpl}/_images/${fname}`;
+                    img.srcset = `${api_mpl}/_images/${fname_2x}`;
                 });
             };
             document.body.appendChild(script);

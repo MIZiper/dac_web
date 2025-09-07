@@ -88,6 +88,8 @@ async def download(request):
     fignum = int(request.path_params['fignum'])
     fmt = request.path_params['fmt']
     manager = Gcf.get_fig_manager(fignum)
+    if manager is None:
+        return PlainTextResponse(f'Figure {fignum} not found', status_code=404)
     buff = BytesIO()
     manager.canvas.figure.savefig(buff, format=fmt)
     content_type = mimetypes.types_map.get(f".{fmt}", 'application/octet-stream')
@@ -101,9 +103,14 @@ class WebAggWSEndpoint(WebSocketEndpoint):
         await websocket.accept()
         self.fignum = int(websocket.path_params['fignum'])
         self.manager = Gcf.get_fig_manager(self.fignum)
+        if self.manager is None:
+            await websocket.close(code=3003, reason="Figure not found")
+            return
         self.manager.add_web_socket(self)
 
     async def on_disconnect(self, websocket: WebSocket, close_code: int):
+        if self.manager is None:
+            return
         self.manager.remove_web_socket(self)
 
     async def on_receive(self, websocket: WebSocket, data: str):

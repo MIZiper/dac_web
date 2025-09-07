@@ -46,7 +46,7 @@ async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = 
     uuid = sessid or websocket.headers.get(SESSID_KEY)
 
     if uuid is None or not user_manager.validate_sess(uuid):
-        await websocket.close(code=1008, reason="Invalid or missing session ID")
+        await websocket.close(code=3000, reason="Invalid or missing session ID")
         return
     conn = user_manager.get_sess_conn(uuid)
 
