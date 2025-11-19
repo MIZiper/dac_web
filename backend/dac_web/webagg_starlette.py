@@ -21,8 +21,8 @@ import matplotlib as mpl
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backends import backend_webagg_core as core
 
-import nest_asyncio
-nest_asyncio.apply()  # Allow nested event loops
+import nest_asyncio2
+nest_asyncio2.apply()  # Allow nested event loops
 
 STATIC_PATH = str(core.FigureManagerWebAgg.get_static_file_path())
 IMAGES_PATH = str(Path(mpl.get_data_path(), 'images'))
