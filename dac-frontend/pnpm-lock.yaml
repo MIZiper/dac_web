@@ -11,6 +11,9 @@ importers:
       '@sveltestrap/sveltestrap':
         specifier: ^7.1.0
         version: 7.1.0(svelte@5.45.2)
+      sv-router:
+        specifier: ^0.11.1
+        version: 0.11.1(svelte@5.45.2)
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.0.3
@@ -464,6 +467,12 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  sv-router@0.11.1:
+    resolution: {integrity: sha512-DqRlv4ulNtm+0sW7Kwun2vJYGa3Z0vtdWqC4G9Rf6AKtub/I4JEdDxdjqZP8v9XrPl7iVEbRglwpSiKS4xvfuQ==}
+    hasBin: true
+    peerDependencies:
+      svelte: ^5
+
   svelte-check@4.3.4:
     resolution: {integrity: sha512-DVWvxhBrDsd+0hHWKfjP99lsSXASeOhHJYyuKOFYJcP7ThfSCKgjVarE8XfuMWpS5JV3AlDf+iK1YGGo2TACdw==}
     engines: {node: '>= 18.0.0'}
@@ -863,6 +872,11 @@ snapshots:
       mri: 1.2.0
 
   source-map-js@1.2.1: {}
+
+  sv-router@0.11.1(svelte@5.45.2):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.45.2
 
   svelte-check@4.3.4(picomatch@4.0.3)(svelte@5.45.2)(typescript@5.7.3):
     dependencies:

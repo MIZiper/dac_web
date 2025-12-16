@@ -1,18 +1,27 @@
 <script lang="ts">
-    import { Nav, Navbar, NavbarBrand, NavItem, Styles } from '@sveltestrap/sveltestrap';
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from '/vite.svg'
+  import { Router } from "sv-router";
+  import "./router.ts";
+
+  import {
+    Nav,
+    Navbar,
+    NavbarBrand,
+    NavItem,
+    Styles,
+  } from "@sveltestrap/sveltestrap";
 </script>
 
 <Styles />
 
 <main>
-  <Navbar>
+  <Navbar style="background-color:whitesmoke;">
     <NavbarBrand>DAC analysis frame</NavbarBrand>
     <Nav>
       <NavItem>Save &amp; Publish</NavItem>
     </Nav>
   </Navbar>
+
+  <Router />
 </main>
 
 <style>
