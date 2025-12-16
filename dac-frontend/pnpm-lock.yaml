@@ -8,12 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/lang-yaml':
+        specifier: ^6.1.2
+        version: 6.1.2
       '@sveltestrap/sveltestrap':
         specifier: ^7.1.0
         version: 7.1.0(svelte@5.45.2)
       sv-router:
         specifier: ^0.11.1
         version: 0.11.1(svelte@5.45.2)
+      svelte-codemirror-editor:
+        specifier: ^2.1.0
+        version: 2.1.0(codemirror@6.0.2)(svelte@5.45.2)
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.0.3
@@ -35,6 +41,30 @@ importers:
         version: 6.4.1
 
 packages:
+
+  '@codemirror/autocomplete@6.20.0':
+    resolution: {integrity: sha512-bOwvTOIJcG5FVo5gUUupiwYh8MioPLQ4UcqbcRf7UQ98X90tCa9E1kZ3Z7tqwpZxYyOvh1YTYbmZE9RTfTp5hg==}
+
+  '@codemirror/commands@6.10.0':
+    resolution: {integrity: sha512-2xUIc5mHXQzT16JnyOFkh8PvfeXuIut3pslWGfsGOhxP/lpgRm9HOl/mpzLErgt5mXDovqA0d11P21gofRLb9w==}
+
+  '@codemirror/lang-yaml@6.1.2':
+    resolution: {integrity: sha512-dxrfG8w5Ce/QbT7YID7mWZFKhdhsaTNOYjOkSIMt1qmC4VQnXSDSYVHHHn8k6kJUfIhtLo8t1JJgltlxWdsITw==}
+
+  '@codemirror/language@6.11.3':
+    resolution: {integrity: sha512-9HBM2XnwDj7fnu0551HkGdrUrrqmYq/WC5iv6nbY2WdicXdGbhR/gfbZOH73Aqj4351alY1+aoG9rCNfiwS1RA==}
+
+  '@codemirror/lint@6.9.2':
+    resolution: {integrity: sha512-sv3DylBiIyi+xKwRCJAAsBZZZWo82shJ/RTMymLabAdtbkV5cSKwWDeCgtUq3v8flTaXS2y1kKkICuRYtUswyQ==}
+
+  '@codemirror/search@6.5.11':
+    resolution: {integrity: sha512-KmWepDE6jUdL6n8cAAqIpRmLPBZ5ZKnicE8oGU/s3QrAVID+0VhLFrzUucVKHG5035/BSykhExDL/Xm7dHthiA==}
+
+  '@codemirror/state@6.5.2':
+    resolution: {integrity: sha512-FVqsPqtPWKVVL3dPSxy8wEF/ymIEuVzF1PK3VbUgrxXpJUSHQWWZz4JMToquRxnkw+36LTamCZG2iua2Ptq0fA==}
+
+  '@codemirror/view@6.39.4':
+    resolution: {integrity: sha512-xMF6OfEAUVY5Waega4juo1QGACfNkNF+aJLqpd8oUJz96ms2zbfQ9Gh35/tI3y8akEV31FruKfj7hBnIU/nkqA==}
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -208,6 +238,21 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
+  '@lezer/common@1.4.0':
+    resolution: {integrity: sha512-DVeMRoGrgn/k45oQNu189BoW4SZwgZFzJ1+1TV5j2NJ/KFC83oa/enRqZSGshyeMk5cPWMhsKs9nx+8o0unwGg==}
+
+  '@lezer/highlight@1.2.3':
+    resolution: {integrity: sha512-qXdH7UqTvGfdVBINrgKhDsVTJTxactNNxLk7+UMwZhU13lMHaOBlJe9Vqp907ya56Y3+ed2tlqzys7jDkTmW0g==}
+
+  '@lezer/lr@1.4.5':
+    resolution: {integrity: sha512-/YTRKP5yPPSo1xImYQk7AZZMAgap0kegzqCSYHjAL9x1AZ0ZQW+IpcEzMKagCsbTsLnVeWkxYrCNeXG8xEPrjg==}
+
+  '@lezer/yaml@1.0.3':
+    resolution: {integrity: sha512-GuBLekbw9jDBDhGur82nuwkxKQ+a3W5H0GfaAthDXcAu+XdpS43VlnxA9E9hllkpSP5ellRDKjLLj7Lu9Wr6xA==}
+
+  '@marijn/find-cluster-break@1.0.2':
+    resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
+
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
@@ -373,6 +418,12 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
+  codemirror@6.0.2:
+    resolution: {integrity: sha512-VhydHotNW5w1UGK0Qj96BwSk/Zqbp9WbnyK2W/eVMv4QyF41INRGpjUhFJY7/uDNuudSc33a/PKr4iDqRduvHw==}
+
+  crelt@1.0.6:
+    resolution: {integrity: sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==}
+
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
     engines: {node: '>=6.0'}
@@ -467,6 +518,9 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  style-mod@4.1.3:
+    resolution: {integrity: sha512-i/n8VsZydrugj3Iuzll8+x/00GH2vnYsk1eomD8QiRrSAeW6ItbCQDtfXCeJHd0iwiNagqjQkvpvREEPtW3IoQ==}
+
   sv-router@0.11.1:
     resolution: {integrity: sha512-DqRlv4ulNtm+0sW7Kwun2vJYGa3Z0vtdWqC4G9Rf6AKtub/I4JEdDxdjqZP8v9XrPl7iVEbRglwpSiKS4xvfuQ==}
     hasBin: true
@@ -480,6 +534,12 @@ packages:
     peerDependencies:
       svelte: ^4.0.0 || ^5.0.0-next.0
       typescript: '>=5.0.0'
+
+  svelte-codemirror-editor@2.1.0:
+    resolution: {integrity: sha512-WGkSsIYNpVcOVxaQPkmdBQhaGyKLmg6pgaS/b+7guRb4eikrbXYtvNFuW2AzKJi8ZbLhSngrf3SRiZOuwuskrQ==}
+    peerDependencies:
+      codemirror: ^6.0.0
+      svelte: ^5.0.0
 
   svelte@5.45.2:
     resolution: {integrity: sha512-yyXdW2u3H0H/zxxWoGwJoQlRgaSJLp+Vhktv12iRw2WRDlKqUPT54Fi0K/PkXqrdkcQ98aBazpy0AH4BCBVfoA==}
@@ -542,10 +602,69 @@ packages:
       vite:
         optional: true
 
+  w3c-keyname@2.2.8:
+    resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
+
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
 snapshots:
+
+  '@codemirror/autocomplete@6.20.0':
+    dependencies:
+      '@codemirror/language': 6.11.3
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+      '@lezer/common': 1.4.0
+
+  '@codemirror/commands@6.10.0':
+    dependencies:
+      '@codemirror/language': 6.11.3
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+      '@lezer/common': 1.4.0
+
+  '@codemirror/lang-yaml@6.1.2':
+    dependencies:
+      '@codemirror/autocomplete': 6.20.0
+      '@codemirror/language': 6.11.3
+      '@codemirror/state': 6.5.2
+      '@lezer/common': 1.4.0
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.5
+      '@lezer/yaml': 1.0.3
+
+  '@codemirror/language@6.11.3':
+    dependencies:
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+      '@lezer/common': 1.4.0
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.5
+      style-mod: 4.1.3
+
+  '@codemirror/lint@6.9.2':
+    dependencies:
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+      crelt: 1.0.6
+
+  '@codemirror/search@6.5.11':
+    dependencies:
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+      crelt: 1.0.6
+
+  '@codemirror/state@6.5.2':
+    dependencies:
+      '@marijn/find-cluster-break': 1.0.2
+
+  '@codemirror/view@6.39.4':
+    dependencies:
+      '@codemirror/state': 6.5.2
+      crelt: 1.0.6
+      style-mod: 4.1.3
+      w3c-keyname: 2.2.8
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
@@ -643,6 +762,24 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@lezer/common@1.4.0': {}
+
+  '@lezer/highlight@1.2.3':
+    dependencies:
+      '@lezer/common': 1.4.0
+
+  '@lezer/lr@1.4.5':
+    dependencies:
+      '@lezer/common': 1.4.0
+
+  '@lezer/yaml@1.0.3':
+    dependencies:
+      '@lezer/common': 1.4.0
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.5
+
+  '@marijn/find-cluster-break@1.0.2': {}
 
   '@popperjs/core@2.11.8': {}
 
@@ -759,6 +896,18 @@ snapshots:
 
   clsx@2.1.1: {}
 
+  codemirror@6.0.2:
+    dependencies:
+      '@codemirror/autocomplete': 6.20.0
+      '@codemirror/commands': 6.10.0
+      '@codemirror/language': 6.11.3
+      '@codemirror/lint': 6.9.2
+      '@codemirror/search': 6.5.11
+      '@codemirror/state': 6.5.2
+      '@codemirror/view': 6.39.4
+
+  crelt@1.0.6: {}
+
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
@@ -873,6 +1022,8 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
+  style-mod@4.1.3: {}
+
   sv-router@0.11.1(svelte@5.45.2):
     dependencies:
       esm-env: 1.2.2
@@ -889,6 +1040,11 @@ snapshots:
       typescript: 5.7.3
     transitivePeerDependencies:
       - picomatch
+
+  svelte-codemirror-editor@2.1.0(codemirror@6.0.2)(svelte@5.45.2):
+    dependencies:
+      codemirror: 6.0.2
+      svelte: 5.45.2
 
   svelte@5.45.2:
     dependencies:
@@ -929,5 +1085,7 @@ snapshots:
   vitefu@1.1.1(vite@6.4.1):
     optionalDependencies:
       vite: 6.4.1
+
+  w3c-keyname@2.2.8: {}
 
   zimmerframe@1.1.4: {}
