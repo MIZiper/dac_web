@@ -1,11 +1,11 @@
-<div bind:this={figure} id="figure">
+<div id="figure">
 
 </div>
 
 <script lang="ts">
     let {mplSite} = $props();
 
-    let figure;
+    let figure: any;
 
     function initMpl() {
         ['mpl.css'].forEach((file) => {
@@ -29,3 +29,10 @@
     }
 
 </script>
+
+<style>
+    #figure {
+        min-height: 600px;
+        min-width: 960px;
+    }
+</style>
