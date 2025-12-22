@@ -29,14 +29,14 @@
     <ScenarioList />
 {/snippet}
 
-<Row>
-    <Col>
+<Row class="mt-1">
+    <Col class="pe-1">
         <ContextList />
-        <Row>
-            <Col>
+        <Row class="my-1">
+            <Col class="pe-1">
                 <DataList />
             </Col>
-            <Col>
+            <Col class="ps-1">
                 <ActionList />
             </Col>
         </Row>
@@ -46,7 +46,7 @@
             onFire={fireYamlHandler}
         />
     </Col>
-    <Col xs="auto">
+    <Col xs="auto" class="ps-1">
         <MplCanvas mplSite="" />
     </Col>
 </Row>

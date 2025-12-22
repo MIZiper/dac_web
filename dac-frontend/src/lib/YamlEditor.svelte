@@ -25,10 +25,10 @@
             <Col>
                 <CardTitle>YAML Editor</CardTitle>
             </Col>
-            <Col xs="auto">
+            <Col xs="auto" class="pe-1">
                 <Button>Save</Button>
             </Col>
-            <Col xs="auto">
+            <Col xs="auto" class="ps-1">
                 <Button>Save & Run</Button>
             </Col>
         </Row>

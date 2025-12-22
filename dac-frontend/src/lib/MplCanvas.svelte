@@ -93,13 +93,15 @@
 </script>
 
 <div id="mpl-container" class={isFullscreen ? "fullscreen-component" : ""}>
-    <div id="fullscreen-btn">
-        <Icon
-            onclick={toggleFullscreen}
-            name={isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}
-            title="Toggle fullscreen"
-        />
-    </div>
+    {#if figure}
+        <div id="fullscreen-btn">
+            <Icon
+                onclick={toggleFullscreen}
+                name={isFullscreen ? "fullscreen-exit" : "arrows-fullscreen"}
+                title="Toggle fullscreen"
+            />
+        </div>
+    {/if}
     {#if !isFullscreen && figure}
         <div id="autoscale-btn">
             <Icon
@@ -110,9 +112,13 @@
         </div>
     {/if}
     <div id="figure"></div>
+    {#if !figure}
+        <img
+            src="https://placehold.co/1000x600?text=Loading+matplotlib"
+            alt="Mpl placeholder"
+        />
+    {/if}
 </div>
-
-<!-- <img src="https://placehold.co/1000x600?text=Loading+matplotlib" /> -->
 
 <style>
     #mpl-container {

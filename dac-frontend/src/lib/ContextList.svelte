@@ -26,7 +26,7 @@
             <Col>
                 <CardTitle>Context</CardTitle>
             </Col>
-            <Col xs="auto">
+            <Col xs="auto" class="pe-1">
                 <Dropdown>
                     <DropdownToggle caret>
                         <Icon name="three-dots-vertical" />
@@ -36,13 +36,13 @@
                     </DropdownMenu>
                 </Dropdown>
             </Col>
-            <Col xs="auto">
+            <Col xs="auto" class="ps-1">
                 <Dropdown>
                     <DropdownToggle caret>
                         <Icon name="plus" />
                     </DropdownToggle>
                     <DropdownMenu>
-                        <DropdownItem>Add action</DropdownItem>
+                        <DropdownItem>Add context</DropdownItem>
                     </DropdownMenu>
                 </Dropdown>
             </Col>
