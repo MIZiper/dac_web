@@ -1,10 +1,19 @@
 <script lang="ts">
     import {
+        ButtonGroup,
         Card,
         CardBody,
+        CardFooter,
         CardHeader,
         CardTitle,
+        Col,
+        Dropdown,
+        DropdownItem,
+        DropdownMenu,
+        DropdownToggle,
+        Icon,
         Input,
+        Row,
     } from "@sveltestrap/sveltestrap";
     import type { DataItem } from "../schema";
 
@@ -12,7 +21,33 @@
 </script>
 
 <Card>
-    <CardHeader><CardTitle>Context</CardTitle></CardHeader>
+    <CardHeader>
+        <Row>
+            <Col>
+                <CardTitle>Context</CardTitle>
+            </Col>
+            <Col xs="auto">
+                <Dropdown>
+                    <DropdownToggle caret>
+                        <Icon name="three-dots-vertical" />
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem>Run</DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
+            </Col>
+            <Col xs="auto">
+                <Dropdown>
+                    <DropdownToggle caret>
+                        <Icon name="plus" />
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem>Add action</DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
+            </Col>
+        </Row>
+    </CardHeader>
     <CardBody>
         <Input type="select">
             {#each contexts as context (context.uuid)}

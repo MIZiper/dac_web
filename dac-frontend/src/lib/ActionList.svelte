@@ -4,9 +4,15 @@
         CardBody,
         CardHeader,
         CardTitle,
+        Col,
+        Dropdown,
+        DropdownItem,
+        DropdownMenu,
+        DropdownToggle,
         Icon,
         ListGroup,
         ListGroupItem,
+        Row,
     } from "@sveltestrap/sveltestrap";
     import type { ActionItem } from "../schema";
 
@@ -15,7 +21,21 @@
 
 <Card>
     <CardHeader>
-        <CardTitle>Action</CardTitle>
+        <Row>
+            <Col>
+                <CardTitle>Action</CardTitle>
+            </Col>
+            <Col xs="auto">
+                <Dropdown>
+                    <DropdownToggle caret>
+                        <Icon name="plus" />
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem>Add action</DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
+            </Col>
+        </Row>
     </CardHeader>
     <CardBody>
         <ListGroup>
