@@ -5,7 +5,9 @@
     import ActionList from "../lib/ActionList.svelte";
     import YamlEditor from "../lib/YamlEditor.svelte";
     import MplCanvas from "../lib/MplCanvas.svelte";
+    import ScenarioList from "../lib/ScenarioList.svelte";
 
+    import { navTeleport } from "../utils/NavibarSnippet.svelte";
     import { route } from "../router";
     route.getParams("/projects/:id");
     const project_id = route.params.id;
@@ -13,7 +15,19 @@
     let yaml_code: string = $state("");
     function saveYamlHandler() {}
     function fireYamlHandler() {}
+
+    $effect(() => {
+        navTeleport.snippet = contextMenuSnippet;
+
+        return () => {
+            navTeleport.snippet = null;
+        };
+    });
 </script>
+
+{#snippet contextMenuSnippet()}
+    <ScenarioList />
+{/snippet}
 
 <Row>
     <Col>

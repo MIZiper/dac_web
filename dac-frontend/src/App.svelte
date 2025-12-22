@@ -1,12 +1,14 @@
 <script lang="ts">
   import { Router } from "sv-router";
   import "./router.ts";
+  import { navTeleport } from "./utils/NavibarSnippet.svelte";
 
   import {
     Nav,
     Navbar,
     NavbarBrand,
     NavItem,
+    NavLink,
     Styles,
   } from "@sveltestrap/sveltestrap";
 </script>
@@ -17,7 +19,12 @@
   <Navbar style="background-color:whitesmoke;">
     <NavbarBrand>DAC analysis frame</NavbarBrand>
     <Nav>
-      <NavItem>Save &amp; Publish</NavItem>
+      {#if navTeleport.snippet}
+        {@render navTeleport.snippet()}
+      {/if}
+      <NavItem>
+        <NavLink>Save &amp; Publish</NavLink>
+      </NavItem>
     </Nav>
   </Navbar>
 

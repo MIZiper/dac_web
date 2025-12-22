@@ -17,3 +17,6 @@ export interface ActionType {
     type_path: string;
 }
 
+export interface ScenarioItem {
+    name: string,
+}
