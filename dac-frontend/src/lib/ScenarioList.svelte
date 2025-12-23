@@ -7,8 +7,13 @@
     } from "@sveltestrap/sveltestrap";
     import type { ScenarioItem } from "../schema";
 
-    let currentScenario: ScenarioItem | null = $state(null);
-    let scenarios: ScenarioItem[] = $state([]);
+    let {
+        scenarios,
+        currentScenario = $bindable(),
+    }: {
+        scenarios: ScenarioItem[];
+        currentScenario: ScenarioItem | null;
+    } = $props();
 </script>
 
 <Dropdown nav inNavbar>
@@ -17,7 +22,9 @@
     </DropdownToggle>
     <DropdownMenu>
         {#each scenarios as scenario}
-            <DropdownItem>{scenario.name}</DropdownItem>
+            <DropdownItem onclick={(e) => (currentScenario = scenario)}
+                >{scenario.name}</DropdownItem
+            >
         {/each}
     </DropdownMenu>
 </Dropdown>

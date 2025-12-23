@@ -15,9 +15,17 @@
         Input,
         Row,
     } from "@sveltestrap/sveltestrap";
-    import type { DataItem } from "../schema";
+    import type { ActionType, DataItem } from "../schema";
 
-    let contexts: DataItem[] = $state([]);
+    let {
+        contexts,
+        availableContextTypes,
+        currentContext = $bindable(),
+    }: {
+        contexts: DataItem[];
+        availableContextTypes: ActionType[];
+        currentContext: DataItem | null;
+    } = $props();
 </script>
 
 <Card>
@@ -29,7 +37,7 @@
             <Col xs="auto" class="pe-1">
                 <Dropdown>
                     <DropdownToggle caret>
-                        <Icon name="three-dots-vertical" />
+                        <Icon name="three-dots-vertical" title="Context menu" />
                     </DropdownToggle>
                     <DropdownMenu>
                         <DropdownItem>Run</DropdownItem>
@@ -39,10 +47,12 @@
             <Col xs="auto" class="ps-1">
                 <Dropdown>
                     <DropdownToggle caret>
-                        <Icon name="plus" />
+                        <Icon name="plus" title="Add context data" />
                     </DropdownToggle>
                     <DropdownMenu>
-                        <DropdownItem>Add context</DropdownItem>
+                        {#each availableContextTypes as contextType}
+                            <DropdownItem>{contextType.type_name}</DropdownItem>
+                        {/each}
                     </DropdownMenu>
                 </Dropdown>
             </Col>

@@ -9,12 +9,28 @@
 
     import { navTeleport } from "../utils/NavibarSnippet.svelte";
     import { route } from "../router";
+
+    import {
+        data,
+        actions,
+        contexts,
+        scenarios,
+        availableContextTypes,
+        availableActionTypes,
+        switchScenario,
+    } from "./MainPageHandler.svelte";
+    import type { DataItem, ScenarioItem } from "../schema";
+
     route.getParams("/projects/:id");
     const project_id = route.params.id;
 
     let yaml_code: string = $state("");
     function saveYamlHandler() {}
     function fireYamlHandler() {}
+
+    let sess_id = $state("");
+    let currentContext: DataItem | null = $state(null);
+    let currentScenario: ScenarioItem | null = $state(null);
 
     $effect(() => {
         navTeleport.snippet = contextMenuSnippet;
@@ -23,21 +39,26 @@
             navTeleport.snippet = null;
         };
     });
+    $effect(() => {
+        if (currentScenario) {
+            switchScenario(currentScenario).then(() => {});
+        }
+    });
 </script>
 
 {#snippet contextMenuSnippet()}
-    <ScenarioList />
+    <ScenarioList {scenarios} bind:currentScenario />
 {/snippet}
 
 <Row class="mt-1">
     <Col class="pe-1">
-        <ContextList />
+        <ContextList {contexts} {availableContextTypes} bind:currentContext />
         <Row class="my-1">
             <Col class="pe-1">
-                <DataList />
+                <DataList {data} />
             </Col>
             <Col class="ps-1">
-                <ActionList />
+                <ActionList {actions} {availableActionTypes} />
             </Col>
         </Row>
         <YamlEditor

@@ -14,7 +14,7 @@
         ListGroupItem,
         Row,
     } from "@sveltestrap/sveltestrap";
-    import type { ActionItem, ActionStatus } from "../schema";
+    import type { ActionItem, ActionStatus, ActionType } from "../schema";
 
     const StatusName: Map<ActionStatus, string> = new Map([
         ["New", "file-earmark-plus"],
@@ -23,11 +23,13 @@
         ["Completed", "file-earmark-check"],
     ]);
 
-    let actions: ActionItem[] = $state([
-        { name: "Act 1", uuid: "xxx", status: "New" },
-        { name: "Act 2", uuid: "yyy", status: "Configured" },
-        { name: "Act 3", uuid: "zzz", status: "Completed" },
-    ]);
+    let {
+        actions,
+        availableActionTypes,
+    }: {
+        actions: ActionItem[];
+        availableActionTypes: ActionType[];
+    } = $props();
     let isOpenActMenu = $state(false);
     function toggleActMenu() {
         isOpenActMenu = !isOpenActMenu;
@@ -50,10 +52,12 @@
             <Col xs="auto">
                 <Dropdown>
                     <DropdownToggle caret>
-                        <Icon name="plus" />
+                        <Icon name="plus" title="Add action" />
                     </DropdownToggle>
                     <DropdownMenu>
-                        <DropdownItem>Add action</DropdownItem>
+                        {#each availableActionTypes as actionType}
+                            <DropdownItem>{actionType.type_name}</DropdownItem>
+                        {/each}
                     </DropdownMenu>
                 </Dropdown>
             </Col>

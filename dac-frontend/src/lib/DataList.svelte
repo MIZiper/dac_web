@@ -16,11 +16,8 @@
     } from "@sveltestrap/sveltestrap";
     import type { DataItem } from "../schema";
 
-    let data: DataItem[] = $state([
-        { name: "Dat 1", uuid: "xxx", type_path: "a.b.c" },
-        { name: "Dat 2", uuid: "yyy", type_path: "d.e.f" },
-        { name: "Dat 3", uuid: "zzz", type_path: "g.h.i" },
-    ]);
+    let { data }: { data: DataItem[] } = $props();
+
     let isOpenDatMenu = $state(false);
     function toggleDatMenu() {
         isOpenDatMenu = !isOpenDatMenu;
