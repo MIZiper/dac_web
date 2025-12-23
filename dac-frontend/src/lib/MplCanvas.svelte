@@ -1,19 +1,24 @@
 <script lang="ts">
     import { Icon } from "@sveltestrap/sveltestrap";
     import { onMount } from "svelte";
+    import {
+        api_mpl,
+        app_mpl,
+        FIG_NUM,
+        SESSID_KEY,
+    } from "../utils/FetchObjects";
 
-    let { mplSite } = $props();
+    // const api_mpl = `/mpl`; // for dev
+    // const app_mpl = `/mpl`; // for dev
 
-    // const api_mpl = `${mplSite}/api/mpl`;
-    // const app_mpl = `${mplSite}/app/mpl`;
-    const api_mpl = `/mpl`; // for dev
-    const app_mpl = `/mpl`; // for dev
+    let { sess_id = "" } = $props();
 
     let figure: any = $state();
     let isFullscreen: boolean = $state(false);
-    const FIG_NUM = 1;
 
     function initMpl() {
+        const query_str = `${SESSID_KEY}=${sess_id}`;
+
         ["mpl.css"].forEach((file) => {
             const link = document.createElement("link");
             link.rel = "stylesheet";
@@ -22,14 +27,19 @@
         });
 
         function ondownload(figure, format) {
-            window.open(`${app_mpl}/${figure.id}/download.${format}`, "_blank");
+            window.open(
+                `${app_mpl}/${figure.id}/download.${format}?${query_str}`,
+                "_blank",
+            );
         }
 
         const script = document.createElement("script");
         script.src = `${api_mpl}/js/mpl.js`;
         script.onload = () => {
             let websocket_type = window.mpl.get_websocket_type();
-            let websocket = new websocket_type(`${app_mpl}/${FIG_NUM}/ws`);
+            let websocket = new websocket_type(
+                `${app_mpl}/${FIG_NUM}/ws?${query_str}`,
+            );
 
             figure = new window.mpl.figure(
                 FIG_NUM,
@@ -89,7 +99,11 @@
         autoScaleCanvas();
     }
 
-    onMount(initMpl);
+    $effect(() => {
+        if (sess_id !== "") {
+            initMpl();
+        }
+    });
 </script>
 
 <div id="mpl-container" class={isFullscreen ? "fullscreen-component" : ""}>
@@ -123,6 +137,7 @@
 <style>
     #mpl-container {
         position: relative;
+        /* min-width: 1000px; */
     }
     #fullscreen-btn {
         position: absolute;

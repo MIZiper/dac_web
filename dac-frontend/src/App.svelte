@@ -23,7 +23,7 @@
         {@render navTeleport.snippet()}
       {/if}
       <NavItem>
-        <NavLink>Save &amp; Publish</NavLink>
+        <NavLink href="/projects/new">New Project</NavLink>
       </NavItem>
     </Nav>
   </Navbar>

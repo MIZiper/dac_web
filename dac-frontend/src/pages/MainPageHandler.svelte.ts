@@ -2,25 +2,35 @@ import type { ActionItem, ActionType, DataItem, ScenarioItem } from "../schema";
 import { ax_api, ax_app } from "../utils/FetchObjects";
 import { DEFAULT_NAME, SESSID_KEY, GCK_ID } from "../utils/FetchObjects";
 
-export let data: DataItem[] = $state([]);
-export let actions: ActionItem[] = $state([]);
-export let contexts: DataItem[] = $state([]);
-export let scenarios: ScenarioItem[] = $state([]);
-export let availableContextTypes: ActionType[] = $state([]);
-export let availableActionTypes: ActionType[] = $state([]);
+let data: DataItem[] = $state([]);
+let actions: ActionItem[] = $state([]);
+let contexts: DataItem[] = $state([]);
+let scenarios: ScenarioItem[] = $state([]);
+let availableContextTypes: ActionType[] = $state([]);
+let availableActionTypes: ActionType[] = $state([]);
 
 // const sha1 = new Hashes.SHA1();
+
+export function stateObjectPasser() {
+    return { data, actions, contexts, scenarios, availableContextTypes, availableActionTypes };
+}
 
 export async function initAnalysis(sess_id: string) {
     ax_app.defaults.headers.common[SESSID_KEY] = sess_id;
     ax_api.defaults.headers.common[SESSID_KEY] = sess_id;
 
+    const currentContext: DataItem = {
+        name: "GCK",
+        uuid: GCK_ID,
+        type_path: "",
+    };
+
     await Promise.all([
         fetchScenarios(),
         fetchContextTypes(),
         fetchActionTypes(),
-        getCurrentData(),
-        getCurrentActions(),
+        getCurrentData(currentContext),
+        getCurrentActions(currentContext),
     ])
 
     window.addEventListener("beforeunload", function (e) {
@@ -34,7 +44,7 @@ export async function fetchScenarios() {
     const res = await ax_app.get("/scenarios");
     if (res.status == 200) {
         scenarios = res.data["scenarios"];
-        currentScenario = res.data["current_scenario"];
+        return res.data["current_scenario"];
     } else {
         throw new Error(`Error while fetching scenarios: ${res.status}`);
         console.error(res);
@@ -43,12 +53,12 @@ export async function fetchScenarios() {
 
 export async function getCurrentData(context: DataItem) {
     const res = await ax_app.get(`/${context.uuid}/data`);
-    data = res.data;
+    data = res.data['data'];
 }
 
 export async function getCurrentActions(context: DataItem) {
     const res = await ax_app.get(`/${context.uuid}/actions`);
-    actions = res.data;
+    actions = res.data['actions'];
 
 }
 
@@ -57,19 +67,19 @@ export async function switchScenario(scenario: ScenarioItem) {
         scenario: scenario.name
     });
     if (res.status == 200) {
-        currentScenario = res.data['current_scenario'];
+        return res.data['current_scenario'];
         // fetch others
     }
 }
 
 export async function fetchContextTypes() {
     const res = await ax_app.get("/types/context");
-    availableContextTypes = res.data;
+    availableContextTypes = res.data['context_types'];
 }
 
 export async function fetchActionTypes() {
     const res = await ax_app.get("/types/action");
-    availableActionTypes = res.data;
+    availableActionTypes = res.data['action_types'];
 }
 
 export async function addContext(contextType: ActionType) {
