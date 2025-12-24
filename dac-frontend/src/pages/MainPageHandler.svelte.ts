@@ -1,36 +1,44 @@
-import type { ActionItem, ActionType, DataItem, ScenarioItem } from "../schema";
+import type { ActionItem, ActionStatus, ActionType, DataItem, ScenarioItem } from "../schema";
 import { ax_api, ax_app } from "../utils/FetchObjects";
 import { DEFAULT_NAME, SESSID_KEY, GCK_ID } from "../utils/FetchObjects";
 
-let data: DataItem[] = $state([]);
-let actions: ActionItem[] = $state([]);
-let contexts: DataItem[] = $state([]);
-let scenarios: ScenarioItem[] = $state([]);
-let availableContextTypes: ActionType[] = $state([]);
-let availableActionTypes: ActionType[] = $state([]);
+export const appdata: {
+    data: DataItem[],
+    actions: ActionItem[],
+    contexts: DataItem[],
+    scenarios: ScenarioItem[],
+    availableContextTypes: ActionType[],
+    availableActionTypes: ActionType[],
+    currentContext: DataItem | null,
+    currentScenario: ScenarioItem | null,
+} = $state({
+    data: [],
+    actions: [],
+    contexts: [],
+    scenarios: [],
+    availableActionTypes: [],
+    availableContextTypes: [],
+    currentContext: null,
+    currentScenario: null,
+});
+
+const statusMap: Map<number, ActionStatus> = new Map([
+    [0, "New"],
+    [1, "Configured"],
+    [2, "Completed"],
+    [-1, "Failed"],
+]);
 
 // const sha1 = new Hashes.SHA1();
-
-export function stateObjectPasser() {
-    return { data, actions, contexts, scenarios, availableContextTypes, availableActionTypes };
-}
 
 export async function initAnalysis(sess_id: string) {
     ax_app.defaults.headers.common[SESSID_KEY] = sess_id;
     ax_api.defaults.headers.common[SESSID_KEY] = sess_id;
 
-    const currentContext: DataItem = {
-        name: "GCK",
-        uuid: GCK_ID,
-        type_path: "",
-    };
-
     await Promise.all([
         fetchScenarios(),
         fetchContextTypes(),
-        fetchActionTypes(),
-        getCurrentData(currentContext),
-        getCurrentActions(currentContext),
+        fetchContexts(),
     ])
 
     window.addEventListener("beforeunload", function (e) {
@@ -43,23 +51,46 @@ export async function initAnalysis(sess_id: string) {
 export async function fetchScenarios() {
     const res = await ax_app.get("/scenarios");
     if (res.status == 200) {
-        scenarios = res.data["scenarios"];
-        return res.data["current_scenario"];
+        appdata.scenarios = res.data["scenarios"].map(
+            (n: string) => ({
+                name: n,
+            })
+        );
+        appdata.currentScenario = {
+            name: res.data["current_scenario"]
+        };
     } else {
         throw new Error(`Error while fetching scenarios: ${res.status}`);
         console.error(res);
     }
 }
 
+export async function fetchContexts() {
+    const res = await ax_app.get('/contexts');
+    appdata.contexts = res.data['contexts'].map((c: any) => ({
+        name: c['name'],
+        uuid: c['uuid'],
+        type_path: c['type'],
+    }));
+    appdata.currentContext = appdata.contexts.find((c) => c.uuid === res.data['current_context']) || null;
+}
+
 export async function getCurrentData(context: DataItem) {
     const res = await ax_app.get(`/${context.uuid}/data`);
-    data = res.data['data'];
+    appdata.data = res.data['data'].map((d: any) => ({
+        name: d['name'],
+        uuid: d['uuid'],
+        type_path: "",
+    }));
 }
 
 export async function getCurrentActions(context: DataItem) {
     const res = await ax_app.get(`/${context.uuid}/actions`);
-    actions = res.data['actions'];
-
+    appdata.actions = res.data['actions'].map((a: any) => ({
+        name: a["name"],
+        uuid: a["uuid"],
+        status: statusMap.get(a['status']),
+    }));
 }
 
 export async function switchScenario(scenario: ScenarioItem) {
@@ -67,23 +98,52 @@ export async function switchScenario(scenario: ScenarioItem) {
         scenario: scenario.name
     });
     if (res.status == 200) {
-        return res.data['current_scenario'];
-        // fetch others
+        scenario.name === res.data['current_scenario'];
+        await Promise.all([
+            fetchContextTypes(),
+            fetchActionTypes(),
+        ]);
+    }
+}
+
+export async function switchContext(context: DataItem) {
+    const res = await ax_app.post(`/contexts/${context.uuid}`);
+    if (res.status == 200) {
+        await Promise.all([
+            getCurrentData(context),
+            getCurrentActions(context),
+            fetchActionTypes(),
+        ]);
     }
 }
 
 export async function fetchContextTypes() {
     const res = await ax_app.get("/types/context");
-    availableContextTypes = res.data['context_types'];
+    appdata.availableContextTypes = res.data['context_types'].map((e: any) => ({
+        type_name: e['name'],
+        type_path: e['type'],
+    }));
 }
 
 export async function fetchActionTypes() {
     const res = await ax_app.get("/types/action");
-    availableActionTypes = res.data['action_types'];
+    appdata.availableActionTypes = res.data['action_types'].map((t: any) => {
+        if (typeof t === "string") {
+            return {
+                type_name: t,
+                type_path: null,
+            }
+        } else {
+            return {
+                type_name: t['name'],
+                type_path: t['type'],
+            }
+        }
+    });
 }
 
 export async function addContext(contextType: ActionType) {
-    if (contexts.find(
+    if (appdata.contexts.find(
         (c) => (c.type_path === contextType.type_path) && (c.name === DEFAULT_NAME)
     )) {
         console.error("Context already exists.");
@@ -98,7 +158,7 @@ export async function addContext(contextType: ActionType) {
     });
 
     if (res.status == 200) {
-        contexts.push({
+        appdata.contexts.push({
             name: DEFAULT_NAME,
             uuid: res.data["context_uuid"],
             type_path: contextType.type_path,
@@ -123,7 +183,7 @@ export async function getContextConfig(context: DataItem) {
 export async function deleteContext(context: DataItem) {
     const res = await ax_app.delete(`/contexts/${context.uuid}`);
     if (res.status == 200) {
-        contexts = contexts.filter((c) => c.uuid !== context.uuid);
+        appdata.contexts = appdata.contexts.filter((c) => c.uuid !== context.uuid);
     }
 }
 
@@ -134,7 +194,7 @@ export async function addAction(context: DataItem, actionType: ActionType) {
             name: actionType.type_name, // this is actually ignored
         }
     });
-    actions.push({
+    appdata.actions.push({
         name: actionType.type_name,
         uuid: res.data['action_uuid'],
         status: "New",
@@ -167,7 +227,7 @@ export async function runAction(context: DataItem, action: ActionItem) {
 
 export async function deleteAction(context: DataItem, action: ActionItem) {
     const res = await ax_app.delete(`/${context.uuid}/actions/${action.uuid}`);
-    actions = actions.filter((a) => a.uuid !== action.uuid);
+    appdata.actions = appdata.actions.filter((a) => a.uuid !== action.uuid);
 }
 
 export async function saveProject(publish_name: string = "", signature: string = "") {

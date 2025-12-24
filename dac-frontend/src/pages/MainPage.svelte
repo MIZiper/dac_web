@@ -13,20 +13,11 @@
 
     import {
         initAnalysis,
-        stateObjectPasser,
+        appdata,
         switchScenario,
+        switchContext,
     } from "./MainPageHandler.svelte";
-    import type { DataItem, ScenarioItem } from "../schema";
     import { onMount } from "svelte";
-
-    let {
-        data,
-        actions,
-        contexts,
-        scenarios,
-        availableContextTypes,
-        availableActionTypes,
-    } = stateObjectPasser();
 
     let loading = $state(0);
     route.getParams("/projects/:id");
@@ -37,8 +28,6 @@
     function fireYamlHandler() {}
 
     let sess_id = $state("");
-    let currentContext: DataItem | null = $state(null);
-    let currentScenario: ScenarioItem | null = $state(null);
 
     $effect(() => {
         navTeleport.snippet = contextMenuSnippet;
@@ -48,8 +37,13 @@
         };
     });
     $effect(() => {
-        if (currentScenario) {
-            switchScenario(currentScenario).then(() => {});
+        if (appdata.currentContext) {
+            switchContext(appdata.currentContext).then(() => {});
+        }
+    });
+    $effect(() => {
+        if (appdata.currentScenario) {
+            switchScenario(appdata.currentScenario).then(() => {});
         }
     });
 
@@ -73,20 +67,30 @@
 </script>
 
 {#snippet contextMenuSnippet()}
-    <ScenarioList {scenarios} bind:currentScenario />
+    <ScenarioList
+        scenarios={appdata.scenarios}
+        bind:currentScenario={appdata.currentScenario}
+    />
 {/snippet}
 
 <Progress style="height:4px" value={loading} animated />
 
 <Row class="mt-1">
     <Col class="pe-1">
-        <ContextList {contexts} {availableContextTypes} bind:currentContext />
+        <ContextList
+            contexts={appdata.contexts}
+            availableContextTypes={appdata.availableContextTypes}
+            bind:currentContext={appdata.currentContext}
+        />
         <Row class="my-1">
             <Col class="pe-1">
-                <DataList {data} />
+                <DataList data={appdata.data} />
             </Col>
             <Col class="ps-1">
-                <ActionList {actions} {availableActionTypes} />
+                <ActionList
+                    actions={appdata.actions}
+                    availableActionTypes={appdata.availableActionTypes}
+                />
             </Col>
         </Row>
         <YamlEditor
