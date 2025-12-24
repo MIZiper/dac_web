@@ -16,8 +16,12 @@
         appdata,
         switchScenario,
         switchContext,
+        getActionConfig,
+        runAction,
+        deleteAction,
     } from "./MainPageHandler.svelte";
     import { onMount } from "svelte";
+    import YAML from "yaml";
 
     let loading = $state(0);
     route.getParams("/projects/:id");
@@ -82,6 +86,25 @@
                 <ActionList
                     actions={appdata.actions}
                     availableActionTypes={appdata.availableActionTypes}
+                    onEditAction={(a) => {
+                        if (appdata.currentContext) {
+                            getActionConfig(appdata.currentContext, a).then(
+                                (conf) => {
+                                    yaml_code = YAML.stringify(conf);
+                                },
+                            );
+                        }
+                    }}
+                    onRunAction={(a) => {
+                        if (appdata.currentContext) {
+                            runAction(appdata.currentContext, a).then();
+                        }
+                    }}
+                    onDeleteAction={(a) => {
+                        if (appdata.currentContext) {
+                            deleteAction(appdata.currentContext, a).then();
+                        }
+                    }}
                 />
             </Col>
         </Row>

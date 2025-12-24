@@ -26,20 +26,45 @@
     let {
         actions,
         availableActionTypes,
+        onEditAction = null,
+        onRunAction = null,
+        onDeleteAction = null,
     }: {
         actions: ActionItem[];
         availableActionTypes: ActionType[];
+        onEditAction: ((a: ActionItem) => void) | null;
+        onRunAction: ((a: ActionItem) => void) | null;
+        onDeleteAction: ((a: ActionItem) => void) | null;
     } = $props();
     let isOpenActMenu = $state(false);
     function toggleActMenu() {
         isOpenActMenu = !isOpenActMenu;
+
+        // this will trigger before `handleMenu`, need to find a way to set null after menu closed
+        // if (!isOpenActMenu) {
+        //     selectedAction = null;
+        // }
     }
     let menuContainer: HTMLDivElement;
+    let selectedAction: ActionItem | null = null;
 
     function popActionMenu(a: ActionItem, e: MouseEvent) {
         isOpenActMenu = true;
+        selectedAction = a;
         menuContainer.style.left = e.clientX + "px";
         menuContainer.style.top = e.clientY + "px";
+    }
+    function handleMenu(t: "edit" | "run" | "delete") {
+        if (!selectedAction) {
+            return;
+        }
+        if (t === "edit" && onEditAction) {
+            onEditAction(selectedAction);
+        } else if (t === "run" && onRunAction) {
+            onRunAction(selectedAction);
+        } else if (t === "delete" && onDeleteAction) {
+            onDeleteAction(selectedAction);
+        }
     }
 </script>
 
@@ -109,9 +134,13 @@
 <div bind:this={menuContainer} style="position: fixed; z-index: 9;">
     <Dropdown isOpen={isOpenActMenu} toggle={toggleActMenu}>
         <DropdownMenu>
-            <DropdownItem>Edit</DropdownItem>
-            <DropdownItem>Run</DropdownItem>
-            <DropdownItem disabled>Delete</DropdownItem>
+            <DropdownItem onclick={(e) => handleMenu("edit")}>Edit</DropdownItem
+            >
+            <DropdownItem onclick={(e) => handleMenu("run")}>Run</DropdownItem>
+            <DropdownItem divider />
+            <DropdownItem onclick={(e) => handleMenu("delete")}
+                >Delete</DropdownItem
+            >
         </DropdownMenu>
     </Dropdown>
 </div>

@@ -33,7 +33,7 @@
             </Col>
         </Row>
     </CardHeader>
-    <CardBody>
+    <CardBody class="p-0">
         <CodeMirror bind:value lang={yaml()} />
     </CardBody>
 </Card>

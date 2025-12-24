@@ -22,6 +22,7 @@
     "@sveltestrap/sveltestrap": "^7.1.0",
     "axios": "^1.13.2",
     "sv-router": "^0.11.1",
-    "svelte-codemirror-editor": "^2.1.0"
+    "svelte-codemirror-editor": "^2.1.0",
+    "yaml": "^2.8.2"
   }
 }
