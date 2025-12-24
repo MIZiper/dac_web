@@ -59,9 +59,17 @@
         </Row>
     </CardHeader>
     <CardBody>
-        <Input type="select">
+        <Input
+            type="select"
+            value={currentContext?.uuid}
+            onchange={(e) => {
+                currentContext =
+                    contexts.find((c) => c.uuid === e.currentTarget.value) ||
+                    null;
+            }}
+        >
             {#each contexts as context (context.uuid)}
-                <option>{context.name}</option>
+                <option value={context.uuid}>{context.name}</option>
             {/each}
         </Input>
     </CardBody>

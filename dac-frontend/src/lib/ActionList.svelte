@@ -56,7 +56,30 @@
                     </DropdownToggle>
                     <DropdownMenu>
                         {#each availableActionTypes as actionType}
-                            <DropdownItem>{actionType.type_name}</DropdownItem>
+                            {#if actionType.type_path === null}
+                                {#if actionType.type_name.endsWith(">]")}
+                                    <DropdownItem divider />
+                                    <DropdownItem header
+                                        >{actionType.type_name.slice(
+                                            1,
+                                            -2,
+                                        )}</DropdownItem
+                                    >
+                                {:else if actionType.type_name.endsWith("<]")}
+                                    <DropdownItem divider />
+                                {:else}
+                                    <DropdownItem header
+                                        >{actionType.type_name.slice(
+                                            1,
+                                            -1,
+                                        )}</DropdownItem
+                                    >
+                                {/if}
+                            {:else}
+                                <DropdownItem
+                                    >{actionType.type_name}</DropdownItem
+                                >
+                            {/if}
                         {/each}
                     </DropdownMenu>
                 </Dropdown>
