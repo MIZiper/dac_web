@@ -17,13 +17,13 @@
 
 <main>
   <Navbar style="background-color:whitesmoke;">
-    <NavbarBrand>DAC analysis frame</NavbarBrand>
+    <NavbarBrand target="_blank">DAC analysis frame</NavbarBrand>
     <Nav>
       {#if navTeleport.snippet}
         {@render navTeleport.snippet()}
       {/if}
       <NavItem>
-        <NavLink href="/projects/new">New Project</NavLink>
+        <NavLink href="/projects/new" target="_blank">New Project</NavLink>
       </NavItem>
     </Nav>
   </Navbar>

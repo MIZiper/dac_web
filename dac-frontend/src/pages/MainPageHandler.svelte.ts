@@ -52,6 +52,8 @@ export async function initAnalysis(sess_id: string) {
     // above manually define what needs to be loaded, it's not as elegant as `$effect` approach
     // TODO: server make a bundle response to client with one request
 
+    // an issue here, "beforeunload" will not trigger if page is internal routed
+    // while svelte `onDestroy` will not trigger when page is refreshed/unloaded
     window.addEventListener("beforeunload", function (e) {
         navigator.sendBeacon('/api/term', JSON.stringify({ [SESSID_KEY]: sess_id }));
         // POST only triggered when refreshing page or to same domain or with the prevent dialog
