@@ -9,10 +9,12 @@
 
     let {
         scenarios,
-        currentScenario = $bindable(),
+        currentScenario,
+        onSwitchScenario,
     }: {
         scenarios: ScenarioItem[];
         currentScenario: ScenarioItem | null;
+        onSwitchScenario: (s: ScenarioItem) => void;
     } = $props();
 </script>
 
@@ -22,8 +24,12 @@
     </DropdownToggle>
     <DropdownMenu>
         {#each scenarios as scenario}
-            <DropdownItem onclick={(e) => (currentScenario = scenario)}
-                >{scenario.name}</DropdownItem
+            <DropdownItem
+                onclick={(e) => {
+                    if (scenario.name !== currentScenario?.name) {
+                        onSwitchScenario(scenario);
+                    }
+                }}>{scenario.name}</DropdownItem
             >
         {/each}
     </DropdownMenu>

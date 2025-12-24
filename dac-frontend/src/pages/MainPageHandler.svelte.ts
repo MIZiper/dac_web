@@ -35,11 +35,22 @@ export async function initAnalysis(sess_id: string) {
     ax_app.defaults.headers.common[SESSID_KEY] = sess_id;
     ax_api.defaults.headers.common[SESSID_KEY] = sess_id;
 
+    const initContext: DataItem = {
+        name: "GlobContext",
+        uuid: GCK_ID,
+        type_path: "",
+    }
+    // this is assuming all init session starts with "global" (which is also true currently)
+
     await Promise.all([
         fetchScenarios(),
         fetchContextTypes(),
         fetchContexts(),
+        getCurrentData(initContext),
+        getCurrentActions(initContext),
     ])
+    // above manually define what needs to be loaded, it's not as elegant as `$effect` approach
+    // TODO: server make a bundle response to client with one request
 
     window.addEventListener("beforeunload", function (e) {
         navigator.sendBeacon('/api/term', JSON.stringify({ [SESSID_KEY]: sess_id }));
@@ -56,9 +67,7 @@ export async function fetchScenarios() {
                 name: n,
             })
         );
-        appdata.currentScenario = {
-            name: res.data["current_scenario"]
-        };
+        appdata.currentScenario = appdata.scenarios.find((s) => s.name === res.data["current_scenario"]) || null;
     } else {
         throw new Error(`Error while fetching scenarios: ${res.status}`);
         console.error(res);
@@ -103,6 +112,7 @@ export async function switchScenario(scenario: ScenarioItem) {
             fetchContextTypes(),
             fetchActionTypes(),
         ]);
+        appdata.currentScenario = scenario;
     }
 }
 
@@ -114,6 +124,7 @@ export async function switchContext(context: DataItem) {
             getCurrentActions(context),
             fetchActionTypes(),
         ]);
+        appdata.currentContext = context;
     }
 }
 

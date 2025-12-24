@@ -36,16 +36,6 @@
             navTeleport.snippet = null;
         };
     });
-    $effect(() => {
-        if (appdata.currentContext) {
-            switchContext(appdata.currentContext).then(() => {});
-        }
-    });
-    $effect(() => {
-        if (appdata.currentScenario) {
-            switchScenario(appdata.currentScenario).then(() => {});
-        }
-    });
 
     onMount(async () => {
         loading = 100;
@@ -69,7 +59,8 @@
 {#snippet contextMenuSnippet()}
     <ScenarioList
         scenarios={appdata.scenarios}
-        bind:currentScenario={appdata.currentScenario}
+        currentScenario={appdata.currentScenario}
+        onSwitchScenario={(s) => switchScenario(s).then(() => {})}
     />
 {/snippet}
 
@@ -80,7 +71,8 @@
         <ContextList
             contexts={appdata.contexts}
             availableContextTypes={appdata.availableContextTypes}
-            bind:currentContext={appdata.currentContext}
+            currentContext={appdata.currentContext}
+            onSwitchContext={(c) => switchContext(c).then(() => {})}
         />
         <Row class="my-1">
             <Col class="pe-1">

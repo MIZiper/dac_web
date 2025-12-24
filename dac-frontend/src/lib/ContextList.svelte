@@ -20,11 +20,13 @@
     let {
         contexts,
         availableContextTypes,
-        currentContext = $bindable(),
+        currentContext,
+        onSwitchContext,
     }: {
         contexts: DataItem[];
         availableContextTypes: ActionType[];
         currentContext: DataItem | null;
+        onSwitchContext: (c: DataItem) => void;
     } = $props();
 </script>
 
@@ -63,9 +65,13 @@
             type="select"
             value={currentContext?.uuid}
             onchange={(e) => {
-                currentContext =
+                let ctx =
                     contexts.find((c) => c.uuid === e.currentTarget.value) ||
                     null;
+
+                if (ctx && ctx.uuid !== currentContext?.uuid) {
+                    onSwitchContext(ctx);
+                }
             }}
         >
             {#each contexts as context (context.uuid)}
