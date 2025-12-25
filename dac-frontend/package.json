@@ -1,15 +1,17 @@
 {
-  "name": "dac-frontend",
-  "private": true,
+  "name": "@miz/dac-frontend",
   "version": "0.2.0-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:svelte": "svelte-package -i src -o dist-lib",
+    "prepublishOnly": "npm run build:svelte",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
+    "@sveltejs/package": "^2.5.7",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tsconfig/svelte": "^5.0.4",
     "svelte": "^5.23.1",
@@ -24,5 +26,22 @@
     "sv-router": "^0.11.1",
     "svelte-codemirror-editor": "^2.1.0",
     "yaml": "^2.8.2"
+  },
+  "svelte": "./dist-lib/index.js",
+  "types": "./dist-lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/index.d.ts",
+      "svelte": "./dist-lib/index.js",
+      "default": "./dist-lib/index.js"
+    }
+  },
+  "files": [
+    "dist-lib",
+    "src"
+  ],
+  "peerDependencies": {
+    "svelte": "^4.0.0 || ^5.0.0",
+    "@sveltestrap/sveltestrap": "^7.0.0"
   }
 }
