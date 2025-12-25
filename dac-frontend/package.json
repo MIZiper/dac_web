@@ -1,6 +1,6 @@
 {
   "name": "@miz/dac-frontend",
-  "version": "0.2.0-dev",
+  "version": "0.2.0-prev+001",
   "type": "module",
   "scripts": {
     "dev": "vite",
