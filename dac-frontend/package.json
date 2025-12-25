@@ -1,6 +1,22 @@
 {
-  "name": "@miz/dac_web",
-  "version": "0.2.0-prev+002",
+  "name": "@mizip/dac_web",
+  "version": "0.2.0-alpha.1",
+  "description": "DAC web version frontend with Svelte",
+  "keywords": [
+    "dac",
+    "analysis",
+    "measurement"
+  ],
+  "homepage": "https://github.com/miziper/dac_web#readme",
+  "bugs": {
+    "url": "https://github.com/miziper/dac_web/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miziper/dac_web.git"
+  },
+  "license": "Apache-2.0",
+  "author": "MIZiper",
   "type": "module",
   "scripts": {
     "dev": "vite",

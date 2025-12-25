@@ -9,8 +9,10 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-lib
 dist-ssr
 *.local
+.svelte-kit
 
 # Editor directories and files
 .vscode/*
