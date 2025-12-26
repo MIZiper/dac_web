@@ -43,6 +43,15 @@
         </Row>
     </CardHeader>
     <CardBody class="p-0">
+        <div class="yaml-scroll">
         <CodeMirror bind:value lang={yaml()} />
+        </div>
     </CardBody>
 </Card>
+
+<style>
+    .yaml-scroll {
+        height: 300px;
+        overflow-y: auto;
+    }
+</style>

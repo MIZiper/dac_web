@@ -9,7 +9,7 @@
 
     import { navTeleport } from "../utils/NavibarSnippet.svelte";
     import { route } from "../router";
-    import { ax_api, ax_app, SESSID_KEY } from "../utils/FetchObjects";
+    import { ax_api, ax_app, GCK_ID, SESSID_KEY } from "../utils/FetchObjects";
 
     import {
         initAnalysis,
@@ -22,6 +22,11 @@
         addAction,
         updateAction,
         updateContext,
+        deleteContext,
+        getContextConfig,
+        getCurrentData,
+        getCurrentActions,
+        addContext,
     } from "./MainPageHandler.svelte";
     import { onMount } from "svelte";
     import YAML from "yaml";
@@ -33,21 +38,20 @@
 
     let yaml_code: string = $state("");
     let yamled_node: ActionItem | DataItem | null = $state(null);
-    function saveYamlHandler() {
+    async function saveYamlHandler() {
         let conf = YAML.parse(yaml_code);
         if (yamled_node && appdata.currentContext) {
             if ("status" in yamled_node) {
-                updateAction(appdata.currentContext, yamled_node, conf).then();
+                await updateAction(appdata.currentContext, yamled_node, conf);
             } else {
-                updateContext(yamled_node, conf).then();
+                await updateContext(yamled_node, conf);
             }
         }
     }
-    function fireYamlHandler() {
-        let conf = YAML.parse(yaml_code);
-        if (yamled_node && appdata.currentContext && "status" in yamled_node) {
-            updateAction(appdata.currentContext, yamled_node, conf).then();
-        }
+    async function fireYamlHandler() {
+        await saveYamlHandler();
+        if (appdata.currentContext && yamled_node && "status" in yamled_node)
+            await runAction(appdata.currentContext, yamled_node);
     }
 
     let sess_id = $state("");
@@ -96,6 +100,33 @@
             availableContextTypes={appdata.availableContextTypes}
             currentContext={appdata.currentContext}
             onSwitchContext={(c) => switchContext(c).then(() => {})}
+            onDeleteContext={(c) => {
+                deleteContext(c).then(() => {
+                    let gc = appdata.contexts.find((c) => c.uuid === GCK_ID);
+                    if (gc) {
+                        appdata.currentContext = gc;
+                        getCurrentData(gc).then();
+                        getCurrentActions(gc).then();
+                    }
+                    if (yamled_node && yamled_node.uuid === c.uuid) {
+                        yamled_node = null;
+                        yaml_code = "";
+                    }
+                });
+            }}
+            onEditContext={(c) => {
+                getContextConfig(c).then((conf) => {
+                    yaml_code = YAML.stringify(conf);
+                    yamled_node = c;
+                });
+            }}
+            onAddContextType={(t) => {
+                const c = appdata.currentContext;
+                appdata.currentContext = null; // the select value unexpectedly get reset to global, so force change here.
+                addContext(t).then(() => {
+                    appdata.currentContext = c;
+                });
+            }}
         />
         <Row class="my-1">
             <Col class="pe-1">
@@ -122,8 +153,11 @@
                     }}
                     onDeleteAction={(a) => {
                         if (appdata.currentContext) {
-                            deleteAction(appdata.currentContext, a).then(()=>{
-                                if (yamled_node && yamled_node.uuid===a.uuid) {
+                            deleteAction(appdata.currentContext, a).then(() => {
+                                if (
+                                    yamled_node &&
+                                    yamled_node.uuid === a.uuid
+                                ) {
                                     yamled_node = null;
                                     yaml_code = "";
                                 }
@@ -132,13 +166,15 @@
                     }}
                     onAddActionType={(t) => {
                         if (appdata.currentContext) {
-                            addAction(appdata.currentContext, t).then((new_action) => {
-                                // below not working because `new_action` has no config returned
-                                // if (new_action) {
-                                //     yamled_node = new_action;
-                                //     yaml_code = YAML.stringify();
-                                // }
-                            });
+                            addAction(appdata.currentContext, t).then(
+                                (new_action) => {
+                                    // below not working because `new_action` has no config returned
+                                    // if (new_action) {
+                                    //     yamled_node = new_action;
+                                    //     yaml_code = YAML.stringify();
+                                    // }
+                                },
+                            );
                         }
                     }}
                 />

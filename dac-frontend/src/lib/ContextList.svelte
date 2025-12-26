@@ -16,17 +16,24 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { ActionType, DataItem } from "../schema";
+    import { GCK_ID } from "../utils/FetchObjects";
 
     let {
         contexts,
         availableContextTypes,
         currentContext,
         onSwitchContext,
+        onDeleteContext = null,
+        onEditContext = null,
+        onAddContextType = null,
     }: {
         contexts: DataItem[];
         availableContextTypes: ActionType[];
         currentContext: DataItem | null;
         onSwitchContext: (c: DataItem) => void;
+        onDeleteContext: ((c: DataItem) => void) | null;
+        onEditContext: ((c: DataItem) => void) | null;
+        onAddContextType: ((t: ActionType) => void) | null;
     } = $props();
 </script>
 
@@ -42,7 +49,24 @@
                         <Icon name="three-dots-vertical" title="Context menu" />
                     </DropdownToggle>
                     <DropdownMenu>
-                        <DropdownItem>Run</DropdownItem>
+                        {#if currentContext && currentContext.uuid !== GCK_ID}
+                            <DropdownItem
+                                onclick={(e) => {
+                                    if (onEditContext)
+                                        onEditContext(currentContext);
+                                }}>Edit</DropdownItem
+                            >
+                        {/if}
+                        <DropdownItem disabled>Run All</DropdownItem>
+                        {#if currentContext && currentContext.uuid !== GCK_ID}
+                            <DropdownItem divider />
+                            <DropdownItem
+                                onclick={(e) => {
+                                    if (onDeleteContext)
+                                        onDeleteContext(currentContext);
+                                }}>Delete</DropdownItem
+                            >
+                        {/if}
                     </DropdownMenu>
                 </Dropdown>
             </Col>
@@ -53,7 +77,12 @@
                     </DropdownToggle>
                     <DropdownMenu>
                         {#each availableContextTypes as contextType}
-                            <DropdownItem>{contextType.type_name}</DropdownItem>
+                            <DropdownItem
+                                onclick={(e) => {
+                                    if (onAddContextType)
+                                        onAddContextType(contextType);
+                                }}>{contextType.type_name}</DropdownItem
+                            >
                         {/each}
                     </DropdownMenu>
                 </Dropdown>
