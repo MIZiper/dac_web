@@ -51,6 +51,8 @@
                         onclick={(e) => popDataMenu(datum, e)}
                     >
                         {datum.name}
+                        <br/>
+                        <code>{datum.type_path.split('.').slice(-1)}</code>
                     </ListGroupItem>
                 {/each}
             </ListGroup>

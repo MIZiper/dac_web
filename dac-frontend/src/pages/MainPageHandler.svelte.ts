@@ -92,7 +92,7 @@ export async function getCurrentData(context: DataItem) {
     appdata.data = res.data['data'].map((d: any) => ({
         name: d['name'],
         uuid: d['uuid'],
-        type_path: "",
+        type_path: d['type'],
     }));
 }
 
@@ -241,7 +241,7 @@ export async function getActionConfig(context: DataItem, action: ActionItem) {
 
 export async function runAction(context: DataItem, action: ActionItem) {
     const res = await ax_app.post(`/${context.uuid}/actions/${action.uuid}`);
-    if (res.status==200) {
+    if (res.status == 200) {
         if (res.data['data_updated']) {
             await getCurrentData(context);
         }

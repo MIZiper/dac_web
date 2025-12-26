@@ -104,7 +104,7 @@
             }}
         >
             {#each contexts as context (context.uuid)}
-                <option value={context.uuid}>{context.name}</option>
+                <option value={context.uuid}>{context.name} - {context.type_path.split('.').slice(-1)}</option>
             {/each}
         </Input>
     </CardBody>
