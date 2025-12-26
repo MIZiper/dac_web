@@ -29,12 +29,14 @@
         onEditAction = null,
         onRunAction = null,
         onDeleteAction = null,
+        onAddActionType = null,
     }: {
         actions: ActionItem[];
         availableActionTypes: ActionType[];
         onEditAction: ((a: ActionItem) => void) | null;
         onRunAction: ((a: ActionItem) => void) | null;
         onDeleteAction: ((a: ActionItem) => void) | null;
+        onAddActionType: ((t: ActionType) => void) | null;
     } = $props();
     let isOpenActMenu = $state(false);
     function toggleActMenu() {
@@ -102,7 +104,10 @@
                                 {/if}
                             {:else}
                                 <DropdownItem
-                                    >{actionType.type_name}</DropdownItem
+                                    onclick={(e) => {
+                                        if (onAddActionType)
+                                            onAddActionType(actionType);
+                                    }}>{actionType.type_name}</DropdownItem
                                 >
                             {/if}
                         {/each}

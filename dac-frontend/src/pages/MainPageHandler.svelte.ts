@@ -46,6 +46,7 @@ export async function initAnalysis(sess_id: string) {
         fetchScenarios(),
         fetchContextTypes(),
         fetchContexts(),
+        fetchActionTypes(),
         getCurrentData(initContext),
         getCurrentActions(initContext),
     ])
@@ -207,11 +208,15 @@ export async function addAction(context: DataItem, actionType: ActionType) {
             name: actionType.type_name, // this is actually ignored
         }
     });
-    appdata.actions.push({
-        name: actionType.type_name,
-        uuid: res.data['action_uuid'],
-        status: "New",
-    });
+    if (res.status == 200) {
+        const new_action: ActionItem = {
+            name: actionType.type_name,
+            uuid: res.data['action_uuid'],
+            status: "New",
+        }
+        appdata.actions.push(new_action);
+        return new_action;
+    }
 }
 
 export async function updateAction(context: DataItem, action: ActionItem, action_config: any) {
@@ -236,6 +241,15 @@ export async function getActionConfig(context: DataItem, action: ActionItem) {
 
 export async function runAction(context: DataItem, action: ActionItem) {
     const res = await ax_app.post(`/${context.uuid}/actions/${action.uuid}`);
+    if (res.status==200) {
+        if (res.data['data_updated']) {
+            await getCurrentData(context);
+        }
+        action.status = statusMap.get(res.data['status']) || "Failed";
+        if (res.data['status']) {
+
+        }
+    }
 }
 
 export async function deleteAction(context: DataItem, action: ActionItem) {

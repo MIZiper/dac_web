@@ -13,10 +13,16 @@
     import CodeMirror from "svelte-codemirror-editor";
 
     let {
-        value,
+        value = $bindable(),
         onSave,
         onFire,
-    }: { value: string; onSave: () => void; onFire: () => void } = $props();
+        boundNode,
+    }: {
+        value: string;
+        onSave: () => void;
+        onFire: () => void;
+        boundNode: any;
+    } = $props();
 </script>
 
 <Card>
@@ -26,10 +32,13 @@
                 <CardTitle>YAML Editor</CardTitle>
             </Col>
             <Col xs="auto" class="pe-1">
-                <Button>Save</Button>
+                <Button disabled={!boundNode} onclick={onSave}>Save</Button>
             </Col>
             <Col xs="auto" class="ps-1">
-                <Button>Save & Run</Button>
+                <Button
+                    disabled={!boundNode || !("status" in boundNode)}
+                    onclick={onFire}>Save & Run</Button
+                >
             </Col>
         </Row>
     </CardHeader>
