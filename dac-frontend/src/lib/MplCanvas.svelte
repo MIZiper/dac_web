@@ -7,6 +7,7 @@
         FIG_NUM,
         SESSID_KEY,
     } from "../utils/FetchObjects";
+    import { scale } from "svelte/transition";
 
     // const api_mpl = `/mpl`; // for dev
     // const app_mpl = `/mpl`; // for dev
@@ -127,7 +128,7 @@
     {/if}
     <div id="figure"></div>
     {#if !figure}
-        <img
+        <img out:scale={{duration: 500}}
             src="https://placehold.co/1000x600?text=Loading+matplotlib"
             alt="Mpl placeholder"
         />
