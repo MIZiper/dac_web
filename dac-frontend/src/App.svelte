@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Router } from "sv-router";
-  import "./router.ts";
+  import { route } from "./router";
   import { navTeleport } from "./utils/NavibarSnippet.svelte";
 
   import {
@@ -11,6 +11,8 @@
     NavLink,
     Styles,
   } from "@sveltestrap/sveltestrap";
+  import { setContext } from "svelte";
+  setContext("route", route);
 </script>
 
 <Styles />

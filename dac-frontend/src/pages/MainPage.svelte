@@ -8,7 +8,6 @@
     import ScenarioList from "../lib/ScenarioList.svelte";
 
     import { navTeleport } from "../utils/NavibarSnippet.svelte";
-    import { route } from "../router";
     import { ax_api, ax_app, GCK_ID, SESSID_KEY } from "../utils/FetchObjects";
 
     import {
@@ -28,11 +27,12 @@
         getCurrentActions,
         addContext,
     } from "./MainPageHandler.svelte";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import YAML from "yaml";
     import type { ActionItem, DataItem } from "../schema";
 
     let loading = $state(0);
+    const route = getContext("route");
     route.getParams("/projects/:id");
     const project_id = route.params.id;
 
