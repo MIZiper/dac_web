@@ -43,12 +43,10 @@
     "svelte-codemirror-editor": "^2.1.0",
     "yaml": "^2.8.2"
   },
-  "svelte": "./dist-lib/index.js",
-  "types": "./dist-lib/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist-lib/index.d.ts",
-      "svelte": "./dist-lib/index.js",
+      "svelte": "./src/index.ts",
       "default": "./dist-lib/index.js"
     }
   },
