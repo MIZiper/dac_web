@@ -1,0 +1,49 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "(dev) Start DAC backend",
+            "type": "shell",
+            "command": [
+                "cd backend",
+                "&&",
+                "uv run uvicorn --reload --port=8031 dac_web.main:app"
+            ],
+            "problemMatcher": [
+                "$python"
+            ]
+        },
+        {
+            "label": "(dev) Start DAC frontend",
+            "type": "shell",
+            "command": [
+                "cd dac-frontend",
+                "&&",
+                "until /bin/nc -z localhost 8031; do sleep 1; done",
+                "&&",
+                "pnpm run dev --open",
+            ],
+            "options": {
+                "env": {
+                    "VITE_API_PORT": "8031"
+                }
+            },
+            "problemMatcher": [
+                "$tsc"
+            ]
+        },
+        {
+            "label": "🚀 DAC",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "(dev) Start DAC backend",
+                "(dev) Start DAC frontend"
+            ],
+            "group": {
+                "kind": "build",
+            }
+        },
+    ]
+}

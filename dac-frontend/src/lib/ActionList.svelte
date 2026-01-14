@@ -68,6 +68,12 @@
             onDeleteAction(selectedAction);
         }
     }
+    function fetchTasks(actionType) {
+        
+    }
+    function activateTask(taskName) {
+
+    }
 </script>
 
 <Card>
