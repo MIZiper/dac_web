@@ -30,6 +30,7 @@
     import { getContext, onMount } from "svelte";
     import YAML from "yaml";
     import type { ActionItem, DataItem } from "../schema";
+    import { taskHolder } from "../tasks/TaskRouter.svelte";
 
     let loading = $state(0);
     const route = getContext("route");
@@ -191,3 +192,13 @@
         <MplCanvas {sess_id} />
     </Col>
 </Row>
+
+{#if taskHolder.currentComponent}
+    <taskHolder.currentComponent
+        config_in={{ name: "abc" }}
+        onTaskDone={(config) => {
+            if (config) console.log(config);
+            taskHolder.currentComponent = null;
+        }}
+    />
+{/if}

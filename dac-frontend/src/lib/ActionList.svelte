@@ -15,6 +15,7 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { ActionItem, ActionStatus, ActionType } from "../schema";
+    import { taskHolder } from "../tasks/TaskRouter.svelte";
 
     const StatusName: Map<ActionStatus, string> = new Map([
         ["New", "file-earmark-plus"],
@@ -48,7 +49,7 @@
         // }
     }
     let menuContainer: HTMLDivElement;
-    let selectedAction: ActionItem | null = null;
+    let selectedAction: ActionItem | null = $state(null);
 
     function popActionMenu(a: ActionItem, e: MouseEvent) {
         isOpenActMenu = true;
@@ -67,12 +68,6 @@
         } else if (t === "delete" && onDeleteAction) {
             onDeleteAction(selectedAction);
         }
-    }
-    function fetchTasks(actionType) {
-        
-    }
-    function activateTask(taskName) {
-
     }
 </script>
 
@@ -145,6 +140,16 @@
 <div bind:this={menuContainer} style="position: fixed; z-index: 9;">
     <Dropdown isOpen={isOpenActMenu} toggle={toggleActMenu}>
         <DropdownMenu>
+            {#if selectedAction && taskHolder.mapping[selectedAction.name]} <!-- not .name but .type_path -->
+                {#each taskHolder.mapping[selectedAction.name] as task}
+                    <DropdownItem
+                        onclick={() => {
+                            taskHolder.currentComponent = task[1];
+                        }}>{task[0]}</DropdownItem
+                    >
+                {/each}
+                <DropdownItem divider />
+            {/if}
             <DropdownItem onclick={(e) => handleMenu("edit")}>Edit</DropdownItem
             >
             <DropdownItem onclick={(e) => handleMenu("run")}>Run</DropdownItem>
