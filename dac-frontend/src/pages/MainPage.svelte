@@ -37,6 +37,10 @@
     route.getParams("/projects/:id");
     const project_id = route.params.id;
 
+    let config_in = $state({});
+    let onTaskDone: ((c: Record<string, any> | null) => void) | null =
+        $state(null);
+
     let yaml_code: string = $state("");
     let yamled_node: ActionItem | DataItem | null = $state(null);
     async function saveYamlHandler() {
@@ -178,6 +182,31 @@
                             );
                         }
                     }}
+                    onTaskAction={(a, c) => {
+                        if (appdata.currentContext) {
+                            getActionConfig(appdata.currentContext, a).then(
+                                (conf) => {
+                                    config_in = conf;
+                                    taskHolder.currentComponent = c;
+
+                                    onTaskDone = ((a_, conf_) => {
+                                        return (config_out) => {
+                                            if (config_out) {
+                                                yaml_code = YAML.stringify({
+                                                    ...conf_,
+                                                    ...config_out,
+                                                });
+                                                yamled_node = a_;
+                                            }
+                                            taskHolder.currentComponent = null;
+                                            config_in = {};
+                                            onTaskDone = null;
+                                        };
+                                    })(a, conf);
+                                },
+                            );
+                        }
+                    }}
                 />
             </Col>
         </Row>
@@ -193,12 +222,6 @@
     </Col>
 </Row>
 
-{#if taskHolder.currentComponent}
-    <taskHolder.currentComponent
-        config_in={{ name: "abc" }}
-        onTaskDone={(config) => {
-            if (config) console.log(config);
-            taskHolder.currentComponent = null;
-        }}
-    />
+{#if taskHolder.currentComponent && onTaskDone}
+    <taskHolder.currentComponent {config_in} {onTaskDone} />
 {/if}

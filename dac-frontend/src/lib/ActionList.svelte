@@ -15,7 +15,8 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { ActionItem, ActionStatus, ActionType } from "../schema";
-    import { taskHolder } from "../tasks/TaskRouter.svelte";
+    import { taskHolder, type TaskBaseProps } from "../tasks/TaskRouter.svelte";
+    import type { Component } from "svelte";
 
     const StatusName: Map<ActionStatus, string> = new Map([
         ["New", "file-earmark-plus"],
@@ -31,6 +32,7 @@
         onRunAction = null,
         onDeleteAction = null,
         onAddActionType = null,
+        onTaskAction = null,
     }: {
         actions: ActionItem[];
         availableActionTypes: ActionType[];
@@ -38,6 +40,9 @@
         onRunAction: ((a: ActionItem) => void) | null;
         onDeleteAction: ((a: ActionItem) => void) | null;
         onAddActionType: ((t: ActionType) => void) | null;
+        onTaskAction:
+            | ((a: ActionItem, c: Component<TaskBaseProps>) => void)
+            | null;
     } = $props();
     let isOpenActMenu = $state(false);
     function toggleActMenu() {
@@ -140,11 +145,13 @@
 <div bind:this={menuContainer} style="position: fixed; z-index: 9;">
     <Dropdown isOpen={isOpenActMenu} toggle={toggleActMenu}>
         <DropdownMenu>
-            {#if selectedAction && taskHolder.mapping[selectedAction.name]} <!-- not .name but .type_path -->
+            {#if selectedAction && taskHolder.mapping[selectedAction.name]}
+                <!-- not .name but .type_path -->
                 {#each taskHolder.mapping[selectedAction.name] as task}
                     <DropdownItem
                         onclick={() => {
-                            taskHolder.currentComponent = task[1];
+                            if (onTaskAction && selectedAction)
+                                onTaskAction(selectedAction, task[1]);
                         }}>{task[0]}</DropdownItem
                     >
                 {/each}
