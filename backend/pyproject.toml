@@ -1,6 +1,6 @@
 [project]
 name = "dac_web-backend"
-version = "0.1.1"
+version = "0.2.0.dev0"
 description = "DAC analysis on web, the backend handlers."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,7 +9,6 @@ dependencies = [
     "httpx>=0.28.1",
     "matplotlib>=3.10.5",
     "miz-dac>=0.4.0",
-    "nest-asyncio2>=1.6.1",
     "starlette>=0.47.2",
     "uvicorn>=0.35.0",
     "websockets>=15.0.1",

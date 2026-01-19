@@ -21,9 +21,6 @@ import matplotlib as mpl
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backends import backend_webagg_core as core
 
-import nest_asyncio2
-nest_asyncio2.apply()  # Allow nested event loops
-
 STATIC_PATH = str(core.FigureManagerWebAgg.get_static_file_path())
 IMAGES_PATH = str(Path(mpl.get_data_path(), 'images'))
 FIG_NUM = 1
@@ -106,6 +103,7 @@ class WebAggWSEndpoint(WebSocketEndpoint):
         if self.manager is None:
             await websocket.close(code=3003, reason="Figure not found")
             return
+        # 这里的 self 必须实现 send_json 和 send_binary 方法
         self.manager.add_web_socket(self)
 
     async def on_disconnect(self, websocket: WebSocket, close_code: int):
@@ -120,23 +118,32 @@ class WebAggWSEndpoint(WebSocketEndpoint):
         else:
             manager = Gcf.get_fig_manager(self.fignum)
             if manager is not None:
+                # 注意：handle_json 是同步的，它内部会调用下面的 send_json/send_binary
                 manager.handle_json(message)
 
     def send_json(self, content):
-        loop = asyncio.get_event_loop()
-        coroutine = self.websocket.send_json(content)
+        # 1. 获取当前运行的事件循环
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return # 或者处理异常
 
-        loop.run_until_complete(coroutine)
+        # 2. 关键：不要 run_until_complete，而是创建一个并发任务
+        # 这允许同步代码立即返回，而发送逻辑在下一帧执行
+        loop.create_task(self.websocket.send_json(content))
 
     def send_binary(self, blob):
-        loop = asyncio.get_event_loop()
-        if self.supports_binary:
-            coroutine = self.websocket.send_bytes(blob)
-        else:
-            # Convert binary data to base64 string if binary is not supported
-            coroutine = self.websocket.send_text(base64.b64encode(blob).decode('utf-8'))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
 
-        loop.run_until_complete(coroutine)
+        # 同理，异步发送二进制数据
+        if self.supports_binary:
+            loop.create_task(self.websocket.send_bytes(blob))
+        else:
+            text_data = base64.b64encode(blob).decode('utf-8')
+            loop.create_task(self.websocket.send_text(text_data))
 
 routes = [
     Route('/favicon.ico', favicon),
@@ -151,16 +158,11 @@ routes = [
 app = Starlette(debug=False, routes=routes)
 
 """
-I don't like current implementation, there are some issues.
+There are some issues:
 
 - It supports only one websocket connection.
   If with multiple connections, there will be error accumulation on the diff image.
-  This should due to the force async to sync patch.
-- With the nested event loop patch, error occurs when exiting.
-
-Why tornado use async too, but no `async` required?
-And why there is no official function to change async to sync?
-When new websocket connection, new endpoint is created, then why pass websocket as parameter?
+- When new websocket connection, new endpoint is created, then why pass websocket as parameter?
 """
 
 if __name__ == '__main__':

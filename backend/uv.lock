@@ -132,14 +132,13 @@ wheels = [
 
 [[package]]
 name = "dac-web-backend"
-version = "0.1.1"
+version = "0.2.0.dev0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "matplotlib" },
     { name = "miz-dac" },
-    { name = "nest-asyncio2" },
     { name = "starlette" },
     { name = "uvicorn" },
     { name = "websockets" },
@@ -151,7 +150,6 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "miz-dac", specifier = ">=0.4.0" },
-    { name = "nest-asyncio2", specifier = ">=1.6.1" },
     { name = "starlette", specifier = ">=0.47.2" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "websockets", specifier = ">=15.0.1" },
@@ -362,15 +360,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7b/88/8266962effbcee8cdd38de0a17ba7867a9c068efdf197f749bd259dfd4af/miz_dac-0.4.0.tar.gz", hash = "sha256:380efda52ab1880bab0407f3a0026a14c7a64e3e69a30fcaf8ee0bd632463545", size = 50306, upload-time = "2025-08-27T08:55:31.544Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/91/23e79e4684bdd73ec888c8dd619d5fb1bfb52228f71d257699ac72bb6269/miz_dac-0.4.0-py3-none-any.whl", hash = "sha256:fa41642af0e172d3919a18d7ee434230f71c6dd59e57449f68f60bc82fdf0bcd", size = 58348, upload-time = "2025-08-27T08:55:30.624Z" },
-]
-
-[[package]]
-name = "nest-asyncio2"
-version = "1.6.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f2/e5/483e900c34a8a6144b544578b53483973ad34ca3e5d49f7e78367b9ca837/nest_asyncio2-1.6.1.tar.gz", hash = "sha256:809296f49d362f77b55020d94bdb61987f7c0ae198bd628c9fec4042860336ac", size = 7013, upload-time = "2025-11-18T15:56:44.177Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/6f/3abf81876809a7d9e0ae79655eef9634844b3053fdfba114fb1589e2119a/nest_asyncio2-1.6.1-py3-none-any.whl", hash = "sha256:c420e44030caada8e593b1b7a786eec7871742bb6d498a192317e7124a6e2102", size = 5803, upload-time = "2025-11-18T15:56:42.768Z" },
 ]
 
 [[package]]

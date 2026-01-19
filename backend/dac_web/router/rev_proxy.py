@@ -52,8 +52,6 @@ async def proxy_websocket(websocket: WebSocket, path: str, sessid: str | None = 
 
     internal_url = f"ws://{conn}/{path}"
 
-    # TODO: there is an error since uvicorn==0.36, the websocket automatically got closed after established.
-    # currently fix uvicorn==0.35
     async with websockets.connect(internal_url) as internal_ws:
         async def client_to_target():
             try:
