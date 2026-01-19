@@ -13,7 +13,14 @@
             ],
             "problemMatcher": [
                 "$python"
-            ]
+            ],
+            "options": {
+                "env": {
+                    "APP_LOG_ON": "1",
+                    "LOG_DIR": "../storage/logs/",
+                    "PROJECT_DIR": "../storage/projects/",
+                }
+            }
         },
         {
             "label": "(dev) Start DAC frontend",

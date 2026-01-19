@@ -4,6 +4,7 @@ Create, read, save, terminate app services.
 """
 
 import os, asyncio, httpx, json, socket
+import sys
 from os import path
 from uuid import uuid4
 from datetime import datetime
@@ -165,7 +166,7 @@ async def start_process_session():
     # env['APP_SESSID'] = sess_id
 
     process = await asyncio.create_subprocess_exec(
-        "python", "-m", APPMOD_ENTRY,
+        sys.executable, "-m", APPMOD_ENTRY,
         # env=env,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
