@@ -131,31 +131,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dac-web-backend"
-version = "0.2.0.dev0"
-source = { virtual = "." }
-dependencies = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "matplotlib" },
-    { name = "miz-dac" },
-    { name = "starlette" },
-    { name = "uvicorn" },
-    { name = "websockets" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.116.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "matplotlib", specifier = ">=3.10.5" },
-    { name = "miz-dac", specifier = ">=0.4.0" },
-    { name = "starlette", specifier = ">=0.47.2" },
-    { name = "uvicorn", specifier = ">=0.35.0" },
-    { name = "websockets", specifier = ">=15.0.1" },
-]
-
-[[package]]
 name = "fastapi"
 version = "0.116.1"
 source = { registry = "https://pypi.org/simple" }
@@ -360,6 +335,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7b/88/8266962effbcee8cdd38de0a17ba7867a9c068efdf197f749bd259dfd4af/miz_dac-0.4.0.tar.gz", hash = "sha256:380efda52ab1880bab0407f3a0026a14c7a64e3e69a30fcaf8ee0bd632463545", size = 50306, upload-time = "2025-08-27T08:55:31.544Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/91/23e79e4684bdd73ec888c8dd619d5fb1bfb52228f71d257699ac72bb6269/miz_dac-0.4.0-py3-none-any.whl", hash = "sha256:fa41642af0e172d3919a18d7ee434230f71c6dd59e57449f68f60bc82fdf0bcd", size = 58348, upload-time = "2025-08-27T08:55:30.624Z" },
+]
+
+[[package]]
+name = "miz-dac-web"
+version = "0.2.0.dev0"
+source = { editable = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "matplotlib" },
+    { name = "miz-dac" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+    { name = "websockets" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.116.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "matplotlib", specifier = ">=3.10.5" },
+    { name = "miz-dac", specifier = ">=0.4.0" },
+    { name = "starlette", specifier = ">=0.47.2" },
+    { name = "uvicorn", specifier = ">=0.35.0" },
+    { name = "websockets", specifier = ">=15.0.1" },
 ]
 
 [[package]]
