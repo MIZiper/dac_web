@@ -12,7 +12,7 @@ from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
 from dac.core.actions import PAB, VAB, SAB, TAB
 from dac.core.scenario import use_scenario
 
-GCK_ID = 'global'
+GCK_ID = "global"
 FIG_NUM = 1
 
 app = FastAPI()
@@ -26,36 +26,43 @@ container = Container.parse_save_config({})
 # init & save
 # -----------
 
-@app.post('/init')
+
+@app.post("/init")
 async def init(config: dict = Body(...)):
     global container
     container = Container.parse_save_config(config)
     return {"message": "Init done"}
 
-@app.get('/save')
+
+@app.get("/save")
 async def get_save():
     return {
         "message": "Save done",
         "config": container.get_save_config(),
     }
 
+
 # -------
 # scenarios
 # -------
 
-@app.get('/scenarios')
+
+@app.get("/scenarios")
 async def get_scenarios():
     return {
         "scenarios": os.listdir(scenarios_dir),
         "current_scenario": current_scenario,
     }
 
-@app.post('/scenarios')
+
+@app.post("/scenarios")
 async def post_scenarios(data: dict = Body(...)):
     global current_scenario
+
     class FakeDACWin:
         def message(self, s):
             pass
+
     target_scenario = data.get("scenario")
     use_scenario(path.join(scenarios_dir, target_scenario), dac_win=FakeDACWin())
     current_scenario = target_scenario
@@ -64,62 +71,70 @@ async def post_scenarios(data: dict = Body(...)):
         "current_scenario": current_scenario,
     }
 
+
 # --------
 # contexts
 # --------
 
-@app.get('/contexts')
+
+@app.get("/contexts")
 async def get_contexts():
     contexts = [
         {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
-        for node_type, node_name, node
-        in container.context_keys.NodeIter
+        for node_type, node_name, node in container.context_keys.NodeIter
     ]
-    contexts.insert(0, {
-        "name": "Global",
-        "uuid": GCK_ID,
-        "type": get_nodetype_path(GCK.__class__),
-    })
+    contexts.insert(
+        0,
+        {
+            "name": "Global",
+            "uuid": GCK_ID,
+            "type": get_nodetype_path(GCK.__class__),
+        },
+    )
     return {
         "contexts": contexts,
-        "current_context": GCK_ID if container.current_key is GCK else container.current_key.uuid
+        "current_context": GCK_ID
+        if container.current_key is GCK
+        else container.current_key.uuid,
     }
 
-@app.post('/contexts')
+
+@app.post("/contexts")
 async def post_contexts(data: dict = Body(...)):
     context_config = data.get("context_config")
-    context_key_type = Container.GetClass(context_config['type'])
-    context_key = context_key_type(context_config['name'])
+    context_key_type = Container.GetClass(context_config["type"])
+    context_key = context_key_type(context_config["name"])
     container.context_keys.add_node(context_key)
     return {
         "message": f"Create context '{context_key.name}'",
-        "context_uuid": context_key.uuid
+        "context_uuid": context_key.uuid,
     }
 
-@app.get('/contexts/{context_key_id}')
+
+@app.get("/contexts/{context_key_id}")
 async def get_context_of(context_key_id: str = FPath(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    return {
-        "context_config": context_key.get_construct_config()
-    }
+    return {"context_config": context_key.get_construct_config()}
 
-@app.put('/contexts/{context_key_id}')
+
+@app.put("/contexts/{context_key_id}")
 async def put_context_of(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
         raise HTTPException(status_code=400, detail="Cannot modify global context key")
     context_config = data.get("context_config")
-    if (new_name:=context_config.get("name")) and new_name!=context_key.name:
+    if (new_name := context_config.get("name")) and new_name != context_key.name:
         container.context_keys.rename_node_to(context_key, new_name)
     context_key.apply_construct_config(context_config)
     return {
         "message": f"Update context '{context_key.name}'",
     }
 
-@app.post('/contexts/{context_key_id}')
-async def post_context_of(context_key_id: str): # NOTE: (issue 20250813-1)
+
+@app.post("/contexts/{context_key_id}")
+async def post_context_of(context_key_id: str):  # NOTE: (issue 20250813-1)
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -128,7 +143,8 @@ async def post_context_of(context_key_id: str): # NOTE: (issue 20250813-1)
         "message": f"Activate context '{context_key.name}'",
     }
 
-@app.delete('/contexts/{context_key_id}')
+
+@app.delete("/contexts/{context_key_id}")
 async def delete_context_of(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
@@ -140,36 +156,37 @@ async def delete_context_of(context_key_id: str):
         "message": f"Delete context '{context_key.name}'",
     }
 
-@app.get('/types/{option}')
+
+@app.get("/types/{option}")
 async def get_available_types(option: str):
-    if option == 'context':
+    if option == "context":
         return {
             "context_types": [
                 {"name": data_type.__name__, "type": get_nodetype_path(data_type)}
-                if not isinstance(data_type, str) else
-                data_type
-                for data_type
-                in Container.GetGlobalDataTypes()
+                if not isinstance(data_type, str)
+                else data_type
+                for data_type in Container.GetGlobalDataTypes()
             ]
         }
-    elif option == 'action':
+    elif option == "action":
         return {
             "action_types": [
                 {"name": action_type.CAPTION, "type": get_nodetype_path(action_type)}
-                if not isinstance(action_type, str) else
-                action_type
-                for action_type
-                in container.ActionTypesInCurrentContext
+                if not isinstance(action_type, str)
+                else action_type
+                for action_type in container.ActionTypesInCurrentContext
             ]
         }
     else:
         raise HTTPException(status_code=404, detail="Unrecognized command")
 
+
 # ----
 # data
 # ----
 
-@app.get('/{context_key_id}/data')
+
+@app.get("/{context_key_id}/data")
 async def get_data(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -178,12 +195,12 @@ async def get_data(context_key_id: str):
     return {
         "data": [
             {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
-            for node_type, node_name, node
-            in context.NodeIter
+            for node_type, node_name, node in context.NodeIter
         ]
     }
 
-@app.get('/{context_key_id}/data/{data_id}')
+
+@app.get("/{context_key_id}/data/{data_id}")
 async def get_data_of(context_key_id: str, data_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -192,11 +209,10 @@ async def get_data_of(context_key_id: str, data_id: str):
     data = context.get_node_by_uuid(data_id)
     if data is None:
         raise HTTPException(status_code=404, detail="No such data")
-    return {
-        "data_config": data.get_construct_config()
-    }
+    return {"data_config": data.get_construct_config()}
 
-@app.put('/{context_key_id}/data/{data_id}')
+
+@app.put("/{context_key_id}/data/{data_id}")
 async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -210,11 +226,13 @@ async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(
         "message": f"Update data '{data.name}'",
     }
 
+
 # -------
 # actions
 # -------
 
-@app.get('/{context_key_id}/actions')
+
+@app.get("/{context_key_id}/actions")
 async def get_actions(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -223,27 +241,25 @@ async def get_actions(context_key_id: str):
     return {
         "actions": [
             {"name": action.name, "uuid": action.uuid, "status": action.status}
-            for action
-            in container.actions
+            for action in container.actions
             if action.context_key is context_key
         ]
     }
 
-@app.post('/{context_key_id}/actions')
+
+@app.post("/{context_key_id}/actions")
 async def post_actions(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     action_config = data.get("action_config")
-    action_type = Container.GetClass(action_config['type'])
+    action_type = Container.GetClass(action_config["type"])
     action = action_type(context_key=context_key)
     container.actions.append(action)
-    return {
-        "message": f"Create action '{action.name}'",
-        "action_uuid": action.uuid
-    }
+    return {"message": f"Create action '{action.name}'", "action_uuid": action.uuid}
 
-@app.get('/{context_key_id}/actions/{action_id}')
+
+@app.get("/{context_key_id}/actions/{action_id}")
 async def get_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -251,11 +267,10 @@ async def get_action_of(context_key_id: str, action_id: str):
     action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
-    return {
-        "action_config": action.get_construct_config()
-    }
+    return {"action_config": action.get_construct_config()}
 
-@app.put('/{context_key_id}/actions/{action_id}')
+
+@app.put("/{context_key_id}/actions/{action_id}")
 async def put_action_of(context_key_id: str, action_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -269,7 +284,8 @@ async def put_action_of(context_key_id: str, action_id: str, data: dict = Body(.
         "message": f"Update action '{action.name}'",
     }
 
-@app.post('/{context_key_id}/actions/{action_id}')
+
+@app.post("/{context_key_id}/actions/{action_id}")
 async def post_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -278,14 +294,10 @@ async def post_action_of(context_key_id: str, action_id: str):
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     msg, signal, status, stats = run_action(action)
-    return {
-        "message": msg,
-        "data_updated": signal,
-        "status": status,
-        "stats": stats
-    }
+    return {"message": msg, "data_updated": signal, "status": status, "stats": stats}
 
-@app.delete('/{context_key_id}/actions/{action_id}')
+
+@app.delete("/{context_key_id}/actions/{action_id}")
 async def delete_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -298,13 +310,16 @@ async def delete_action_of(context_key_id: str, action_id: str):
         "message": f"Delete action '{action.name}'",
     }
 
+
 # ------
 # others
 # ------
 
+
 @app.get("/ready")
 async def ready():
     return JSONResponse(status_code=204, content={})
+
 
 def get_context_key(context_key_id: str):
     if context_key_id == GCK_ID:
@@ -315,11 +330,17 @@ def get_context_key(context_key_id: str):
         except:
             return None
 
+
 def get_nodetype_path(node_type: type[NodeBase]):
     return f"{node_type.__module__}.{node_type.__qualname__}"
 
-def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, bool, int, object]:
-    params = container.prepare_params_for_action(action._SIGNATURE, action._construct_config)
+
+def run_action(
+    action: ActionNode, complete_cb: callable = None
+) -> tuple[str, bool, int, object]:
+    params = container.prepare_params_for_action(
+        action._SIGNATURE, action._construct_config
+    )
 
     def completed(rst):
         current_context = container.CurrentContext
@@ -351,6 +372,7 @@ def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, boo
         action.figure = figure
 
     stats = None
+
     def pass_stats(data):
         nonlocal stats
         stats = data
@@ -359,6 +381,7 @@ def run_action(action: ActionNode, complete_cb: callable=None) -> tuple[str, boo
         action.renderer = pass_stats
 
     if False:
+
         def fn(p, progress_emitter, logger):
             action._progress = progress_emitter
             action._message = logger

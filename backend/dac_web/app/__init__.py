@@ -14,7 +14,9 @@ app = FastAPI()
 
 figure = Figure(figsize=(10, 6))
 core.FigureManagerWebAgg._toolbar2_class = core.NavigationToolbar2WebAgg
-manager: core.FigureManagerWebAgg = core.new_figure_manager_given_figure(num=FIG_NUM, figure=figure)
+manager: core.FigureManagerWebAgg = core.new_figure_manager_given_figure(
+    num=FIG_NUM, figure=figure
+)
 Gcf._set_new_active_manager(manager)
 
 app.mount("/mpl", mpl_app)
@@ -23,6 +25,7 @@ app.mount("", dac_app)
 # log_fp = None
 # orig_out = sys.stdout
 # orig_err = sys.stderr
+
 
 class CustomServer(Server):
     async def startup(self, sockets=None):
@@ -44,6 +47,7 @@ class CustomServer(Server):
         #         log_fp.close()
         await super().shutdown(sockets)
 
+
 def main():
     # sess_id = os.getenv("APP_SESSID", "DEBUG")
     # logdir = os.getenv("LOG_DIR", "./storage/logs")
@@ -57,5 +61,6 @@ def main():
     server = CustomServer(config)
     server.run()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()
