@@ -31,6 +31,7 @@ async def proxy_http(
     async with (
         httpx.AsyncClient() as client
     ):  # TODO: try to reuse the client, otherwise every http request is a new connection to internal service
+        # TODO: make PAB special for the timeout, or return something early
         uuid = sessid or request.headers.get(SESSID_KEY)
         if uuid is None or not user_manager.validate_sess(uuid):
             raise HTTPException(status_code=401, detail="Invalid or missing session ID")

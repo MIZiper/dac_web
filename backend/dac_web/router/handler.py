@@ -21,7 +21,7 @@ APPMOD_ENTRY = "dac_web.app.__init__"
 SESSID_KEY = "dac-sess_id"
 PROJDIR = os.getenv("PROJECT_DIR", "./storage/projects")
 SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
-__VERSION__ = version("dac_web-backend")
+__VERSION__ = version("miz-dac_web")
 
 
 class UserManager(dict):

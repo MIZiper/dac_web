@@ -18,7 +18,7 @@ FIG_NUM = 1
 app = FastAPI()
 
 current_scenario = "0.base.yaml"
-scenarios_dir = path.join(path.dirname(dac.__file__), "scenarios")
+scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(path.dirname(dac.__file__), "scenarios")
 use_scenario(path.join(scenarios_dir, current_scenario))
 container = Container.parse_save_config({})
 
