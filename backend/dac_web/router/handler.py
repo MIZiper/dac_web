@@ -6,6 +6,7 @@ Create, read, save, terminate app services.
 import os, asyncio, httpx, json, socket
 import sys
 from os import path
+from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
 from importlib.metadata import version
@@ -22,6 +23,8 @@ SESSID_KEY = "dac-sess_id"
 PROJDIR = os.getenv("PROJECT_DIR", "./storage/projects")
 SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
 __VERSION__ = version("miz-dac_web")
+LOG_DIR = os.getenv("LOG_DIR", "./storage/logs")
+APP_LOG_ON = os.getenv("APP_LOG_ON")
 
 
 class UserManager(dict):
@@ -91,7 +94,15 @@ async def terminate_process_session(request: Request):
     if not user_manager.validate_sess(sess_id):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
     try:
-        user_manager.get_sess_obj(sess_id).terminate()
+        p = user_manager.get_sess_obj(sess_id)
+        p.terminate() # terminate first to flush out the outputs, otherwise below code blocks. strange but works.
+        # NOTE: it is said PIPE has a buffer limit, no idea what if output is long since it's always in demo phase :|
+        if APP_LOG_ON and LOG_DIR:
+            out, err = await p.communicate()
+            stdout_path = path.join(LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log")
+            stderr_path = path.join(LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log")
+            Path(stdout_path).write_bytes(out or b"")
+            Path(stderr_path).write_bytes(err or b"")
         user_manager.remove_sess(sess_id)
         return {"message": "Analysis terminated"}
     except Exception as e:
