@@ -9,6 +9,7 @@ from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 import httpx
 from fastapi import (
     FastAPI,
+    APIRouter,
     Request,
     WebSocket,
     WebSocketDisconnect,
@@ -19,10 +20,10 @@ from fastapi.responses import Response
 
 from dac_web.router.handler import user_manager, SESSID_KEY
 
-app = FastAPI()
+router = APIRouter()
 
 
-@app.api_route(
+@router.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 )
 async def proxy_http(
@@ -53,7 +54,7 @@ async def proxy_http(
         )
 
 
-@app.websocket("/{path:path}")
+@router.websocket("/{path:path}")
 async def proxy_websocket(
     websocket: WebSocket, path: str, sessid: str | None = Query(None, alias=SESSID_KEY)
 ):

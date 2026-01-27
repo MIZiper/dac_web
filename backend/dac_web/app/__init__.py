@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 import os, sys
 from datetime import datetime
 from uvicorn import Config, Server
@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 import matplotlib.backends.backend_webagg_core as core
 from matplotlib._pylab_helpers import Gcf
 
-from dac_web.app.handler import FIG_NUM, app as dac_app
+from dac_web.app.handler import FIG_NUM, router as dac_router
 from dac_web.webagg_starlette import app as mpl_app
 
 app = FastAPI()
@@ -20,7 +20,7 @@ manager: core.FigureManagerWebAgg = core.new_figure_manager_given_figure(
 Gcf._set_new_active_manager(manager)
 
 app.mount("/mpl", mpl_app)
-app.mount("", dac_app)
+app.include_router(dac_router, prefix="")
 
 # log_fp = None
 # orig_out = sys.stdout

@@ -11,12 +11,12 @@ from uuid import uuid4
 from datetime import datetime
 from importlib.metadata import version
 
-from fastapi import FastAPI, Request, HTTPException, Body
+from fastapi import FastAPI, Request, HTTPException, Body, APIRouter
 from dac_web.webagg_starlette import app as mpl_app
 
 
-app = FastAPI()
-app.mount("/mpl", mpl_app)
+router = APIRouter()
+router.include_router(mpl_app.router, prefix="/mpl")
 
 APPMOD_ENTRY = "dac_web.app.__init__"
 SESSID_KEY = "dac-sess_id"
@@ -52,7 +52,7 @@ class UserManager(dict):
 user_manager = UserManager()
 
 
-@app.post("/load")
+@router.post("/load")
 async def load_project(data: dict = Body(...)):
     project_id = data.get("project_id")
     project_fpath = path.join(PROJDIR, project_id)
@@ -76,19 +76,19 @@ async def load_project(data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="Project not found")
 
 
-@app.post("/load_saved")
+@router.post("/load_saved")
 async def load_saved_project(data: dict = Body(...)):
     project_id = get_project_id_by_path(data.get("project_path"))
     return await load_project({"project_id": project_id})
 
 
-@app.post("/new")
+@router.post("/new")
 async def new_process_session():
     sess_id = await start_process_session()
     return {"message": "Analysis started", SESSID_KEY: sess_id}
 
 
-@app.post("/term")
+@router.post("/term")
 async def terminate_process_session(request: Request):
     sess_id = (await request.json()).get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
@@ -111,7 +111,7 @@ async def terminate_process_session(request: Request):
         )
 
 
-@app.post("/save")
+@router.post("/save")
 async def save_project(request: Request, data: dict = Body(...)):
     sess_id = request.headers.get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
@@ -168,7 +168,7 @@ async def save_project(request: Request, data: dict = Body(...)):
         raise HTTPException(status_code=500, detail="Project save failed")
 
 
-@app.post("/project_files")
+@router.post("/project_files")
 async def get_project_files(data: dict = Body(...)):
     relpath = data.get("relpath").strip("./")
     node_dir = path.join(SAVEDIR, relpath)

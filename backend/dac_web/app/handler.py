@@ -1,7 +1,7 @@
 import os, json
 from os import path
 
-from fastapi import FastAPI, Request, HTTPException, Body, Path as FPath
+from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath
 from fastapi.responses import JSONResponse
 
 from matplotlib.figure import Figure
@@ -15,7 +15,7 @@ from dac.core.scenario import use_scenario
 GCK_ID = "global"
 FIG_NUM = 1
 
-app = FastAPI()
+router = APIRouter()
 
 current_scenario = "0.base.yaml"
 scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(path.dirname(dac.__file__), "scenarios")
@@ -27,14 +27,14 @@ container = Container.parse_save_config({})
 # -----------
 
 
-@app.post("/init")
+@router.post("/init")
 async def init(config: dict = Body(...)):
     global container
     container = Container.parse_save_config(config)
     return {"message": "Init done"}
 
 
-@app.get("/save")
+@router.get("/save")
 async def get_save():
     return {
         "message": "Save done",
@@ -47,7 +47,7 @@ async def get_save():
 # -------
 
 
-@app.get("/scenarios")
+@router.get("/scenarios")
 async def get_scenarios():
     return {
         "scenarios": os.listdir(scenarios_dir),
@@ -55,7 +55,7 @@ async def get_scenarios():
     }
 
 
-@app.post("/scenarios")
+@router.post("/scenarios")
 async def post_scenarios(data: dict = Body(...)):
     global current_scenario
 
@@ -77,7 +77,7 @@ async def post_scenarios(data: dict = Body(...)):
 # --------
 
 
-@app.get("/contexts")
+@router.get("/contexts")
 async def get_contexts():
     contexts = [
         {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
@@ -99,7 +99,7 @@ async def get_contexts():
     }
 
 
-@app.post("/contexts")
+@router.post("/contexts")
 async def post_contexts(data: dict = Body(...)):
     context_config = data.get("context_config")
     context_key_type = Container.GetClass(context_config["type"])
@@ -111,7 +111,7 @@ async def post_contexts(data: dict = Body(...)):
     }
 
 
-@app.get("/contexts/{context_key_id}")
+@router.get("/contexts/{context_key_id}")
 async def get_context_of(context_key_id: str = FPath(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -119,7 +119,7 @@ async def get_context_of(context_key_id: str = FPath(...)):
     return {"context_config": context_key.get_construct_config()}
 
 
-@app.put("/contexts/{context_key_id}")
+@router.put("/contexts/{context_key_id}")
 async def put_context_of(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
@@ -133,7 +133,7 @@ async def put_context_of(context_key_id: str, data: dict = Body(...)):
     }
 
 
-@app.post("/contexts/{context_key_id}")
+@router.post("/contexts/{context_key_id}")
 async def post_context_of(context_key_id: str):  # NOTE: (issue 20250813-1)
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -144,7 +144,7 @@ async def post_context_of(context_key_id: str):  # NOTE: (issue 20250813-1)
     }
 
 
-@app.delete("/contexts/{context_key_id}")
+@router.delete("/contexts/{context_key_id}")
 async def delete_context_of(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
@@ -157,7 +157,7 @@ async def delete_context_of(context_key_id: str):
     }
 
 
-@app.get("/types/{option}")
+@router.get("/types/{option}")
 async def get_available_types(option: str):
     if option == "context":
         return {
@@ -186,7 +186,7 @@ async def get_available_types(option: str):
 # ----
 
 
-@app.get("/{context_key_id}/data")
+@router.get("/{context_key_id}/data")
 async def get_data(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -200,7 +200,7 @@ async def get_data(context_key_id: str):
     }
 
 
-@app.get("/{context_key_id}/data/{data_id}")
+@router.get("/{context_key_id}/data/{data_id}")
 async def get_data_of(context_key_id: str, data_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -212,7 +212,7 @@ async def get_data_of(context_key_id: str, data_id: str):
     return {"data_config": data.get_construct_config()}
 
 
-@app.put("/{context_key_id}/data/{data_id}")
+@router.put("/{context_key_id}/data/{data_id}")
 async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -232,7 +232,7 @@ async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(
 # -------
 
 
-@app.get("/{context_key_id}/actions")
+@router.get("/{context_key_id}/actions")
 async def get_actions(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -247,7 +247,7 @@ async def get_actions(context_key_id: str):
     }
 
 
-@app.post("/{context_key_id}/actions")
+@router.post("/{context_key_id}/actions")
 async def post_actions(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -259,7 +259,7 @@ async def post_actions(context_key_id: str, data: dict = Body(...)):
     return {"message": f"Create action '{action.name}'", "action_uuid": action.uuid}
 
 
-@app.get("/{context_key_id}/actions/{action_id}")
+@router.get("/{context_key_id}/actions/{action_id}")
 async def get_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -270,7 +270,7 @@ async def get_action_of(context_key_id: str, action_id: str):
     return {"action_config": action.get_construct_config()}
 
 
-@app.put("/{context_key_id}/actions/{action_id}")
+@router.put("/{context_key_id}/actions/{action_id}")
 async def put_action_of(context_key_id: str, action_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -285,7 +285,7 @@ async def put_action_of(context_key_id: str, action_id: str, data: dict = Body(.
     }
 
 
-@app.post("/{context_key_id}/actions/{action_id}")
+@router.post("/{context_key_id}/actions/{action_id}")
 async def post_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -297,7 +297,7 @@ async def post_action_of(context_key_id: str, action_id: str):
     return {"message": msg, "data_updated": signal, "status": status, "stats": stats}
 
 
-@app.delete("/{context_key_id}/actions/{action_id}")
+@router.delete("/{context_key_id}/actions/{action_id}")
 async def delete_action_of(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -316,7 +316,7 @@ async def delete_action_of(context_key_id: str, action_id: str):
 # ------
 
 
-@app.get("/ready")
+@router.get("/ready")
 async def ready():
     return JSONResponse(status_code=204, content={})
 
