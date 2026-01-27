@@ -18,7 +18,9 @@ FIG_NUM = 1
 router = APIRouter()
 
 current_scenario = "0.base.yaml"
-scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(path.dirname(dac.__file__), "scenarios")
+scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(
+    path.dirname(dac.__file__), "scenarios"
+)
 use_scenario(path.join(scenarios_dir, current_scenario))
 container = Container.parse_save_config({})
 
@@ -42,9 +44,9 @@ async def get_save():
     }
 
 
-# -------
+# ---------
 # scenarios
-# -------
+# ---------
 
 
 @router.get("/scenarios")
@@ -233,14 +235,14 @@ async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(
 
 
 @router.get("/{context_key_id}/actions")
-async def get_actions(context_key_id: str):
+async def get_actions_of_context(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     context = container.get_context(context_key)
     return {
         "actions": [
-            {"name": action.name, "uuid": action.uuid, "status": action.status}
+            {"name": action.name, "uuid": action.uuid, "status": action.status, "type": get_nodetype_path(type(action))}
             for action in container.actions
             if action.context_key is context_key
         ]
@@ -248,7 +250,7 @@ async def get_actions(context_key_id: str):
 
 
 @router.post("/{context_key_id}/actions")
-async def post_actions(context_key_id: str, data: dict = Body(...)):
+async def create_action_for_context(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -260,7 +262,7 @@ async def post_actions(context_key_id: str, data: dict = Body(...)):
 
 
 @router.get("/{context_key_id}/actions/{action_id}")
-async def get_action_of(context_key_id: str, action_id: str):
+async def get_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -271,7 +273,7 @@ async def get_action_of(context_key_id: str, action_id: str):
 
 
 @router.put("/{context_key_id}/actions/{action_id}")
-async def put_action_of(context_key_id: str, action_id: str, data: dict = Body(...)):
+async def update_action_config(context_key_id: str, action_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")

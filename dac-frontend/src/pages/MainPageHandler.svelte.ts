@@ -102,6 +102,7 @@ export async function getCurrentActions(context: DataItem) {
         name: a["name"],
         uuid: a["uuid"],
         status: statusMap.get(a['status']),
+        type_path: a["type"]
     }));
 }
 
@@ -213,6 +214,7 @@ export async function addAction(context: DataItem, actionType: ActionType) {
             name: actionType.type_name,
             uuid: res.data['action_uuid'],
             status: "New",
+            type_path: actionType.type_path,
         }
         appdata.actions.push(new_action);
         return new_action;

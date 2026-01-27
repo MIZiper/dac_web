@@ -12,7 +12,9 @@ app = FastAPI()
 
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(rev_router, prefix="/app", include_in_schema=False)
-app.include_router(app_doc_router, prefix="/app", tags=["APP"]) # for /docs purpose only, and seems the /app routing is overshadowed by rev_router
+app.include_router(
+    app_doc_router, prefix="/app", tags=["APP"]
+)  # for /docs purpose only, and seems the /app routing is overshadowed by rev_router
 
 FRONTEND_DIST = os.getenv("FRONTEND_DIST")
 if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):

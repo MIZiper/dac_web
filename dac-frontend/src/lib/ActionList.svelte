@@ -145,9 +145,8 @@
 <div bind:this={menuContainer} style="position: fixed; z-index: 9;">
     <Dropdown isOpen={isOpenActMenu} toggle={toggleActMenu}>
         <DropdownMenu>
-            {#if selectedAction && taskHolder.mapping[selectedAction.name]}
-                <!-- not .name but .type_path -->
-                {#each taskHolder.mapping[selectedAction.name] as task}
+            {#if selectedAction && taskHolder.mapping[selectedAction.type_path]}
+                {#each taskHolder.mapping[selectedAction.type_path] as task}
                     <DropdownItem
                         onclick={() => {
                             if (onTaskAction && selectedAction)

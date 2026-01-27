@@ -95,12 +95,16 @@ async def terminate_process_session(request: Request):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
     try:
         p = user_manager.get_sess_obj(sess_id)
-        p.terminate() # terminate first to flush out the outputs, otherwise below code blocks. strange but works.
+        p.terminate()  # terminate first to flush out the outputs, otherwise below code blocks. strange but works.
         # NOTE: it is said PIPE has a buffer limit, no idea what if output is long since it's always in demo phase :|
         if APP_LOG_ON and LOG_DIR:
             out, err = await p.communicate()
-            stdout_path = path.join(LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log")
-            stderr_path = path.join(LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log")
+            stdout_path = path.join(
+                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
+            )
+            stderr_path = path.join(
+                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log"
+            )
             Path(stdout_path).write_bytes(out or b"")
             Path(stderr_path).write_bytes(err or b"")
         user_manager.remove_sess(sess_id)

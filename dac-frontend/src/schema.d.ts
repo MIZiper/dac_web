@@ -10,6 +10,7 @@ export interface ActionItem {
     name: string,
     uuid: string,
     status: ActionStatus,
+    type_path: string,
 }
 
 export interface ActionType {
