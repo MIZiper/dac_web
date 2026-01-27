@@ -4,9 +4,8 @@
 name: Node.js Package
 
 on:
-  push:
-    paths:
-      - dac-frontend/package.json
+  release:
+    types: [published]
 
 jobs:
   publish-npm:
