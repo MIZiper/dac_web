@@ -12,11 +12,8 @@ from datetime import datetime
 from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body, APIRouter
-from dac_web.webagg_starlette import app as mpl_app
-
 
 router = APIRouter()
-router.include_router(mpl_app.router, prefix="/mpl")
 
 APPMOD_ENTRY = "dac_web.app.__init__"
 SESSID_KEY = "dac-sess_id"

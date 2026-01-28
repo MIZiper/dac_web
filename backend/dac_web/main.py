@@ -1,20 +1,22 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from dac_web.router.rev_proxy import router as rev_router
 from dac_web.router.handler import router as api_router
 from dac_web.app.handler import router as app_doc_router
+from dac_web.webagg_starlette import app as mpl_app
 
 app = FastAPI()
 
 app.include_router(api_router, prefix="/api", tags=["API"])
+app.mount("/api/mpl", mpl_app) # for static files only, disk cache possible
 app.include_router(rev_router, prefix="/app", include_in_schema=False)
 app.include_router(
     app_doc_router, prefix="/app", tags=["APP"]
-)  # for /docs purpose only, and seems the /app routing is overshadowed by rev_router
+)  # for /docs purpose only, and seems the /app routing is overshadowed by rev_router (๑•̀ㅂ•́)و✧
 
 FRONTEND_DIST = os.getenv("FRONTEND_DIST")
 if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):
