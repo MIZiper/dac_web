@@ -12,6 +12,8 @@ from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
 from dac.core.actions import PAB, VAB, SAB, TAB
 from dac.core.scenario import use_scenario
 
+from dac_web.schema import Response, DACConfig, DACConfigResp, ScenariosResp
+
 GCK_ID = "global"
 FIG_NUM = 1
 
@@ -29,19 +31,19 @@ container = Container.parse_save_config({})
 # -----------
 
 
-@router.post("/init")
-async def init(config: dict = Body(...)):
+@router.post("/init", response_model=Response)
+async def init(config: DACConfig):
     global container
-    container = Container.parse_save_config(config)
-    return {"message": "Init done"}
+    container = Container.parse_save_config(config.model_dump())
+    return Response(message="Init done")
 
 
-@router.get("/save")
-async def get_save():
-    return {
-        "message": "Save done",
-        "config": container.get_save_config(),
-    }
+@router.get("/save", response_model=DACConfigResp)
+async def get_dac_config():
+    return DACConfigResp(
+        message="Saved",
+        config=DACConfig.model_validate(container.get_save_config())
+    )
 
 
 # ---------
@@ -49,16 +51,17 @@ async def get_save():
 # ---------
 
 
-@router.get("/scenarios")
-async def get_scenarios():
-    return {
-        "scenarios": os.listdir(scenarios_dir),
-        "current_scenario": current_scenario,
-    }
+@router.get("/scenarios", response_model=ScenariosResp)
+async def list_scenarios():
+    return ScenariosResp(
+        message="List scenarios",
+        scenarios=os.listdir(scenarios_dir),
+        current_scenario=current_scenario
+    )
 
 
 @router.post("/scenarios")
-async def post_scenarios(data: dict = Body(...)):
+async def switch_to_scenario(data: dict = Body(...)):
     global current_scenario
 
     class FakeDACWin:
@@ -80,7 +83,7 @@ async def post_scenarios(data: dict = Body(...)):
 
 
 @router.get("/contexts")
-async def get_contexts():
+async def list_contexts():
     contexts = [
         {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
         for node_type, node_name, node in container.context_keys.NodeIter
@@ -102,7 +105,7 @@ async def get_contexts():
 
 
 @router.post("/contexts")
-async def post_contexts(data: dict = Body(...)):
+async def create_context(data: dict = Body(...)):
     context_config = data.get("context_config")
     context_key_type = Container.GetClass(context_config["type"])
     context_key = context_key_type(context_config["name"])
@@ -114,7 +117,7 @@ async def post_contexts(data: dict = Body(...)):
 
 
 @router.get("/contexts/{context_key_id}")
-async def get_context_of(context_key_id: str = FPath(...)):
+async def get_context_config(context_key_id: str = FPath(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -122,7 +125,7 @@ async def get_context_of(context_key_id: str = FPath(...)):
 
 
 @router.put("/contexts/{context_key_id}")
-async def put_context_of(context_key_id: str, data: dict = Body(...)):
+async def update_context_config(context_key_id: str, data: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
         raise HTTPException(status_code=400, detail="Cannot modify global context key")
@@ -136,7 +139,7 @@ async def put_context_of(context_key_id: str, data: dict = Body(...)):
 
 
 @router.post("/contexts/{context_key_id}")
-async def post_context_of(context_key_id: str):  # NOTE: (issue 20250813-1)
+async def activate_context(context_key_id: str):  # NOTE: (issue 20250813-1)
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -147,7 +150,7 @@ async def post_context_of(context_key_id: str):  # NOTE: (issue 20250813-1)
 
 
 @router.delete("/contexts/{context_key_id}")
-async def delete_context_of(context_key_id: str):
+async def delete_context(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
         raise HTTPException(status_code=400, detail="Cannot delete global context key")
@@ -189,7 +192,7 @@ async def get_available_types(option: str):
 
 
 @router.get("/{context_key_id}/data")
-async def get_data(context_key_id: str):
+async def get_context_data(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -203,7 +206,7 @@ async def get_data(context_key_id: str):
 
 
 @router.get("/{context_key_id}/data/{data_id}")
-async def get_data_of(context_key_id: str, data_id: str):
+async def get_data_config(context_key_id: str, data_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -215,7 +218,7 @@ async def get_data_of(context_key_id: str, data_id: str):
 
 
 @router.put("/{context_key_id}/data/{data_id}")
-async def put_data_of(context_key_id: str, data_id: str, data_body: dict = Body(...)):
+async def update_data_config(context_key_id: str, data_id: str, data_body: dict = Body(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -288,7 +291,7 @@ async def update_action_config(context_key_id: str, action_id: str, data: dict =
 
 
 @router.post("/{context_key_id}/actions/{action_id}")
-async def post_action_of(context_key_id: str, action_id: str):
+async def run_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -300,7 +303,7 @@ async def post_action_of(context_key_id: str, action_id: str):
 
 
 @router.delete("/{context_key_id}/actions/{action_id}")
-async def delete_action_of(context_key_id: str, action_id: str):
+async def delete_action(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")

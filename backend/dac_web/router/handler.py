@@ -169,7 +169,7 @@ async def save_project(request: Request, data: dict = Body(...)):
         raise HTTPException(status_code=500, detail="Project save failed")
 
 
-@router.post("/project_files")
+# @router.post("/project_files")
 async def get_project_files(data: dict = Body(...)):
     relpath = data.get("relpath").strip("./")
     node_dir = path.join(SAVEDIR, relpath)

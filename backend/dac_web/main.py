@@ -9,7 +9,21 @@ from dac_web.router.handler import router as api_router
 from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
 
-app = FastAPI()
+tags_metadata = [
+    {
+        "name": "API",
+        "description": "For session creating and terminating."
+    },
+    {
+        "name": "APP",
+        "description": "For data/action/context manipulation."
+    }
+]
+
+app = FastAPI(
+    title="DAC_web API",
+    openapi_tags=tags_metadata,
+)
 
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.mount("/api/mpl", mpl_app) # for static files only, disk cache possible
