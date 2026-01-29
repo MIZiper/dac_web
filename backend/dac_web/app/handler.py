@@ -12,7 +12,7 @@ from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
 from dac.core.actions import PAB, VAB, SAB, TAB
 from dac.core.scenario import use_scenario
 
-from dac_web.schema import Response, DACConfig, DACConfigResp, ScenariosResp
+import dac_web.schema as s
 
 GCK_ID = "global"
 FIG_NUM = 1
@@ -31,18 +31,17 @@ container = Container.parse_save_config({})
 # -----------
 
 
-@router.post("/init", response_model=Response)
-async def init(config: DACConfig):
+@router.post("/init", response_model=s.DACResponse)
+async def init(config: s.DACConfig):
     global container
     container = Container.parse_save_config(config.model_dump())
-    return Response(message="Init done")
+    return s.DACResponse(message="Init done")
 
 
-@router.get("/save", response_model=DACConfigResp)
+@router.get("/save", response_model=s.ProjectConfigResp)
 async def get_dac_config():
-    return DACConfigResp(
-        message="Saved",
-        config=DACConfig.model_validate(container.get_save_config())
+    return s.ProjectConfigResp(
+        message="Saved", config=s.DACConfig.model_validate(container.get_save_config())
     )
 
 
@@ -51,30 +50,31 @@ async def get_dac_config():
 # ---------
 
 
-@router.get("/scenarios", response_model=ScenariosResp)
+@router.get("/scenarios", response_model=s.ScenariosResp)
 async def list_scenarios():
-    return ScenariosResp(
+    return s.ScenariosResp(
         message="List scenarios",
         scenarios=os.listdir(scenarios_dir),
-        current_scenario=current_scenario
+        current_scenario=current_scenario,
     )
 
 
-@router.post("/scenarios")
-async def switch_to_scenario(data: dict = Body(...)):
+@router.post("/scenarios", response_model=s.ScenariosResp)
+async def switch_to_scenario(data: s.ScenarioReq):
     global current_scenario
 
     class FakeDACWin:
         def message(self, s):
             pass
 
-    target_scenario = data.get("scenario")
+    target_scenario = data.scenario
     use_scenario(path.join(scenarios_dir, target_scenario), dac_win=FakeDACWin())
     current_scenario = target_scenario
-    return {
-        "message": f"Switch to '{target_scenario}'",
-        "current_scenario": current_scenario,
-    }
+    return s.ScenariosResp(
+        message=f"Switch to '{target_scenario}'",
+        scenarios=None,
+        current_scenario=current_scenario,
+    )
 
 
 # --------
@@ -82,74 +82,74 @@ async def switch_to_scenario(data: dict = Body(...)):
 # --------
 
 
-@router.get("/contexts")
+@router.get("/contexts", response_model=s.ContextsResp)
 async def list_contexts():
     contexts = [
-        {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
+        s.DACContext(name=node_name, uuid=node.uuid, type=get_nodetype_path(node_type))
         for node_type, node_name, node in container.context_keys.NodeIter
     ]
     contexts.insert(
         0,
-        {
-            "name": "Global",
-            "uuid": GCK_ID,
-            "type": get_nodetype_path(GCK.__class__),
-        },
+        s.DACContext(
+            name="Global",
+            uuid=GCK_ID,
+            type=get_nodetype_path(GCK.__class__),
+        ),
     )
-    return {
-        "contexts": contexts,
-        "current_context": GCK_ID
+    return s.ContextsResp(
+        message="List contexts",
+        contexts=contexts,
+        current_context=GCK_ID
         if container.current_key is GCK
         else container.current_key.uuid,
-    }
+    )
 
 
-@router.post("/contexts")
-async def create_context(data: dict = Body(...)):
-    context_config = data.get("context_config")
-    context_key_type = Container.GetClass(context_config["type"])
-    context_key = context_key_type(context_config["name"])
+@router.post("/contexts", response_model=s.ContextResp)
+async def create_context(data: s.ContextReq):
+    context_config = data.context_config
+    context_key_type = Container.GetClass(context_config.type)
+    context_key = context_key_type(context_config.name)
     container.context_keys.add_node(context_key)
-    return {
-        "message": f"Create context '{context_key.name}'",
-        "context_uuid": context_key.uuid,
-    }
+    return s.ContextResp(
+        message=f"Create context '{context_key.name}'", context_uuid=context_key.uuid
+    )
 
 
-@router.get("/contexts/{context_key_id}")
+@router.get("/contexts/{context_key_id}", response_model=s.ContextReq)
 async def get_context_config(context_key_id: str = FPath(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    return {"context_config": context_key.get_construct_config()}
+    return s.ContextReq(
+        context_config=s.DACContext.model_validate(context_key.get_construct_config())
+    )
 
 
-@router.put("/contexts/{context_key_id}")
-async def update_context_config(context_key_id: str, data: dict = Body(...)):
+@router.put("/contexts/{context_key_id}", response_model=s.DACResponse)
+async def update_context_config(context_key_id: str, data: s.ContextReq):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
         raise HTTPException(status_code=400, detail="Cannot modify global context key")
-    context_config = data.get("context_config")
-    if (new_name := context_config.get("name")) and new_name != context_key.name:
+    context_config = data.context_config
+    if (new_name := context_config.name) and new_name != context_key.name:
         container.context_keys.rename_node_to(context_key, new_name)
-    context_key.apply_construct_config(context_config)
-    return {
-        "message": f"Update context '{context_key.name}'",
-    }
+    context_key.apply_construct_config(context_config.model_dump())
+    return s.DACResponse(message=f"Update context '{context_key.name}'")
 
 
-@router.post("/contexts/{context_key_id}")
+@router.post("/contexts/{context_key_id}", response_model=s.DACResponse)
 async def activate_context(context_key_id: str):  # NOTE: (issue 20250813-1)
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     container.activate_context(context_key)
-    return {
-        "message": f"Activate context '{context_key.name}'",
-    }
+    return s.DACResponse(
+        message=f"Activate context '{context_key.name}'",
+    )
 
 
-@router.delete("/contexts/{context_key_id}")
+@router.delete("/contexts/{context_key_id}", response_model=s.DACResponse)
 async def delete_context(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None or context_key is GCK:
@@ -157,31 +157,38 @@ async def delete_context(context_key_id: str):
     if context_key is container.current_key:
         container.activate_context(GCK)
     container.remove_context_key(context_key)
-    return {
-        "message": f"Delete context '{context_key.name}'",
-    }
+    return s.DACResponse(
+        message=f"Delete context '{context_key.name}'",
+    )
 
 
-@router.get("/types/{option}")
+@router.get("/types/{option}", response_model=s.TypesResp)
 async def get_available_types(option: str):
     if option == "context":
-        return {
-            "context_types": [
-                {"name": data_type.__name__, "type": get_nodetype_path(data_type)}
+        return s.TypesResp(
+            message="Get context types",
+            context_types=[
+                s.DACNodeType(
+                    name=data_type.__name__,
+                    type=get_nodetype_path(data_type),
+                )
                 if not isinstance(data_type, str)
                 else data_type
                 for data_type in Container.GetGlobalDataTypes()
-            ]
-        }
+            ],
+        )
     elif option == "action":
-        return {
-            "action_types": [
-                {"name": action_type.CAPTION, "type": get_nodetype_path(action_type)}
+        return s.TypesResp(
+            message="Get action types",
+            action_types=[
+                s.DACNodeType(
+                    name=action_type.CAPTION, type=get_nodetype_path(action_type)
+                )
                 if not isinstance(action_type, str)
                 else action_type
                 for action_type in container.ActionTypesInCurrentContext
-            ]
-        }
+            ],
+        )
     else:
         raise HTTPException(status_code=404, detail="Unrecognized command")
 
@@ -191,21 +198,22 @@ async def get_available_types(option: str):
 # ----
 
 
-@router.get("/{context_key_id}/data")
+@router.get("/{context_key_id}/data", response_model=s.DataResp)
 async def get_context_data(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     context = container.get_context(context_key)
-    return {
-        "data": [
-            {"name": node_name, "uuid": node.uuid, "type": get_nodetype_path(node_type)}
+    return s.DataResp(
+        message="List data of context",
+        data=[
+            s.DACData(name=node_name, uuid=node.uuid, type=get_nodetype_path(node_type))
             for node_type, node_name, node in context.NodeIter
-        ]
-    }
+        ],
+    )
 
 
-@router.get("/{context_key_id}/data/{data_id}")
+@router.get("/{context_key_id}/data/{data_id}", response_model=s.DataReq)
 async def get_data_config(context_key_id: str, data_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -214,11 +222,11 @@ async def get_data_config(context_key_id: str, data_id: str):
     data = context.get_node_by_uuid(data_id)
     if data is None:
         raise HTTPException(status_code=404, detail="No such data")
-    return {"data_config": data.get_construct_config()}
+    return s.DataReq(data_config=s.DACData.model_validate(data.get_construct_config()))
 
 
-@router.put("/{context_key_id}/data/{data_id}")
-async def update_data_config(context_key_id: str, data_id: str, data_body: dict = Body(...)):
+@router.put("/{context_key_id}/data/{data_id}", response_model=s.DACResponse)
+async def update_data_config(context_key_id: str, data_id: str, data_body: s.DataReq):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -226,10 +234,10 @@ async def update_data_config(context_key_id: str, data_id: str, data_body: dict 
     data = context.get_node_by_uuid(data_id)
     if data is None:
         raise HTTPException(status_code=404, detail="No such data")
-    data.apply_construct_config(data_body.get("data_config"))
-    return {
-        "message": f"Update data '{data.name}'",
-    }
+    data.apply_construct_config(data_body.data_config.model_dump())
+    return s.DACResponse(
+        message=f"Update data '{data.name}'",
+    )
 
 
 # -------
@@ -237,34 +245,43 @@ async def update_data_config(context_key_id: str, data_id: str, data_body: dict 
 # -------
 
 
-@router.get("/{context_key_id}/actions")
+@router.get("/{context_key_id}/actions", response_model=s.ActionsResp)
 async def get_actions_of_context(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     context = container.get_context(context_key)
-    return {
-        "actions": [
-            {"name": action.name, "uuid": action.uuid, "status": action.status, "type": get_nodetype_path(type(action))}
+    return s.ActionsResp(
+        message="List actions of context",
+        actions=[
+            s.DACAction(
+                name=action.name,
+                uuid=action.uuid,
+                status=action.status,
+                type=get_nodetype_path(type(action)),
+            )
             for action in container.actions
             if action.context_key is context_key
-        ]
-    }
+        ],
+    )
 
 
-@router.post("/{context_key_id}/actions")
-async def create_action_for_context(context_key_id: str, data: dict = Body(...)):
+@router.post("/{context_key_id}/actions", response_model=s.ActionResp)
+async def create_action_for_context(context_key_id: str, data: s.ActionReq):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    action_config = data.get("action_config")
-    action_type = Container.GetClass(action_config["type"])
+    action_config = data.action_config
+    action_type = Container.GetClass(action_config.type)
     action = action_type(context_key=context_key)
     container.actions.append(action)
-    return {"message": f"Create action '{action.name}'", "action_uuid": action.uuid}
+    return s.ActionResp(
+        message=f"Create action '{action.name}'",
+        action_uuid=action.uuid,
+    )
 
 
-@router.get("/{context_key_id}/actions/{action_id}")
+@router.get("/{context_key_id}/actions/{action_id}", response_model=s.ActionReq)
 async def get_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -272,25 +289,27 @@ async def get_action_by_id(context_key_id: str, action_id: str):
     action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
-    return {"action_config": action.get_construct_config()}
+    return s.ActionReq(
+        action_config=s.DACAction.model_validate(action.get_construct_config()),
+    )
 
 
-@router.put("/{context_key_id}/actions/{action_id}")
-async def update_action_config(context_key_id: str, action_id: str, data: dict = Body(...)):
+@router.put("/{context_key_id}/actions/{action_id}", response_model=s.DACResponse)
+async def update_action_config(context_key_id: str, action_id: str, data: s.ActionReq):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
-    action_config = data.get("action_config")
-    action.apply_construct_config(action_config)
-    return {
-        "message": f"Update action '{action.name}'",
-    }
+    action_config = data.action_config
+    action.apply_construct_config(action_config.model_dump())
+    return s.DACResponse(
+        message=f"Update action '{action.name}'",
+    )
 
 
-@router.post("/{context_key_id}/actions/{action_id}")
+@router.post("/{context_key_id}/actions/{action_id}", response_model=s.ActionRunResp)
 async def run_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -299,10 +318,12 @@ async def run_action_by_id(context_key_id: str, action_id: str):
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     msg, signal, status, stats = run_action(action)
-    return {"message": msg, "data_updated": signal, "status": status, "stats": stats}
+    return s.ActionRunResp(
+        message=msg, data_updated=signal, status=s.StatusType(status), stats=stats
+    )
 
 
-@router.delete("/{context_key_id}/actions/{action_id}")
+@router.delete("/{context_key_id}/actions/{action_id}", response_model=s.DACResponse)
 async def delete_action(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -311,9 +332,9 @@ async def delete_action(context_key_id: str, action_id: str):
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     container.actions.remove(action)
-    return {
-        "message": f"Delete action '{action.name}'",
-    }
+    return s.DACResponse(
+        message=f"Delete action '{action.name}'",
+    )
 
 
 # ------

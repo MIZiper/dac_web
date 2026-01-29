@@ -12,6 +12,7 @@ from datetime import datetime
 from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body, APIRouter
+import dac_web.schema as s
 
 router = APIRouter()
 
@@ -49,9 +50,9 @@ class UserManager(dict):
 user_manager = UserManager()
 
 
-@router.post("/load")
-async def load_project(data: dict = Body(...)):
-    project_id = data.get("project_id")
+@router.post("/load", response_model=s.ManProjectResp)
+async def load_project(data: s.ManProjectResp):
+    project_id = data.project_id
     project_fpath = path.join(PROJDIR, project_id)
     if path.isfile(project_fpath):
         with open(project_fpath, mode="r") as fp:
@@ -62,30 +63,34 @@ async def load_project(data: dict = Body(...)):
         async with httpx.AsyncClient() as client:
             resp = await client.post(f"http://{conn}/init", json=config)
         if resp.status_code == 200:
-            return {
-                "message": "Project loaded",
-                SESSID_KEY: sess_id,
-                "project_id": project_id,
-            }
+            return s.ManProjectResp(
+                message="Project loaded",
+                session_id=sess_id,
+                project_id=project_id,
+            )
         else:
             raise HTTPException(status_code=500, detail="Project load failed")
     else:
         raise HTTPException(status_code=404, detail="Project not found")
 
 
-@router.post("/load_saved")
-async def load_saved_project(data: dict = Body(...)):
-    project_id = get_project_id_by_path(data.get("project_path"))
-    return await load_project({"project_id": project_id})
+# @router.post("/load_saved", response_model=s.ManProjectResp)
+# async def load_saved_project(data: dict = Body(...)):
+#     project_id = get_project_id_by_path(data.get("project_path"))
+#     return await load_project({"project_id": project_id})
 
 
-@router.post("/new")
+@router.post("/new", response_model=s.ManProjectResp)
 async def new_process_session():
     sess_id = await start_process_session()
-    return {"message": "Analysis started", SESSID_KEY: sess_id}
+    return s.ManProjectResp(
+        message="Analysis started",
+        session_id=sess_id,
+        project_id=None,
+    )
 
 
-@router.post("/term")
+@router.post("/term", response_model=s.DACResponse)
 async def terminate_process_session(request: Request):
     sess_id = (await request.json()).get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
@@ -105,21 +110,23 @@ async def terminate_process_session(request: Request):
             Path(stdout_path).write_bytes(out or b"")
             Path(stderr_path).write_bytes(err or b"")
         user_manager.remove_sess(sess_id)
-        return {"message": "Analysis terminated"}
+        return s.DACResponse(
+            message="Analysis terminated",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to terminate analysis: {str(e)}"
         )
 
 
-@router.post("/save")
-async def save_project(request: Request, data: dict = Body(...)):
+@router.post("/save", response_model=s.ManProjectResp)
+async def save_project(request: Request, data: s.SaveProjectReq):
     sess_id = request.headers.get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
-    project_id = data.get("project_id", "").strip("./")
-    publish_name = data.get("publish_name", "").strip("./")
-    signature = data.get("signature")
+    project_id = data.project_id.strip("./")
+    publish_name = data.publish_name.strip("./")
+    signature = data.signature
 
     dac_web_config = {
         "signature": signature,
@@ -164,17 +171,21 @@ async def save_project(request: Request, data: dict = Body(...)):
                 line = f"{project_id}; {datetime.now()}; {signature}\n"
                 fp.write(line)
                 fp.write(lines)
-        return {"message": "Project saved", "project_id": project_id}
+        return s.ManProjectResp(
+            message="Project saved",
+            project_id=project_id,
+            session_id=None,
+        )
     else:
         raise HTTPException(status_code=500, detail="Project save failed")
 
 
 # @router.post("/project_files")
-async def get_project_files(data: dict = Body(...)):
-    relpath = data.get("relpath").strip("./")
-    node_dir = path.join(SAVEDIR, relpath)
-    dirpath, dirnames, filenames = next(os.walk(node_dir))
-    return {"dirnames": dirnames, "filenames": filenames}  # TODO: filter out .gitkeep
+# async def get_project_files(data: dict = Body(...)):
+#     relpath = data.get("relpath").strip("./")
+#     node_dir = path.join(SAVEDIR, relpath)
+#     dirpath, dirnames, filenames = next(os.walk(node_dir))
+#     return {"dirnames": dirnames, "filenames": filenames}  # TODO: filter out .gitkeep
 
 
 # ------
