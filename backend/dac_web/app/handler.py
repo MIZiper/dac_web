@@ -1,7 +1,7 @@
 import os, json
 from os import path
 
-from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath
+from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath, Header, Depends
 from fastapi.responses import JSONResponse
 
 from matplotlib.figure import Figure
@@ -17,7 +17,12 @@ import dac_web.schema as s
 GCK_ID = "global"
 FIG_NUM = 1
 
-router = APIRouter()
+def require_token_header(sess_id: str=Header(..., alias=s.SESSID_KEY)):
+    return sess_id
+
+router = APIRouter(
+    dependencies=[Depends(require_token_header)] # for /docs purpose only, the validation is done in rev_proxy
+)
 
 current_scenario = "0.base.yaml"
 scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(

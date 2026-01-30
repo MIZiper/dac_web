@@ -13,11 +13,11 @@ from importlib.metadata import version
 
 from fastapi import FastAPI, Request, HTTPException, Body, APIRouter
 import dac_web.schema as s
+from dac_web.schema import SESSID_KEY
 
 router = APIRouter()
 
 APPMOD_ENTRY = "dac_web.app.__init__"
-SESSID_KEY = "dac-sess_id"
 PROJDIR = os.getenv("PROJECT_DIR", "./storage/projects")
 SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
 __VERSION__ = version("miz-dac_web")
@@ -65,8 +65,8 @@ async def load_project(data: s.ManProjectResp):
         if resp.status_code == 200:
             return s.ManProjectResp(
                 message="Project loaded",
-                session_id=sess_id,
                 project_id=project_id,
+                **{SESSID_KEY: sess_id},
             )
         else:
             raise HTTPException(status_code=500, detail="Project load failed")
@@ -85,8 +85,8 @@ async def new_process_session():
     sess_id = await start_process_session()
     return s.ManProjectResp(
         message="Analysis started",
-        session_id=sess_id,
         project_id=None,
+        **{SESSID_KEY: sess_id},
     )
 
 
@@ -174,7 +174,7 @@ async def save_project(request: Request, data: s.SaveProjectReq):
         return s.ManProjectResp(
             message="Project saved",
             project_id=project_id,
-            session_id=None,
+            **{SESSID_KEY: None},
         )
     else:
         raise HTTPException(status_code=500, detail="Project save failed")

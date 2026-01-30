@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from enum import Enum
 
+SESSID_KEY = "dac-sess_id"
 
 class StatusType(Enum):
     Created = 0
@@ -50,7 +51,7 @@ class DACContext(BaseModel):
 
 
 class ManProjectResp(DACResponse):
-    dac_sess_id: str | None = Field(..., alias="session_id")
+    session_id: str | None = Field(..., alias=SESSID_KEY)
     project_id: str | None = Field(...)
 
 
