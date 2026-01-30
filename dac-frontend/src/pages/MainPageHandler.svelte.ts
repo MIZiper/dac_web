@@ -207,6 +207,7 @@ export async function addAction(context: DataItem, actionType: ActionType) {
         action_config: {
             type: actionType.type_path,
             name: actionType.type_name, // this is actually ignored
+            status: 0, // is ignored
         }
     });
     if (res.status == 200) {

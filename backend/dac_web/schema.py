@@ -1,15 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
-
-from enum import Enum
+from dac.core import ActionNode
 
 SESSID_KEY = "dac-sess_id"
-
-class StatusType(Enum):
-    Created = 0
-    Configured = 1
-    Completed = 2
-    Failed = -1
-    Unknown = -2
 
 
 class DACRequest(BaseModel):
@@ -26,29 +18,39 @@ class DACConfig(BaseModel):
     actions: list[dict]
 
 
-class DACNodeType(BaseModel):
+class DACFile(BaseModel):
+    dac: DACConfig
+
+
+class NodeType(BaseModel):
     name: str
     type: str
 
-
-class DACData(BaseModel):
+class NodeConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
     name: str
-    uuid: str | None = None
-    type: str
 
 
-class DACAction(BaseModel):
-    name: str
-    uuid: str | None
-    status: StatusType
-    type: str
-
-
-class DACContext(BaseModel):
+class DataMeta(BaseModel):
     name: str
     uuid: str | None = None
     type: str
 
+
+class ActionMeta(BaseModel):
+    name: str
+    uuid: str | None = None
+    status: ActionNode.ActionStatus
+    type: str
+
+
+class ContextMeta(BaseModel):
+    name: str
+    uuid: str | None = None
+    type: str
+
+class InitProjectReq(DACRequest):
+    project_id: str
 
 class ManProjectResp(DACResponse):
     session_id: str | None = Field(..., alias=SESSID_KEY)
@@ -74,45 +76,52 @@ class ScenariosResp(DACResponse):
     current_scenario: str
 
 
-class DataReq(DACRequest):
-    data_config: DACData
+class DatumCreate(DACRequest):
+    data_config: DataMeta
+
+class DatumExchange(BaseModel):
+    data_config: NodeConfig
 
 
 class DataResp(DACResponse):
-    data: list[DACData]
+    data: list[DataMeta]
 
 
-class ActionReq(DACRequest):
-    action_config: DACAction
+class ActionCreate(DACRequest):
+    action_config: ActionMeta
 
-
-class ActionResp(DACResponse):
+class ActionCreateResp(DACResponse):
     action_uuid: str
 
+class ActionExchange(BaseModel):
+    action_config: NodeConfig
+    
 
 class ActionsResp(DACResponse):
-    actions: list[DACAction]
+    actions: list[ActionMeta]
 
 
-class ActionRunResp(DACResponse):
+class RunActionResp(DACResponse):
     data_updated: bool
-    status: StatusType
+    status: ActionNode.ActionStatus
     stats: object
 
 
-class ContextReq(DACRequest):
-    context_config: DACContext
+class ContextCreate(DACRequest):
+    context_config: ContextMeta
 
-
-class ContextResp(DACResponse):
+class ContextCreateResp(DACResponse):
     context_uuid: str
+
+class ContextExchange(BaseModel):
+    context_config: NodeConfig
 
 
 class ContextsResp(DACResponse):
-    contexts: list[DACContext]
+    contexts: list[ContextMeta]
     current_context: str
 
 
 class TypesResp(DACResponse):
-    context_types: list[DACNodeType | str] | None = None
-    action_types: list[DACNodeType | str] | None = None
+    context_types: list[NodeType | str] | None = None
+    action_types: list[NodeType | str] | None = None

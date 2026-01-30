@@ -51,8 +51,9 @@ user_manager = UserManager()
 
 
 @router.post("/load", response_model=s.ManProjectResp)
-async def load_project(data: s.ManProjectResp):
+async def load_project(data: s.InitProjectReq):
     project_id = data.project_id
+    if not project_id: return
     project_fpath = path.join(PROJDIR, project_id)
     if path.isfile(project_fpath):
         with open(project_fpath, mode="r") as fp:
@@ -61,7 +62,7 @@ async def load_project(data: s.ManProjectResp):
         sess_id = await start_process_session()
         conn = user_manager.get_sess_conn(sess_id)
         async with httpx.AsyncClient() as client:
-            resp = await client.post(f"http://{conn}/init", json=config)
+            resp = await client.post(f"http://{conn}/init", json=config, headers={SESSID_KEY: sess_id})
         if resp.status_code == 200:
             return s.ManProjectResp(
                 message="Project loaded",
