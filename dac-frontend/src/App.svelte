@@ -13,13 +13,17 @@
   } from "@sveltestrap/sveltestrap";
   import { setContext } from "svelte";
   setContext("route", route);
+  import logo from "./assets/logo.png";
 </script>
 
 <Styles />
 
 <main>
   <Navbar style="background-color:whitesmoke;">
-    <NavbarBrand target="_blank">DAC analysis frame</NavbarBrand>
+    <NavbarBrand target="_blank">
+      <img src={logo} alt="DAC logo" height="36px"/>
+      DAC analysis frame
+    </NavbarBrand>
     <Nav>
       {#if navTeleport.snippet}
         {@render navTeleport.snippet()}
