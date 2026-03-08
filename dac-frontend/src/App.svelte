@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Router } from "sv-router";
-  import { route } from "./router";
+  import { router } from "./router";
   import { navTeleport } from "./utils/NavibarSnippet.svelte";
 
   import {
@@ -12,7 +12,7 @@
     Styles,
   } from "@sveltestrap/sveltestrap";
   import { setContext } from "svelte";
-  setContext("route", route);
+  setContext("router", router);
   import logo from "./assets/logo.png";
 </script>
 
