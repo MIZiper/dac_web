@@ -33,9 +33,9 @@
     import { taskHolder } from "../tasks/TaskRouter.svelte";
 
     let loading = $state(0);
-    const route = getContext("route");
-    route.getParams("/projects/:id");
-    const project_id = route.params.id;
+    const router = getContext("router");
+    router.route.getParams("/projects/:id");
+    const project_id = router.route.params.id;
 
     let config_in = $state({});
     let onTaskDone: ((c: Record<string, any> | null) => void) | null =
