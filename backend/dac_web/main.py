@@ -4,10 +4,17 @@ from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from dac_web.db.connection import get_db, init_pool, close_pool
+
 from dac_web.api.rev_proxy import router as rev_router
 from dac_web.api.handler import router as api_router
 from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
+
+async def lifespan(app: FastAPI):
+    await init_pool()
+    yield
+    await close_pool()
 
 tags_metadata = [
     {"name": "API", "description": "For session creating and terminating."},
