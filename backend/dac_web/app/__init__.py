@@ -22,9 +22,6 @@ Gcf._set_new_active_manager(manager)
 app.mount("/mpl", mpl_app)
 app.include_router(dac_router, prefix="")
 
-# log_fp = None
-# orig_out = sys.stdout
-# orig_err = sys.stderr
 
 
 class CustomServer(Server):
@@ -34,29 +31,13 @@ class CustomServer(Server):
         port = self.servers[0].sockets[0].getsockname()[1]
         print(f"✅ APP handler is running on port ... {port}", flush=True)
 
-        # if log_fp is not None:
-        #     sys.stdout = log_fp
-        #     sys.stderr = log_fp
-
     async def shutdown(self, sockets=None):
         print("🛑 Uvicorn is shutting down.", flush=True)
-        # if log_fp is not None:
-        #     sys.stdout = orig_err
-        #     sys.stderr = orig_err
-        #     if not log_fp.closed:
-        #         log_fp.close()
+
         await super().shutdown(sockets)
 
 
 def main():
-    # sess_id = os.getenv("APP_SESSID", "DEBUG")
-    # logdir = os.getenv("LOG_DIR", "./storage/logs")
-    # dolog = os.getenv("APP_LOG_ON")=="1"
-
-    # if dolog:
-    #     global log_fp
-    #     log_fp = open(os.path.join(logdir, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.log"), mode="a")
-
     config = Config("dac_web.app:app", host="localhost", port=0)
     server = CustomServer(config)
     server.run()
