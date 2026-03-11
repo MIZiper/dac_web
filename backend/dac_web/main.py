@@ -4,8 +4,8 @@ from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from dac_web.router.rev_proxy import router as rev_router
-from dac_web.router.handler import router as api_router
+from dac_web.api.rev_proxy import router as rev_router
+from dac_web.api.handler import router as api_router
 from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
 

@@ -17,7 +17,7 @@ from dac_web.schema import SESSID_KEY
 
 router = APIRouter()
 
-APPMOD_ENTRY = "dac_web.app.__init__"
+APPMOD_ENTRY = "dac_web.app.entry"
 PROJDIR = os.getenv("PROJECT_DIR", "./storage/projects")
 SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
 __VERSION__ = version("miz-dac_web")

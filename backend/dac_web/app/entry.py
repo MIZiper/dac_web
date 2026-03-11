@@ -38,7 +38,7 @@ class CustomServer(Server):
 
 
 def main():
-    config = Config("dac_web.app:app", host="localhost", port=0)
+    config = Config("dac_web.app.entry:app", host="localhost", port=0)
     server = CustomServer(config)
     server.run()
 
