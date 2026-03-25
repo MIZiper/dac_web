@@ -16,12 +16,41 @@ from fastapi import (
     HTTPException,
     Query,
 )
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from dac_web.api.handler import user_manager, SESSID_KEY
 
 router = APIRouter()
 
+
+
+sse_client = httpx.AsyncClient(timeout=None)
+
+@router.post("/{context_key_id}/actions/{action_id}")
+async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Request):
+    uuid = request.headers.get(SESSID_KEY)
+    if uuid is None or not user_manager.validate_sess(uuid):
+        raise HTTPException(status_code=401, detail="Invalid or missing session ID")
+    else:
+        conn = user_manager.get_sess_conn(uuid)
+
+    url = f"http://{conn}/{context_key_id}/actions/{action_id}"
+    body = await request.body()
+
+    async def generate_chunks():
+        async with sse_client.stream("POST", url, content=body, headers=request.headers.raw) as resp:
+            async for chunk in resp.aiter_raw():
+                yield chunk
+
+    return StreamingResponse(
+        generate_chunks(), 
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no"} # 禁用 Nginx 缓冲
+    )
+
+
+
+http_client = httpx.AsyncClient()
 
 @router.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
@@ -29,29 +58,25 @@ router = APIRouter()
 async def proxy_http(
     request: Request, path: str, sessid: str | None = Query(None, alias=SESSID_KEY)
 ):
-    async with (
-        httpx.AsyncClient() as client
-    ):  # TODO: try to reuse the client, otherwise every http request is a new connection to internal service
-        # TODO: make PAB special for the timeout, or return something early
-        uuid = sessid or request.headers.get(SESSID_KEY)
-        if uuid is None or not user_manager.validate_sess(uuid):
-            raise HTTPException(status_code=401, detail="Invalid or missing session ID")
-        else:
-            conn = user_manager.get_sess_conn(uuid)
+    uuid = sessid or request.headers.get(SESSID_KEY)
+    if uuid is None or not user_manager.validate_sess(uuid):
+        raise HTTPException(status_code=401, detail="Invalid or missing session ID")
+    else:
+        conn = user_manager.get_sess_conn(uuid)
 
-        url = f"http://{conn}/{path}"
-        headers = dict(request.headers)
-        body = await request.body()
+    url = f"http://{conn}/{path}"
+    body = await request.body()
 
-        response = await client.request(
-            method=request.method, url=url, headers=headers, content=body
-        )
+    response = await http_client.request(
+        method=request.method, url=url, headers=request.headers.raw, content=body
+    )
 
-        return Response(
-            content=response.content,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-        )
+    return Response(
+        content=response.content,
+        status_code=response.status_code,
+        headers=dict(response.headers),
+    )
+
 
 
 @router.websocket("/{path:path}")
