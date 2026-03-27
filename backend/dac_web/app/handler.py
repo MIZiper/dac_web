@@ -1,8 +1,8 @@
-import os, json
+import os, json, asyncio, threading
 from os import path
 
 from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath, Header, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from matplotlib.figure import Figure
 from matplotlib._pylab_helpers import Gcf
@@ -316,7 +316,25 @@ async def update_action_config(context_key_id: str, action_id: str, data: s.Acti
     )
 
 
-@router.post("/{context_key_id}/actions/{action_id}", response_model=s.RunActionResp)
+async def event_stream(action):
+    queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    t = threading.Thread(target=run_action, args=(action, queue, loop))
+    t.start()
+
+    event_id = 0
+    while True:
+        item = await queue.get()
+        event_id += 1
+        if item is None:
+            break
+        yield f"id: {event_id}\n{item}"
+    t.join()
+    if isinstance(action, VAB):
+        action.canvas.draw_idle() # plot in thread doesn't trigger websocket communication?
+
+@router.get("/{context_key_id}/actions/{action_id}/run")
 async def run_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
@@ -324,11 +342,12 @@ async def run_action_by_id(context_key_id: str, action_id: str):
     action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
-    msg, signal, status, stats = run_action(action)
-    return s.RunActionResp(
-        message=msg, data_updated=signal, status=status, stats=stats
-    )
 
+    return StreamingResponse(
+        event_stream(action),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
+    )
 
 @router.delete("/{context_key_id}/actions/{action_id}", response_model=s.DACResponse)
 async def delete_action(context_key_id: str, action_id: str):
@@ -369,8 +388,11 @@ def get_nodetype_path(node_type: type[NodeBase]):
 
 
 def run_action(
-    action: ActionNode, complete_cb: callable = None
-) -> tuple[str, bool, ActionNode.ActionStatus, object]:
+    action: ActionNode, queue: asyncio.Queue, loop, complete_cb: callable = None
+):
+    def sync_put(evt: str, obj):
+        queue.put_nowait(f"event: {evt}\ndata: {json.dumps(obj)}\n\n")
+
     params = container.prepare_params_for_action(
         action._SIGNATURE, action._construct_config
     )
@@ -404,27 +426,18 @@ def run_action(
             figure = manager.canvas.figure
         action.figure = figure
 
-    stats = None
-
-    def pass_stats(data):
-        nonlocal stats
-        stats = data
-
     if isinstance(action, TAB):
-        action.renderer = pass_stats
+        action.renderer = lambda data: sync_put('stats', data)
 
-    if False:
+    action._progress = lambda i, n: sync_put('progress', (i, n))
+    action._message = lambda s: sync_put('message', s)
 
-        def fn(p, progress_emitter, logger):
-            action._progress = progress_emitter
-            action._message = logger
-            action.pre_run()
-            rst = action(**p)
-            action.post_run()
-            return rst
-    else:
-        action.pre_run()
-        rst = action(**params)
-        action.post_run()
-        data_updated, action_status = completed(rst)
-        return f"Run action '{action.name}'", data_updated, action_status, stats
+    sync_put('started', None)
+    action.pre_run()
+    sync_put('message', f"[{action.name}]")
+    rst = action(**params)
+    action.post_run()
+    data_updated, action_status = completed(rst)
+    sync_put('completed', (data_updated, action_status.value))
+    
+    queue.put_nowait(None)

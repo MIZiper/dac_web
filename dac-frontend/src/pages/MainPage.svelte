@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { Col, Progress, Row } from "@sveltestrap/sveltestrap";
+    import {
+        Col,
+        Progress,
+        Row,
+        Toast,
+    } from "@sveltestrap/sveltestrap";
     import ContextList from "../lib/ContextList.svelte";
     import DataList from "../lib/DataList.svelte";
     import ActionList from "../lib/ActionList.svelte";
@@ -8,7 +13,13 @@
     import ScenarioList from "../lib/ScenarioList.svelte";
 
     import { navTeleport } from "../utils/NavibarSnippet.svelte";
-    import { ax_api, ax_app, GCK_ID, SESSID_KEY } from "../utils/FetchObjects";
+    import {
+        app_prefix,
+        ax_api,
+        ax_app,
+        GCK_ID,
+        SESSID_KEY,
+    } from "../utils/FetchObjects";
 
     import {
         initAnalysis,
@@ -16,7 +27,6 @@
         switchScenario,
         switchContext,
         getActionConfig,
-        runAction,
         deleteAction,
         addAction,
         updateAction,
@@ -26,6 +36,7 @@
         getCurrentData,
         getCurrentActions,
         addContext,
+        statusMap,
     } from "./MainPageHandler.svelte";
     import { getContext, onMount } from "svelte";
     import YAML from "yaml";
@@ -33,6 +44,8 @@
     import { taskHolder } from "../tasks/TaskRouter.svelte";
 
     let loading = $state(0);
+    let message = $state("");
+    let toastIsOpen = $state(false);
     const router = getContext("router");
     router.route.getParams("/projects/:id");
     const project_id = router.route.params.id;
@@ -86,6 +99,35 @@
         }
         loading = 0;
     });
+
+    async function runAction(context: DataItem, action: ActionItem) {
+        const query_str = `${SESSID_KEY}=${sess_id}`;
+        const es = new EventSource(
+            `${app_prefix}/${context.uuid}/actions/${action.uuid}/run?${query_str}`,
+        );
+
+        es.addEventListener("started", (e) => {
+            loading = 100;
+        });
+        es.addEventListener("progress", (e) => {
+            const [i, n] = JSON.parse(e.data);
+            loading = (i / n) * 100;
+        });
+        es.addEventListener("completed", (e) => {
+            const [data_updated, action_status] = JSON.parse(e.data);
+            action.status = statusMap.get(action_status) || "Failed";
+            if (data_updated) {
+                getCurrentData(context).then();
+            }
+            loading = 0;
+            es.close();
+        });
+        es.addEventListener("message", (e) => {
+            const msg = JSON.parse(e.data);
+            message = msg;
+            toastIsOpen = true;
+        });
+    }
 </script>
 
 {#snippet contextMenuSnippet()}
@@ -97,6 +139,11 @@
 {/snippet}
 
 <Progress style="height:4px" value={loading} animated />
+<div id="toast-holder">
+    <Toast autohide body header="Message" bind:isOpen={toastIsOpen}>
+        {message}
+    </Toast>
+</div>
 
 <Row class="mt-1">
     <Col class="pe-1">
@@ -225,3 +272,12 @@
 {#if taskHolder.currentComponent && onTaskDone}
     <taskHolder.currentComponent {config_in} {onTaskDone} />
 {/if}
+
+<style>
+    #toast-holder {
+        position: fixed;
+        right: 10px;
+        bottom: 10px;
+        z-index: 9999;
+    }
+</style>

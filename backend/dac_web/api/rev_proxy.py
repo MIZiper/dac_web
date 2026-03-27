@@ -26,26 +26,30 @@ router = APIRouter()
 
 sse_client = httpx.AsyncClient(timeout=None)
 
-@router.post("/{context_key_id}/actions/{action_id}")
-async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Request):
-    uuid = request.headers.get(SESSID_KEY)
+@router.get("/{context_key_id}/actions/{action_id}/run")
+async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Request, sessid: str | None = Query(None, alias=SESSID_KEY)):
+    uuid = sessid or request.headers.get(SESSID_KEY)
     if uuid is None or not user_manager.validate_sess(uuid):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
     else:
         conn = user_manager.get_sess_conn(uuid)
 
-    url = f"http://{conn}/{context_key_id}/actions/{action_id}"
+    url = f"http://{conn}/{context_key_id}/actions/{action_id}/run"
     body = await request.body()
 
+    # forward original headers but ensure session id header is present
+    headers = dict(request.headers)
+    headers[SESSID_KEY] = uuid
+
     async def generate_chunks():
-        async with sse_client.stream("POST", url, content=body, headers=request.headers.raw) as resp:
+        async with sse_client.stream("GET", url, content=body, headers=headers) as resp:
             async for chunk in resp.aiter_raw():
                 yield chunk
 
     return StreamingResponse(
         generate_chunks(), 
         media_type="text/event-stream",
-        headers={"X-Accel-Buffering": "no"} # 禁用 Nginx 缓冲
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
     )
 
 
@@ -67,8 +71,12 @@ async def proxy_http(
     url = f"http://{conn}/{path}"
     body = await request.body()
 
+    # forward original headers but ensure session id header is present
+    headers = dict(request.headers)
+    headers[SESSID_KEY] = uuid
+
     response = await http_client.request(
-        method=request.method, url=url, headers=request.headers.raw, content=body
+        method=request.method, url=url, headers=headers, content=body
     )
 
     return Response(

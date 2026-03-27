@@ -101,11 +101,6 @@ class ActionsResp(DACResponse):
     actions: list[ActionMeta]
 
 
-class RunActionResp(DACResponse):
-    data_updated: bool
-    status: ActionNode.ActionStatus
-    stats: object
-
 
 class ContextCreate(DACRequest):
     context_config: ContextMeta

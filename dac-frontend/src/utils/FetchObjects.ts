@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const app_prefix = "/app";
-const api_prefix = "/api";
+export const app_prefix = "/app";
+export const api_prefix = "/api";
 const mpl_prefix = "/mpl";
 
 export const FIG_NUM = 1;

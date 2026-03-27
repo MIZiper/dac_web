@@ -22,7 +22,7 @@ export const appdata: {
     currentScenario: null,
 });
 
-const statusMap: Map<number, ActionStatus> = new Map([
+export const statusMap: Map<number, ActionStatus> = new Map([
     [0, "New"],
     [1, "Configured"],
     [2, "Completed"],
@@ -240,19 +240,6 @@ export async function updateAction(context: DataItem, action: ActionItem, action
 export async function getActionConfig(context: DataItem, action: ActionItem) {
     const res = await ax_app.get(`/${context.uuid}/actions/${action.uuid}`);
     return res.data['action_config'];
-}
-
-export async function runAction(context: DataItem, action: ActionItem) {
-    const res = await ax_app.post(`/${context.uuid}/actions/${action.uuid}`);
-    if (res.status == 200) {
-        if (res.data['data_updated']) {
-            await getCurrentData(context);
-        }
-        action.status = statusMap.get(res.data['status']) || "Failed";
-        if (res.data['status']) {
-
-        }
-    }
 }
 
 export async function deleteAction(context: DataItem, action: ActionItem) {
