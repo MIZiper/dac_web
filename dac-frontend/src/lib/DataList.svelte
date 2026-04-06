@@ -14,20 +14,35 @@
         ListGroupItem,
         Row,
     } from "@sveltestrap/sveltestrap";
-    import type { DataItem } from "../schema";
+    import type { DataItem, DataQuickAction } from "../schema";
 
-    let { data }: { data: DataItem[] } = $props();
+    let {
+        data,
+        availableQuickActions,
+        onQuickAction = null,
+    }: {
+        data: DataItem[];
+        availableQuickActions: DataQuickAction[];
+        onQuickAction: ((d: DataItem, q: DataQuickAction) => void) | null;
+    } = $props();
 
     let isOpenDatMenu = $state(false);
     function toggleDatMenu() {
         isOpenDatMenu = !isOpenDatMenu;
     }
     let menuContainer: HTMLDivElement;
+    let selectedDatum: DataItem | null = $state(null);
 
     function popDataMenu(d: DataItem, e: MouseEvent) {
         isOpenDatMenu = true;
+        selectedDatum = d;
         menuContainer.style.left = e.clientX + "px";
         menuContainer.style.top = e.clientY + "px";
+    }
+    function handleMenu(t: "delete") {
+        if (!selectedDatum) {
+            return;
+        }
     }
 </script>
 
@@ -51,8 +66,8 @@
                         onclick={(e) => popDataMenu(datum, e)}
                     >
                         {datum.name}
-                        <br/>
-                        <code>{datum.type_path.split('.').slice(-1)}</code>
+                        <br />
+                        <code>{datum.type_path.split(".").slice(-1)}</code>
                     </ListGroupItem>
                 {/each}
             </ListGroup>
@@ -63,8 +78,19 @@
 <div bind:this={menuContainer} style="position: fixed; z-index: 9;">
     <Dropdown isOpen={isOpenDatMenu} toggle={toggleDatMenu}>
         <DropdownMenu>
-            <DropdownItem>View</DropdownItem>
-            <DropdownItem>Custom ...</DropdownItem>
+            {#if selectedDatum}
+                {#each availableQuickActions as quickAction}
+                    {#if quickAction.data_path === selectedDatum.type_path}
+                        <DropdownItem
+                            onclick={(e) => {
+                                if (onQuickAction)
+                                    onQuickAction(selectedDatum, quickAction);
+                            }}>{quickAction.action_name}</DropdownItem
+                        >
+                    {/if}
+                {/each}
+                <DropdownItem divider />
+            {/if}
             <DropdownItem disabled>Delete</DropdownItem>
         </DropdownMenu>
     </Dropdown>

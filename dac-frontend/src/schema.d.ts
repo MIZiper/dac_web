@@ -18,6 +18,14 @@ export interface ActionType {
     type_path: string;
 }
 
+export interface DataQuickAction {
+    data_path: string,
+    action_name: string,
+    action_path: string,
+    dpn: string,
+    opd: any,
+}
+
 export interface ScenarioItem {
     name: string,
 }

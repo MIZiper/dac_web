@@ -73,12 +73,21 @@ async def switch_to_scenario(data: s.ScenarioReq):
             pass
 
     target_scenario = data.scenario
-    use_scenario(path.join(scenarios_dir, target_scenario), dac_win=FakeDACWin())
+    quick_actions = use_scenario(path.join(scenarios_dir, target_scenario), dac_win=FakeDACWin())
     current_scenario = target_scenario
     return s.ScenariosResp(
         message=f"Switch to '{target_scenario}'",
         scenarios=None,
         current_scenario=current_scenario,
+        quick_actions=[
+            s.QuickAction(
+                data_path=dpath,
+                action_path=apath,
+                action_name=aname,
+                dpn=dpn,
+                opd=opd
+            ) for (dpath, apath, aname, dpn, opd) in quick_actions
+        ] if quick_actions else None
     )
 
 

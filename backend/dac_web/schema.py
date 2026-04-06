@@ -43,6 +43,12 @@ class ActionMeta(BaseModel):
     status: ActionNode.ActionStatus
     type: str
 
+class QuickAction(BaseModel):
+    data_path: str
+    action_path: str
+    action_name: str
+    dpn: str
+    opd: dict
 
 class ContextMeta(BaseModel):
     name: str
@@ -74,6 +80,7 @@ class ScenarioReq(DACRequest):
 class ScenariosResp(DACResponse):
     scenarios: list[str] | None
     current_scenario: str
+    quick_actions: list[QuickAction] | None = None
 
 
 class DatumCreate(DACRequest):

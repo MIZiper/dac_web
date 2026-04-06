@@ -1,4 +1,4 @@
-import type { ActionItem, ActionStatus, ActionType, DataItem, ScenarioItem } from "../schema";
+import type { ActionItem, ActionStatus, ActionType, DataItem, DataQuickAction, ScenarioItem } from "../schema";
 import { ax_api, ax_app } from "../utils/FetchObjects";
 import { DEFAULT_NAME, SESSID_KEY, GCK_ID } from "../utils/FetchObjects";
 
@@ -9,6 +9,7 @@ export const appdata: {
     scenarios: ScenarioItem[],
     availableContextTypes: ActionType[],
     availableActionTypes: ActionType[],
+    availableQuickActions: DataQuickAction[],
     currentContext: DataItem | null,
     currentScenario: ScenarioItem | null,
 } = $state({
@@ -18,6 +19,7 @@ export const appdata: {
     scenarios: [],
     availableActionTypes: [],
     availableContextTypes: [],
+    availableQuickActions: [],
     currentContext: null,
     currentScenario: null,
 });
@@ -117,6 +119,7 @@ export async function switchScenario(scenario: ScenarioItem) {
             fetchActionTypes(),
         ]);
         appdata.currentScenario = scenario;
+        appdata.availableQuickActions = res.data['quick_actions'].map((q)=>{});
     }
 }
 
