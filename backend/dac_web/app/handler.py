@@ -28,7 +28,7 @@ current_scenario = "0.base.yaml"
 scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(
     path.dirname(dac.__file__), "scenarios"
 )
-use_scenario(path.join(scenarios_dir, current_scenario))
+quick_actions = use_scenario(path.join(scenarios_dir, current_scenario))
 container = Container.parse_save_config({})
 
 # -----------
@@ -61,6 +61,15 @@ async def list_scenarios():
         message="List scenarios",
         scenarios=os.listdir(scenarios_dir),
         current_scenario=current_scenario,
+        quick_actions=[
+            s.QuickAction(
+                data_path=dpath,
+                action_path=apath,
+                action_name=aname,
+                dpn=dpn,
+                opd=opd
+            ) for (dpath, apath, aname, dpn, opd) in quick_actions
+        ] if quick_actions else None
     )
 
 

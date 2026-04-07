@@ -1,10 +1,5 @@
 <script lang="ts">
-    import {
-        Col,
-        Progress,
-        Row,
-        Toast,
-    } from "@sveltestrap/sveltestrap";
+    import { Col, Progress, Row, Toast } from "@sveltestrap/sveltestrap";
     import ContextList from "../lib/ContextList.svelte";
     import DataList from "../lib/DataList.svelte";
     import ActionList from "../lib/ActionList.svelte";
@@ -182,7 +177,13 @@
         />
         <Row class="my-1">
             <Col class="pe-1">
-                <DataList data={appdata.data} />
+                <DataList
+                    data={appdata.data}
+                    availableQuickActions={appdata.availableQuickActions}
+                    onQuickAction={(d, q) => {
+                        console.log("Perform", $state.snapshot(q), "on", $state.snapshot(d));
+                    }}
+                />
             </Col>
             <Col class="ps-1">
                 <ActionList

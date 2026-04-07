@@ -73,6 +73,12 @@ export async function fetchScenarios() {
             })
         );
         appdata.currentScenario = appdata.scenarios.find((s) => s.name === res.data["current_scenario"]) || null;
+        
+        if (res.data['quick_actions']) {
+            appdata.availableQuickActions = res.data['quick_actions'];
+        } else {
+            appdata.availableQuickActions = [];
+        }
     } else {
         throw new Error(`Error while fetching scenarios: ${res.status}`);
         console.error(res);
@@ -119,7 +125,11 @@ export async function switchScenario(scenario: ScenarioItem) {
             fetchActionTypes(),
         ]);
         appdata.currentScenario = scenario;
-        appdata.availableQuickActions = res.data['quick_actions'].map((q)=>{});
+        if (res.data['quick_actions']) {
+            appdata.availableQuickActions = res.data['quick_actions'];
+        } else {
+            appdata.availableQuickActions = [];
+        }
     }
 }
 

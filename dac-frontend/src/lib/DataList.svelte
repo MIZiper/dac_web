@@ -33,6 +33,14 @@
     let menuContainer: HTMLDivElement;
     let selectedDatum: DataItem | null = $state(null);
 
+    let matchedQuickActions = $derived.by(() =>
+        selectedDatum
+            ? availableQuickActions.filter(
+                  (qa) => qa.data_path === selectedDatum.type_path,
+              )
+            : [],
+    );
+
     function popDataMenu(d: DataItem, e: MouseEvent) {
         isOpenDatMenu = true;
         selectedDatum = d;
@@ -79,17 +87,17 @@
     <Dropdown isOpen={isOpenDatMenu} toggle={toggleDatMenu}>
         <DropdownMenu>
             {#if selectedDatum}
-                {#each availableQuickActions as quickAction}
-                    {#if quickAction.data_path === selectedDatum.type_path}
-                        <DropdownItem
-                            onclick={(e) => {
-                                if (onQuickAction)
-                                    onQuickAction(selectedDatum, quickAction);
-                            }}>{quickAction.action_name}</DropdownItem
-                        >
-                    {/if}
+                {#each matchedQuickActions as quickAction}
+                    <DropdownItem
+                        onclick={(e) => {
+                            if (onQuickAction)
+                                onQuickAction(selectedDatum, quickAction);
+                        }}>{quickAction.action_name}</DropdownItem
+                    >
                 {/each}
-                <DropdownItem divider />
+                {#if matchedQuickActions.length > 0}
+                    <DropdownItem divider />
+                {/if}
             {/if}
             <DropdownItem disabled>Delete</DropdownItem>
         </DropdownMenu>
