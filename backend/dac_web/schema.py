@@ -51,6 +51,12 @@ class QuickAction(BaseModel):
     dpn: str
     opd: dict
 
+class QuickActionCreate(BaseModel):
+    data_uuid: str
+    action_path: str
+    dpn: str
+    opd: dict
+
 class ContextMeta(BaseModel):
     name: str
     uuid: str | None = None
