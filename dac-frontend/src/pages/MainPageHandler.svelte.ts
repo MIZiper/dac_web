@@ -73,7 +73,7 @@ export async function fetchScenarios() {
             })
         );
         appdata.currentScenario = appdata.scenarios.find((s) => s.name === res.data["current_scenario"]) || null;
-        
+
         if (res.data['quick_actions']) {
             appdata.availableQuickActions = res.data['quick_actions'];
         } else {
@@ -97,11 +97,13 @@ export async function fetchContexts() {
 
 export async function getCurrentData(context: DataItem) {
     const res = await ax_app.get(`/${context.uuid}/data`);
-    appdata.data = res.data['data'].map((d: any) => ({
+    const _build = (d) => ({
         name: d['name'],
         uuid: d['uuid'],
         type_path: d['type'],
-    }));
+        children: d['children'].map((c) => _build(c))
+    })
+    appdata.data = res.data['data'].map((d: any) => _build(d));
 }
 
 export async function getCurrentActions(context: DataItem) {

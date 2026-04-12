@@ -227,12 +227,18 @@ async def get_context_data(context_key_id: str):
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
     context = container.get_context(context_key)
+
+    def build(n: DataNode):
+        return s.DataMeta(
+            name=n.name,
+            uuid=n.uuid,
+            type=get_nodetype_path(type(n)),
+            children=[build(c) for c in n.children]
+        )
+
     return s.DataResp(
         message="List data of context",
-        data=[
-            s.DataMeta(name=node_name, uuid=node.uuid, type=get_nodetype_path(node_type))
-            for node_type, node_name, node in context.NodeIter
-        ],
+        data=[build(node) for node_type, node_name, node in context.NodeIter],
     )
 
 

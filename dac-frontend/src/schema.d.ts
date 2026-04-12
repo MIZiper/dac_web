@@ -2,6 +2,7 @@ export interface DataItem {
     name: string,
     uuid: string,
     type_path: string,
+    children: DataItem[],
 }
 
 export type ActionStatus = "New" | "Configured" | "Completed" | "Failed";

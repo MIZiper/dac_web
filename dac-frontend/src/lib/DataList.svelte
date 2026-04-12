@@ -15,6 +15,7 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { DataItem, DataQuickAction } from "../schema";
+    import DataNode from "./DataNode.svelte";
 
     let {
         data,
@@ -32,6 +33,18 @@
     }
     let menuContainer: HTMLDivElement;
     let selectedDatum: DataItem | null = $state(null);
+
+    // collapsed set holds uuids that are collapsed
+    let collapsed: Set<string> = $state(new Set());
+    function toggleCollapse(id: string) {
+        if (collapsed.has(id)) {
+            collapsed.delete(id);
+            collapsed = new Set(collapsed);
+        } else {
+            collapsed.add(id);
+            collapsed = new Set(collapsed);
+        }
+    }
 
     let matchedQuickActions = $derived.by(() =>
         selectedDatum
@@ -67,18 +80,17 @@
     </CardHeader>
     <CardBody class="p-0">
         <div class="list-scroll">
-            <ListGroup flush>
+            {#if data}
                 {#each data as datum (datum.uuid)}
-                    <ListGroupItem
-                        action
-                        onclick={(e) => popDataMenu(datum, e)}
-                    >
-                        {datum.name}
-                        <br />
-                        <code>{datum.type_path.split(".").slice(-1)}</code>
-                    </ListGroupItem>
+                    <DataNode
+                        {datum}
+                        level={0}
+                        {collapsed}
+                        {toggleCollapse}
+                        {popDataMenu}
+                    />
                 {/each}
-            </ListGroup>
+            {/if}
         </div>
     </CardBody>
 </Card>

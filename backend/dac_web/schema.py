@@ -35,6 +35,7 @@ class DataMeta(BaseModel):
     name: str
     uuid: str | None = None
     type: str
+    children: list["DataMeta"] | None = None
 
 
 class ActionMeta(BaseModel):
@@ -92,6 +93,10 @@ class DatumExchange(BaseModel):
 
 class DataResp(DACResponse):
     data: list[DataMeta]
+
+
+# rebuild models to resolve forward references for recursive DataMeta
+DataMeta.model_rebuild()
 
 
 class ActionCreate(DACRequest):
