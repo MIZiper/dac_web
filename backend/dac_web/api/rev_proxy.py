@@ -34,7 +34,12 @@ async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Req
     else:
         conn = user_manager.get_sess_conn(uuid)
 
-    url = f"http://{conn}/{context_key_id}/actions/{action_id}/run"
+    # include original query string when forwarding to internal host
+    query = request.url.query
+    if query:
+        url = f"http://{conn}/{context_key_id}/actions/{action_id}/run?{query}"
+    else:
+        url = f"http://{conn}/{context_key_id}/actions/{action_id}/run"
     body = await request.body()
 
     # forward original headers but ensure session id header is present

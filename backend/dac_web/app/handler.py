@@ -1,7 +1,7 @@
 import os, json, asyncio, threading
 from os import path
 
-from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath, Header, Depends
+from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath, Header, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from matplotlib.figure import Figure
@@ -66,9 +66,8 @@ async def list_scenarios():
                 data_path=dpath,
                 action_path=apath,
                 action_name=aname,
-                dpn=dpn,
-                opd=opd
-            ) for (dpath, apath, aname, dpn, opd) in quick_actions
+                idx=idx
+            ) for (dpath, apath, aname, idx) in quick_actions
         ] if quick_actions else None
     )
 
@@ -93,9 +92,8 @@ async def switch_to_scenario(data: s.ScenarioReq):
                 data_path=dpath,
                 action_path=apath,
                 action_name=aname,
-                dpn=dpn,
-                opd=opd
-            ) for (dpath, apath, aname, dpn, opd) in quick_actions
+                idx=idx
+            ) for (dpath, apath, aname, idx) in quick_actions
         ] if quick_actions else None
     )
 
@@ -358,6 +356,28 @@ async def event_stream(action):
     if isinstance(action, VAB):
         action.canvas.draw_idle() # plot in thread doesn't trigger websocket communication?
 
+@router.get("/{context_key_id}/actions/quick/run")
+async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), idx: int=Query(...), mode: str="oneshot"):
+    context_key = get_context_key(context_key_id)
+    if context_key is None:
+        raise HTTPException(status_code=404, detail="No such context key")
+    context = container.get_context(context_key)
+    data = context.get_node_by_uuid(data_uuid)
+    if data is None:
+        raise HTTPException(status_code=404, detail="No such data")
+    
+    qat: tuple[type[ActionNode], str, dict] = data.QUICK_ACTIONS[idx]
+    action_type, data_param_name, other_params = qat
+    
+    action = action_type(context_key=context_key)
+    action._construct_config = {data_param_name: [data.name], **other_params} # TODO: it's only one data node here
+    
+    return StreamingResponse(
+        event_stream(action),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
+    )
+
 @router.get("/{context_key_id}/actions/{action_id}/run")
 async def run_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
@@ -367,27 +387,6 @@ async def run_action_by_id(context_key_id: str, action_id: str):
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
 
-    return StreamingResponse(
-        event_stream(action),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
-    )
-
-@router.get("/{context_key_id}/actions/quick")
-async def quick_action_on_data(context_key_id: str, quick_action_conf: s.QuickActionCreate, mode: str="oneshot"):
-    context_key = get_context_key(context_key_id)
-    if context_key is None:
-        raise HTTPException(status_code=404, detail="No such context key")
-    context = container.get_context(context_key)
-    data = context.get_node_by_uuid(quick_action_conf.data_uuid)
-    if data is None:
-        raise HTTPException(status_code=404, detail="No such data")
-    
-    action_type: type[ActionNode] = Container.GetClass(quick_action_conf.action_path)
-    
-    params = {quick_action_conf.dpn: data, **quick_action_conf.opd} # TODO: it's only one data node here
-    action = action_type(context_key=context_key)
-    
     return StreamingResponse(
         event_stream(action),
         media_type="text/event-stream",

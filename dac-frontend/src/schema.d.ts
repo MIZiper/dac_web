@@ -23,8 +23,7 @@ export interface DataQuickAction {
     data_path: string,
     action_name: string,
     action_path: string,
-    dpn: string,
-    opd: any,
+    idx: number,
 }
 
 export interface ScenarioItem {

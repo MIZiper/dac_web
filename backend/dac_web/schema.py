@@ -48,14 +48,7 @@ class QuickAction(BaseModel):
     data_path: str
     action_path: str
     action_name: str
-    dpn: str
-    opd: dict
-
-class QuickActionCreate(BaseModel):
-    data_uuid: str
-    action_path: str
-    dpn: str
-    opd: dict
+    idx: int
 
 class ContextMeta(BaseModel):
     name: str

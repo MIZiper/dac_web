@@ -99,8 +99,8 @@
         loading = 0;
     });
 
-    async function runAction(context: DataItem, action: ActionItem) {
-        const query_str = `${SESSID_KEY}=${sess_id}`;
+    async function runAction(context: DataItem, action: ActionItem, quick_str: string="") {
+        const query_str = `${SESSID_KEY}=${sess_id}${quick_str}`;
         const es = new EventSource(
             `${app_prefix}/${context.uuid}/actions/${action.uuid}/run?${query_str}`,
         );
@@ -189,12 +189,15 @@
                     data={appdata.data}
                     availableQuickActions={appdata.availableQuickActions}
                     onQuickAction={(d, q) => {
-                        console.log(
-                            "Perform",
-                            $state.snapshot(q),
-                            "on",
-                            $state.snapshot(d),
-                        );
+                        let fakeAction: ActionItem = {
+                            name: q.action_name,
+                            uuid: "quick",
+                            status: "New",
+                            type_path: q.action_path,
+                        };
+                        if (appdata.currentContext) {
+                            runAction(appdata.currentContext, fakeAction, `&data_uuid=${d.uuid}&idx=${q.idx}`).then();
+                        }
                     }}
                 />
             </Col>
