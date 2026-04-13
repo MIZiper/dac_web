@@ -37,10 +37,14 @@
     import YAML from "yaml";
     import type { ActionItem, DataItem } from "../schema";
     import { taskHolder } from "../tasks/TaskRouter.svelte";
+    import StatsTable from "../lib/StatsTable.svelte";
 
     let loading = $state(0);
     let message = $state("");
     let toastIsOpen = $state(false);
+
+    let tblRef = $state();
+
     const router = getContext("router");
     router.route.getParams("/projects/:id");
     const project_id = router.route.params.id;
@@ -107,6 +111,10 @@
         es.addEventListener("progress", (e) => {
             const [i, n] = JSON.parse(e.data);
             loading = (i / n) * 100;
+        });
+        es.addEventListener("stats", (e) => {
+            const { title, headers, data } = JSON.parse(e.data);
+            tblRef.set(title, headers, data);
         });
         es.addEventListener("completed", (e) => {
             const [data_updated, action_status] = JSON.parse(e.data);
@@ -181,7 +189,12 @@
                     data={appdata.data}
                     availableQuickActions={appdata.availableQuickActions}
                     onQuickAction={(d, q) => {
-                        console.log("Perform", $state.snapshot(q), "on", $state.snapshot(d));
+                        console.log(
+                            "Perform",
+                            $state.snapshot(q),
+                            "on",
+                            $state.snapshot(d),
+                        );
                     }}
                 />
             </Col>
@@ -273,6 +286,8 @@
 {#if taskHolder.currentComponent && onTaskDone}
     <taskHolder.currentComponent {config_in} {onTaskDone} />
 {/if}
+
+<StatsTable bind:this={tblRef} />
 
 <style>
     #toast-holder {

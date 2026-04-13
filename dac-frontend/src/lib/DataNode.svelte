@@ -16,8 +16,6 @@
         popDataMenu: (d: DataItem, e: MouseEvent) => void;
     } = $props();
 
-    $inspect(datum).with(console.trace);
-
     // self import for recursion
     import DataNode from "./DataNode.svelte";
 </script>
