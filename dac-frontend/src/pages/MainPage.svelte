@@ -149,7 +149,7 @@
 </div>
 
 <Row class="mt-1">
-    <Col class="pe-1">
+    <Col class="pe-1" style="max-width: 490px;">
         <ContextList
             contexts={appdata.contexts}
             availableContextTypes={appdata.availableContextTypes}
