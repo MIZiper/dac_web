@@ -11,9 +11,11 @@ from uuid import uuid4
 from datetime import datetime
 from importlib.metadata import version
 
-from fastapi import FastAPI, Request, HTTPException, Body, APIRouter
+from fastapi import FastAPI, Request, HTTPException, Body, APIRouter, Query, Depends
+from asyncpg import Connection
 import dac_web.schema as s
 from dac_web.schema import SESSID_KEY
+from dac_web.db.connection import get_db
 
 router = APIRouter()
 
@@ -74,11 +76,6 @@ async def load_project(data: s.InitProjectReq):
     else:
         raise HTTPException(status_code=404, detail="Project not found")
 
-
-# @router.post("/load_saved", response_model=s.ManProjectResp)
-# async def load_saved_project(data: dict = Body(...)):
-#     project_id = get_project_id_by_path(data.get("project_path"))
-#     return await load_project({"project_id": project_id})
 
 
 @router.post("/new", response_model=s.ManProjectResp)
@@ -181,24 +178,9 @@ async def save_project(request: Request, data: s.SaveProjectReq):
         raise HTTPException(status_code=500, detail="Project save failed")
 
 
-# @router.post("/project_files")
-# async def get_project_files(data: dict = Body(...)):
-#     relpath = data.get("relpath").strip("./")
-#     node_dir = path.join(SAVEDIR, relpath)
-#     dirpath, dirnames, filenames = next(os.walk(node_dir))
-#     return {"dirnames": dirnames, "filenames": filenames}  # TODO: filter out .gitkeep
-
-
 # ------
 # Others
 # ------
-
-
-def get_project_id_by_path(project_path):
-    with open(path.join(SAVEDIR, project_path.strip("./")), mode="r") as fp:
-        project_id = fp.readline().split(";")[0].strip()
-
-    return project_id
 
 
 async def start_process_session():
@@ -217,3 +199,29 @@ async def start_process_session():
     user_manager.set_sess(sess_id, f"localhost:{port}", process)
 
     return sess_id
+
+
+# -------------
+# Projects & DB
+# -------------
+
+
+@router.get("/projects")
+async def get_project_list(
+    conn: Connection = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, le=100),
+):
+    pass
+
+async def read_project_config(project_id: str) -> dict:
+    pass
+
+async def save_project_config(project_id: str, config: dict):
+    pass
+
+async def download_project_config():
+    pass
+
+async def overwrite_project_config():
+    pass
