@@ -56,11 +56,8 @@ user_manager = UserManager()
 async def load_project(data: s.InitProjectReq):
     project_id = data.project_id
     if not project_id: return
-    project_fpath = path.join(PROJDIR, project_id)
-    if path.isfile(project_fpath):
-        with open(project_fpath, mode="r") as fp:
-            config = json.load(fp)["dac"]
-
+    config = await read_project_config(project_id)
+    if config is not None:
         sess_id = await start_process_session()
         conn = user_manager.get_sess_conn(sess_id)
         async with httpx.AsyncClient() as client:
@@ -120,55 +117,24 @@ async def terminate_process_session(request: Request):
 @router.post("/save", response_model=s.ManProjectResp)
 async def save_project(request: Request, data: s.SaveProjectReq):
     sess_id = request.headers.get(SESSID_KEY)
-    if not user_manager.validate_sess(sess_id):
+    if sess_id is None or not user_manager.validate_sess(sess_id):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
-    project_id = data.project_id.strip("./")
-    publish_name = data.publish_name.strip("./")
+    
+    project_id = data.project_id
+    publish_name = data.publish_name
     signature = data.signature
 
-    dac_web_config = {
-        "signature": signature,
-        "version": __VERSION__,
-    }
-
-    if project_id:
-        project_fpath = path.join(PROJDIR, project_id)
-        if path.isfile(project_fpath):
-            with open(project_fpath, mode="r") as fp:
-                config = json.load(fp)
-            config_web = config.get("dac_web", {})
-            if "signature" not in config_web or config_web["signature"] != signature:
-                dac_web_config["inherit"] = project_id
-                project_id = uuid4().hex
-    else:
-        project_id = uuid4().hex
+    project_id = await validate_project_id(project_id, signature)
 
     conn = user_manager.get_sess_conn(sess_id)
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"http://{conn}/save")
-    if resp.status_code == 200:
-        project_fpath = path.join(PROJDIR, project_id)
-        config = resp.json()
-        with open(project_fpath, mode="w") as fp:
-            json.dump(
-                {
-                    "dac": config["config"],
-                    "dac_web": dac_web_config,
-                },
-                fp,
-                indent=2,
-            )
 
-        if publish_name:
-            save_fpath = path.join(SAVEDIR, publish_name)
-            lines = ""
-            if path.isfile(save_fpath):
-                with open(save_fpath, mode="r") as fp:
-                    lines = fp.read()
-            with open(save_fpath, mode="w") as fp:
-                line = f"{project_id}; {datetime.now()}; {signature}\n"
-                fp.write(line)
-                fp.write(lines)
+    if resp.status_code == 200:
+        config = resp.json()
+
+        await save_project_config(project_id, config, publish_name)
+
         return s.ManProjectResp(
             message="Project saved",
             project_id=project_id,
@@ -214,11 +180,52 @@ async def get_project_list(
 ):
     pass
 
-async def read_project_config(project_id: str) -> dict:
-    pass
+async def read_project_config(project_id: str) -> dict | None:
+    project_fpath = path.join(PROJDIR, project_id)
+    if path.isfile(project_fpath):
+        with open(project_fpath, mode="r") as fp:
+            config = json.load(fp)["dac"]
 
-async def save_project_config(project_id: str, config: dict):
-    pass
+async def save_project_config(project_id: str, config: dict, publish_name: str):
+    project_fpath = path.join(PROJDIR, project_id)
+    with open(project_fpath, mode="w") as fp:
+        json.dump(
+            {
+                "dac": config["config"],
+                "dac_web": dac_web_config,
+            },
+            fp,
+            indent=2,
+        )
+
+    if publish_name:
+        save_fpath = path.join(SAVEDIR, publish_name)
+        lines = ""
+        if path.isfile(save_fpath):
+            with open(save_fpath, mode="r") as fp:
+                lines = fp.read()
+        with open(save_fpath, mode="w") as fp:
+            line = f"{project_id}; {datetime.now()}; {signature}\n"
+            fp.write(line)
+            fp.write(lines)
+
+async def validate_project_id(project_id: str, signature: str) -> str:
+    dac_web_config = {
+        "signature": signature,
+        "version": __VERSION__,
+    }
+
+    if project_id:
+        project_fpath = path.join(PROJDIR, project_id)
+        if path.isfile(project_fpath):
+            with open(project_fpath, mode="r") as fp:
+                config = json.load(fp)
+            config_web = config.get("dac_web", {})
+            if "signature" not in config_web or config_web["signature"] != signature:
+                dac_web_config["inherit"] = project_id
+                project_id = uuid4().hex
+    else:
+        project_id = uuid4().hex
 
 async def download_project_config():
     pass

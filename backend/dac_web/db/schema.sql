@@ -19,3 +19,19 @@ CREATE TRIGGER node_updated_at_trigger
 BEFORE UPDATE ON nodes
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
+
+CREATE TABLE IF NOT EXISTS histories (
+    node_id UUID NOT NULL,
+    inherit_from_id UUID NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE,
+    FOREIGN KEY (inherit_from_id) REFERENCES nodes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS publishes (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    title VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status INT, -- Registered, Approved, Rejected, Deleted
+    node_id UUID NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+);
