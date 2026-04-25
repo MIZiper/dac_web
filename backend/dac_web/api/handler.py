@@ -25,7 +25,7 @@ SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
 __VERSION__ = version("miz-dac_web")
 LOG_DIR = os.getenv("LOG_DIR", "./storage/logs")
 APP_LOG_ON = os.getenv("APP_LOG_ON")
-DBSTORE = False
+DBSTORE = True
 
 
 class UserManager(dict):
@@ -139,7 +139,7 @@ async def save_project(
         resp = await client.get(f"http://{intconnstr}/save", headers={SESSID_KEY: sess_id})
 
     if resp.status_code == 200:
-        config = resp.json()
+        config = resp.json()["config"]
 
         if DBSTORE:
             fin_project_id = await save_project_config(
@@ -232,7 +232,7 @@ async def read_project_config(project_id: str, conn: Connection) -> dict | None:
     )
     if not row:
         return None
-    content = row["content"]
+    content = json.loads(row["content"])
     # stored format: { 'dac': {...}, 'dac_web': {...} }
     return content.get("dac")
 
@@ -262,7 +262,7 @@ async def save_project_config_file(
     with open(project_fpath, mode="w") as fp:
         json.dump(
             {
-                "dac": config["config"],
+                "dac": config,
                 "dac_web": dac_web_config,
             },
             fp,
@@ -291,8 +291,8 @@ async def save_project_config(
             "SELECT creator_signature FROM nodes WHERE id = $1::uuid",
             project_id,
         )
-        if row and (existing_sig := row["creator_signature"]):
-            if existing_sig is None or existing_sig != signature:
+        if row:
+            if (existing_sig := row["creator_signature"]) is None or existing_sig != signature:
                 # signature mismatch: create a new node and record inheritance
                 r = await conn.fetchrow(
                     "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
@@ -318,7 +318,7 @@ async def save_project_config(
         else:
             # not found: insert
             r = await conn.fetchrow(
-                "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE)",
+                "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
                 json.dumps(content),
                 signature,
             )

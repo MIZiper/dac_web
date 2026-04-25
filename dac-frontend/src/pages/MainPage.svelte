@@ -122,6 +122,8 @@
             if (res.status == 200) {
                 sess_id = res.data[SESSID_KEY];
                 await initAnalysis(sess_id);
+            } else {
+                // TODO: 404 not found
             }
         }
         loading = 0;
