@@ -136,7 +136,7 @@ async def save_project(
 
     intconnstr = user_manager.get_sess_conn(sess_id)
     async with httpx.AsyncClient() as client:
-        resp = await client.get(f"http://{intconnstr}/save")
+        resp = await client.get(f"http://{intconnstr}/save", headers={SESSID_KEY: sess_id})
 
     if resp.status_code == 200:
         config = resp.json()
@@ -245,17 +245,16 @@ async def save_project_config_file(
         "version": __VERSION__,
     }
 
-    if project_id:
+    fin_project_id = project_id
+    if project_id and project_id!="new":
         project_fpath = path.join(PROJDIR, project_id)
         if path.isfile(project_fpath):
             with open(project_fpath, mode="r") as fp:
-                config = json.load(fp)
-            config_web = config.get("dac_web", {})
+                mconfig = json.load(fp)
+            config_web = mconfig.get("dac_web", {})
             if "signature" not in config_web or config_web["signature"] != signature:
                 dac_web_config["inherit"] = project_id
                 fin_project_id = uuid4().hex
-            else:
-                fin_project_id = project_id
     else:
         fin_project_id = uuid4().hex
 
@@ -279,7 +278,7 @@ async def save_project_config(
     content = {"dac": config, "dac_web": {"version": __VERSION__}}
 
     # If no project_id provided, create a new node
-    if not project_id:
+    if not project_id or project_id=="new":
         r = await conn.fetchrow(
             "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
             json.dumps(content),

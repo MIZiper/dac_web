@@ -261,11 +261,3 @@ export async function deleteAction(context: DataItem, action: ActionItem) {
     const res = await ax_app.delete(`/${context.uuid}/actions/${action.uuid}`);
     appdata.actions = appdata.actions.filter((a) => a.uuid !== action.uuid);
 }
-
-export async function saveProject(publish_name: string = "", signature: string = "") {
-    const res = await ax_api.post("/save", {
-        // signature: sha1.hex(signature),
-        project_id: "",
-        publish_name: publish_name || null,
-    });
-}

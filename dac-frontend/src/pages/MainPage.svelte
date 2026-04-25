@@ -1,5 +1,11 @@
 <script lang="ts">
-    import { Col, Progress, Row, Toast } from "@sveltestrap/sveltestrap";
+    import {
+        Button,
+        Col,
+        Progress,
+        Row,
+        Toast,
+    } from "@sveltestrap/sveltestrap";
     import ContextList from "../lib/ContextList.svelte";
     import DataList from "../lib/DataList.svelte";
     import ActionList from "../lib/ActionList.svelte";
@@ -38,6 +44,7 @@
     import type { ActionItem, DataItem } from "../schema";
     import { taskHolder } from "../tasks/TaskRouter.svelte";
     import StatsTable from "../lib/StatsTable.svelte";
+    import SaveProjectDropdown from "../lib/SaveProjectDropdown.svelte";
 
     let loading = $state(0);
     let message = $state("");
@@ -47,7 +54,7 @@
 
     const router = getContext("router");
     router.route.getParams("/projects/:id");
-    const project_id = router.route.params.id;
+    let project_id = router.route.params.id;
 
     let config_in = $state({});
     let onTaskDone: ((c: Record<string, any> | null) => void) | null =
@@ -69,6 +76,27 @@
         await saveYamlHandler();
         if (appdata.currentContext && yamled_node && "status" in yamled_node)
             await runAction(appdata.currentContext, yamled_node);
+    }
+
+    async function saveProjectHandler(
+        hashed_signature: string,
+        publish_name: string,
+    ) {
+        const res = await ax_api.post("/save", {
+            signature: hashed_signature,
+            project_id: project_id,
+            publish_name: publish_name,
+        });
+        if (res.status == 200) {
+            let fin_project_id = res.data["project_id"];
+            router.navigate("/projects/:id", {
+                params: {
+                    id: fin_project_id,
+                },
+                replace: true,
+            });
+            project_id = fin_project_id;
+        }
     }
 
     let sess_id = $state("");
@@ -99,7 +127,11 @@
         loading = 0;
     });
 
-    async function runAction(context: DataItem, action: ActionItem, quick_str: string="") {
+    async function runAction(
+        context: DataItem,
+        action: ActionItem,
+        quick_str: string = "",
+    ) {
         const query_str = `${SESSID_KEY}=${sess_id}${quick_str}`;
         const es = new EventSource(
             `${app_prefix}/${context.uuid}/actions/${action.uuid}/run?${query_str}`,
@@ -134,6 +166,7 @@
 </script>
 
 {#snippet contextMenuSnippet()}
+    <SaveProjectDropdown onSaveProject={saveProjectHandler} />
     <ScenarioList
         scenarios={appdata.scenarios}
         currentScenario={appdata.currentScenario}
@@ -196,7 +229,11 @@
                             type_path: q.action_path,
                         };
                         if (appdata.currentContext) {
-                            runAction(appdata.currentContext, fakeAction, `&data_uuid=${d.uuid}&idx=${q.idx}`).then();
+                            runAction(
+                                appdata.currentContext,
+                                fakeAction,
+                                `&data_uuid=${d.uuid}&idx=${q.idx}`,
+                            ).then();
                         }
                     }}
                 />
