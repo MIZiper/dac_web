@@ -24,6 +24,7 @@ tags_metadata = [
 app = FastAPI(
     title="DAC_web API",
     openapi_tags=tags_metadata,
+    lifespan=lifespan,
 )
 
 app.include_router(api_router, prefix="/api", tags=["API"])

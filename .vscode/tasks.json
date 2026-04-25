@@ -7,11 +7,11 @@
             "label": "(dev) Start DAC PostgreSQL",
             "type": "shell",
             "command": [
-                "cd backend",
+                "cd backend/",
                 "&&",
                 "podman run -it --rm --name dac_postgres",
                 "-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dac -p 5431:5432",
-                "-v $(pwd)/dac_web/db/:/docker-entrypoint-initdb.d/",
+                "-v ./dac_web/db/:/docker-entrypoint-initdb.d/",
                 "postgres"
             ],
             "problemMatcher": []
@@ -34,6 +34,7 @@
                     "APP_LOG_ON": "1",
                     "LOG_DIR": "../storage/logs/",
                     "PROJECT_DIR": "../storage/projects/",
+                    "POSTGRES_PORT": "5431",
                 }
             }
         },

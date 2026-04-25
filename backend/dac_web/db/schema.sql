@@ -1,3 +1,5 @@
+CREATE TYPE PubStatus AS ENUM ('Registered', 'Approved', 'Rejected', 'Deleted');
+
 CREATE TABLE IF NOT EXISTS nodes (
     id UUID PRIMARY KEY DEFAULT uuidv7(), -- Require PostgreSQL 18+, for native uuid v7 support
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS publishes (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     title VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status INT, -- Registered, Approved, Rejected, Deleted
+    status PubStatus, -- Registered, Approved, Rejected, Deleted
     node_id UUID NOT NULL,
     FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
 );
