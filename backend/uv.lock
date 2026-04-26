@@ -362,7 +362,7 @@ wheels = [
 
 [[package]]
 name = "miz-dac"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -372,9 +372,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "scipy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/7e/1f5389e46c3be3cf112ac7ff21e1768b13393b4aef2e2321035fc7d14a10/miz_dac-0.4.2.tar.gz", hash = "sha256:59139370a7be2344064fe043c092b38188f3821ed0436f25fedd0d43747c0717", size = 159815, upload-time = "2026-04-10T14:59:15.101Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/19/432461f3e9007d754a7276477d521fad123bf38c9eedb9da8da9a92720cf/miz_dac-0.4.3.tar.gz", hash = "sha256:3949a47c0a97be67cf8c2a7d4cfe5888fed2692e0823c7cce98f507fa0c63cf2", size = 161409, upload-time = "2026-04-26T11:24:03.654Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/7d/2a36b097eb517b6ac16f68d32e9cd399393aefc72cce34221c799351efe3/miz_dac-0.4.2-py3-none-any.whl", hash = "sha256:94b43715863dc1f4d428361bb3a6992644f144246fc0fd6cae70cf591673fdf1", size = 60693, upload-time = "2026-04-10T14:59:13.842Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/94/ef9c736657141ba9483b9a1c16b3eb72dc834669397a064b708c08f158e5/miz_dac-0.4.3-py3-none-any.whl", hash = "sha256:b38f4a1250db89f9cf0d21e1107bdb187b8f0fa83056c9d8097ae0ab88cfed19", size = 61557, upload-time = "2026-04-26T11:24:02.383Z" },
 ]
 
 [[package]]
@@ -399,7 +399,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
-    { name = "miz-dac", specifier = ">=0.4.2" },
+    { name = "miz-dac", specifier = ">=0.4.3" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "starlette", specifier = ">=0.47.2" },
     { name = "uvicorn", specifier = ">=0.35.0" },
