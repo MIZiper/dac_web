@@ -8,7 +8,7 @@
 
     let title: string = $state("");
     let headers: Record<string, string[]> = $state({});
-    let data: any[][] = $state([]);
+    let data: (string | number)[][] = $state([]);
     let isOpen: boolean = $state(false);
 
     function toggle() {

@@ -4,11 +4,12 @@ Pass all "/app" requests to internal app services.
 """
 
 import asyncio
-import websockets
-from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
+import json
+import logging
+
 import httpx
+import websockets
 from fastapi import (
-    FastAPI,
     APIRouter,
     Request,
     WebSocket,
@@ -17,8 +18,11 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import Response, StreamingResponse
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from dac_web.api.handler import user_manager, SESSID_KEY
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -47,9 +51,13 @@ async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Req
     headers[SESSID_KEY] = uuid
 
     async def generate_chunks():
-        async with sse_client.stream("GET", url, content=body, headers=headers) as resp:
-            async for chunk in resp.aiter_raw():
-                yield chunk
+        try:
+            async with sse_client.stream("GET", url, content=body, headers=headers) as resp:
+                async for chunk in resp.aiter_raw():
+                    yield chunk
+        except httpx.RequestError as e:
+            logger.error("SSE proxy request failed: %s", e)
+            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
 
     return StreamingResponse(
         generate_chunks(), 
@@ -80,9 +88,13 @@ async def proxy_http(
     headers = dict(request.headers)
     headers[SESSID_KEY] = uuid
 
-    response = await http_client.request(
-        method=request.method, url=url, headers=headers, content=body
-    )
+    try:
+        response = await http_client.request(
+            method=request.method, url=url, headers=headers, content=body
+        )
+    except httpx.RequestError as e:
+        logger.error("Proxy request failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Upstream request failed: {e}")
 
     return Response(
         content=response.content,
@@ -117,9 +129,9 @@ async def proxy_websocket(
                     elif "bytes" in message:
                         await internal_ws.send(message["bytes"])
             except RuntimeError:  # from `websocket`
-                print("Client to target, RuntimeError")
+                logger.debug("Client to target websocket closed")
             except (ConnectionClosedOK, ConnectionClosedError):  # from `internal_ws`
-                print("Client to target, ConnectionClosed")
+                logger.debug("Client to target connection closed")
 
         async def target_to_client():
             try:
@@ -130,8 +142,8 @@ async def proxy_websocket(
                     elif isinstance(data, bytes):
                         await websocket.send_bytes(data)
             except WebSocketDisconnect:  # from `websocket`
-                print("Target to client, WebSocketDisconnect")
+                logger.debug("Target to client websocket disconnected")
             except (ConnectionClosedOK, ConnectionClosedError):  # from `internal_ws`
-                print("Target to client, ConnectionClosed")
+                logger.debug("Target to client connection closed")
 
         await asyncio.gather(client_to_target(), target_to_client())

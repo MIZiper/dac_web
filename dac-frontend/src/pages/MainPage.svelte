@@ -39,7 +39,7 @@
         addContext,
         statusMap,
     } from "./MainPageHandler.svelte";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onMount, onDestroy } from "svelte";
     import YAML from "yaml";
     import type { ActionItem, DataItem } from "../schema";
     import { taskHolder } from "../tasks/TaskRouter.svelte";
@@ -50,20 +50,36 @@
     let message = $state("");
     let toastIsOpen = $state(false);
 
-    let tblRef = $state();
+    let tblRef: { set: (title: string, headers: Record<string, string[]>, data: (string | number)[][]) => void } | undefined = $state();
 
-    const router = getContext("router");
+    const router = getContext<{ route: { getParams: (p: string) => void; params: { id: string } }; navigate: (p: string, opts?: any) => void }>("router");
     router.route.getParams("/projects/:id");
     let project_id = router.route.params.id;
 
-    let config_in = $state({});
+    let config_in: Record<string, any> = $state({});
     let onTaskDone: ((c: Record<string, any> | null) => void) | null =
         $state(null);
 
     let yaml_code: string = $state("");
     let yamled_node: ActionItem | DataItem | null = $state(null);
+
+    $effect(() => {
+        if (appdata.errorMessage) {
+            message = appdata.errorMessage;
+            toastIsOpen = true;
+            appdata.errorMessage = '';
+        }
+    });
+
     async function saveYamlHandler() {
-        let conf = YAML.parse(yaml_code);
+        let conf;
+        try {
+            conf = YAML.parse(yaml_code);
+        } catch (e) {
+            message = `Invalid YAML: ${e instanceof Error ? e.message : e}`;
+            toastIsOpen = true;
+            return;
+        }
         if (yamled_node && appdata.currentContext) {
             if ("status" in yamled_node) {
                 await updateAction(appdata.currentContext, yamled_node, conf);
@@ -82,24 +98,35 @@
         hashed_signature: string,
         publish_name: string,
     ) {
-        const res = await ax_api.post("/save", {
-            signature: hashed_signature,
-            project_id: project_id,
-            publish_name: publish_name,
-        });
-        if (res.status == 200) {
-            let fin_project_id = res.data["project_id"];
-            router.navigate("/projects/:id", {
-                params: {
-                    id: fin_project_id,
-                },
-                replace: true,
+        loading = 50;
+        try {
+            const res = await ax_api.post("/save", {
+                signature: hashed_signature,
+                project_id: project_id,
+                publish_name: publish_name,
             });
-            project_id = fin_project_id;
+            if (res.status == 200) {
+                let fin_project_id = res.data["project_id"];
+                router.navigate("/projects/:id", {
+                    params: {
+                        id: fin_project_id,
+                    },
+                    replace: true,
+                });
+                project_id = fin_project_id;
+            }
+        } catch (e) {
+            message = `Save failed: ${e instanceof Error ? e.message : e}`;
+            toastIsOpen = true;
+            console.error("save failed", e);
+        } finally {
+            loading = 0;
         }
     }
 
     let sess_id = $state("");
+    let activeSSE: Set<EventSource> = $state(new Set());
+    let cleanupAnalysis: (() => void) | null = null;
 
     $effect(() => {
         navTeleport.snippet = contextMenuSnippet;
@@ -111,22 +138,40 @@
 
     onMount(async () => {
         loading = 100;
-        if (project_id === "new") {
-            const res = await ax_api.post("/new");
-            if (res.status == 200) {
-                sess_id = res.data[SESSID_KEY];
-                await initAnalysis(sess_id);
-            }
-        } else {
-            const res = await ax_api.post("/load", { project_id: project_id });
-            if (res.status == 200) {
-                sess_id = res.data[SESSID_KEY];
-                await initAnalysis(sess_id);
+        try {
+            if (project_id === "new") {
+                const res = await ax_api.post("/new");
+                if (res.status == 200) {
+                    sess_id = res.data[SESSID_KEY];
+                    cleanupAnalysis = await initAnalysis(sess_id);
+                } else {
+                    message = `Failed to create session: ${res.status}`;
+                    toastIsOpen = true;
+                }
             } else {
-                // TODO: 404 not found
+                const res = await ax_api.post("/load", { project_id: project_id });
+                if (res.status == 200) {
+                    sess_id = res.data[SESSID_KEY];
+                    cleanupAnalysis = await initAnalysis(sess_id);
+                } else {
+                    message = `Project not found (${res.status})`;
+                    toastIsOpen = true;
+                }
             }
+        } catch (e) {
+            message = `Failed to initialize: ${e instanceof Error ? e.message : e}`;
+            toastIsOpen = true;
+            console.error("init failed", e);
         }
         loading = 0;
+    });
+
+    onDestroy(() => {
+        activeSSE.forEach((es) => es.close());
+        activeSSE.clear();
+        if (cleanupAnalysis) {
+            cleanupAnalysis();
+        }
     });
 
     async function runAction(
@@ -138,32 +183,59 @@
         const es = new EventSource(
             `${app_prefix}/${context.uuid}/actions/${action.uuid}/run?${query_str}`,
         );
+        activeSSE.add(es);
 
-        es.addEventListener("started", (e) => {
+        es.addEventListener("started", () => {
             loading = 100;
         });
         es.addEventListener("progress", (e) => {
-            const [i, n] = JSON.parse(e.data);
-            loading = (i / n) * 100;
+            try {
+                const [i, n] = JSON.parse(e.data);
+                loading = (i / n) * 100;
+            } catch (err) {
+                console.error("Failed to parse progress event data", err);
+            }
         });
         es.addEventListener("stats", (e) => {
-            const { title, headers, data } = JSON.parse(e.data);
-            tblRef.set(title, headers, data);
+            try {
+                const { title, headers, data } = JSON.parse(e.data);
+                if (tblRef) {
+                    tblRef.set(title, headers, data);
+                }
+            } catch (err) {
+                console.error("Failed to parse stats event data", err);
+            }
         });
         es.addEventListener("completed", (e) => {
-            const [data_updated, action_status] = JSON.parse(e.data);
-            action.status = statusMap.get(action_status) || "Failed";
-            if (data_updated) {
-                getCurrentData(context).then();
+            try {
+                const [data_updated, action_status] = JSON.parse(e.data);
+                action.status = statusMap.get(action_status) || "Failed";
+                if (data_updated && appdata.currentContext) {
+                    getCurrentData(appdata.currentContext).then();
+                }
+            } catch (err) {
+                console.error("Failed to parse completed event data", err);
             }
             loading = 0;
+            activeSSE.delete(es);
             es.close();
         });
         es.addEventListener("message", (e) => {
-            const msg = JSON.parse(e.data);
-            message = msg;
-            toastIsOpen = true;
+            try {
+                const msg = JSON.parse(e.data);
+                message = msg;
+                toastIsOpen = true;
+            } catch (err) {
+                console.error("Failed to parse message event data", err);
+            }
         });
+        es.onerror = () => {
+            message = "Connection to analysis server lost";
+            toastIsOpen = true;
+            loading = 0;
+            activeSSE.delete(es);
+            es.close();
+        };
     }
 </script>
 

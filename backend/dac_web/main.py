@@ -1,10 +1,10 @@
 import os
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from dac_web.db.connection import get_db, init_pool, close_pool
+from dac_web.db.connection import init_pool, close_pool
 
 from dac_web.api.rev_proxy import router as rev_router
 from dac_web.api.handler import router as api_router

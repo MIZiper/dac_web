@@ -4,22 +4,26 @@ Adapted from "matplotlib.backends.backend_webagg.py".
 It provides the handling by Starlette, and can be used in FastAPI or other ASGI frameworks.
 """
 
+import asyncio
+import base64
 import json
-import base64, asyncio
+import logging
 import mimetypes
 from io import BytesIO
 from pathlib import Path
 
 from starlette.applications import Starlette
+from starlette.endpoints import WebSocketEndpoint
 from starlette.responses import Response, FileResponse, HTMLResponse, PlainTextResponse
 from starlette.routing import Route, WebSocketRoute, Mount
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket
-from starlette.endpoints import WebSocketEndpoint
 
 import matplotlib as mpl
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backends import backend_webagg_core as core
+
+logger = logging.getLogger(__name__)
 
 STATIC_PATH = str(core.FigureManagerWebAgg.get_static_file_path())
 IMAGES_PATH = str(Path(mpl.get_data_path(), "images"))

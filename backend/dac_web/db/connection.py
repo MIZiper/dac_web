@@ -1,9 +1,12 @@
+import logging
 import os
-
-import asyncpg
 from typing import AsyncGenerator
 
-pool = None
+import asyncpg
+
+logger = logging.getLogger(__name__)
+
+pool: asyncpg.Pool | None = None
 
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
@@ -15,13 +18,17 @@ DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 async def init_pool():
     global pool
 
-    pool = await asyncpg.create_pool(
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
-        host=DB_HOST,
-        port=DB_PORT,
-    )
+    try:
+        pool = await asyncpg.create_pool(
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            host=DB_HOST,
+            port=DB_PORT,
+        )
+    except Exception as e:
+        logger.warning("Database connection failed, falling back to file storage: %s", e)
+        pool = None
 
 
 async def close_pool():
@@ -29,8 +36,12 @@ async def close_pool():
 
     if pool:
         await pool.close()
+        pool = None
 
 
-async def get_db() -> AsyncGenerator[asyncpg.connection.Connection, None]:
+async def get_db() -> AsyncGenerator[asyncpg.connection.Connection | None, None]:
+    if pool is None:
+        yield None
+        return
     async with pool.acquire() as conn:
         yield conn

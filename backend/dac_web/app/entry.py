@@ -1,6 +1,6 @@
-from fastapi import FastAPI, APIRouter
-import os, sys
-from datetime import datetime
+import logging
+
+from fastapi import FastAPI
 from uvicorn import Config, Server
 
 from matplotlib.figure import Figure
@@ -9,6 +9,8 @@ from matplotlib._pylab_helpers import Gcf
 
 from dac_web.app.handler import FIG_NUM, router as dac_router
 from dac_web.webagg_starlette import app as mpl_app
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -29,10 +31,11 @@ class CustomServer(Server):
         await super().startup(sockets)
         # Get the actual port from the bound socket
         port = self.servers[0].sockets[0].getsockname()[1]
-        print(f"✅ APP handler is running on port ... {port}", flush=True)
+        # parent process reads this line from stdout to discover the port
+        print(f"APP handler is running on port ... {port}", flush=True)
 
     async def shutdown(self, sockets=None):
-        print("🛑 Uvicorn is shutting down.", flush=True)
+        logger.info("Uvicorn is shutting down.")
 
         await super().shutdown(sockets)
 

@@ -9,12 +9,9 @@
     } from "../utils/FetchObjects";
     import { scale } from "svelte/transition";
 
-    // const api_mpl = `/mpl`; // for dev
-    // const app_mpl = `/mpl`; // for dev
-
     let { sess_id = "" } = $props();
 
-    let figure: any = $state();
+    let figure: { _resize_canvas: (w: number, h: number, b: boolean) => void; id: number } | undefined = $state();
     let isFullscreen: boolean = $state(false);
 
     function initMpl() {
@@ -27,7 +24,7 @@
             document.head.appendChild(link);
         });
 
-        function ondownload(figure, format) {
+        function ondownload(figure: { id: number }, format: string) {
             window.open(
                 `${app_mpl}/${figure.id}/download.${format}?${query_str}`,
                 "_blank",
@@ -37,18 +34,18 @@
         const script = document.createElement("script");
         script.src = `${api_mpl}/js/mpl.js`;
         script.onload = () => {
-            let websocket_type = window.mpl.get_websocket_type();
+            let websocket_type = (window as any).mpl.get_websocket_type();
             let websocket = new websocket_type(
                 `${app_mpl}/${FIG_NUM}/ws?${query_str}`,
             );
 
-            figure = new window.mpl.figure(
+            figure = new (window as any).mpl.figure(
                 FIG_NUM,
                 websocket,
                 ondownload,
                 document.getElementById("figure"),
             );
-            const widgetImages = document.querySelectorAll(
+            const widgetImages = document.querySelectorAll<HTMLImageElement>(
                 "button.mpl-widget img",
             );
             widgetImages.forEach((img) => {

@@ -1,5 +1,7 @@
+import type { Snippet } from "svelte";
+
 export const navTeleport: {
-    snippet: any
+    snippet: Snippet | null
 } = $state({
     snippet: null
 });

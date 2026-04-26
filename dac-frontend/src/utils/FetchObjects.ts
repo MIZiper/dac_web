@@ -14,6 +14,7 @@ export const api_mpl = `${api_prefix}${mpl_prefix}`; // /api/mpl
 export const ax_api = axios.create({
     baseURL: api_prefix,
     responseType: "json",
+    timeout: 30000,
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -23,6 +24,7 @@ export const ax_api = axios.create({
 export const ax_app = axios.create({
     baseURL: app_prefix,
     responseType: "json",
+    timeout: 30000,
     headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",

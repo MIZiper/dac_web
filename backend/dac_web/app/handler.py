@@ -1,18 +1,25 @@
-import os, json, asyncio, threading
+import asyncio
+import json
+import logging
+import os
+import threading
 from os import path
+from typing import Callable
 
-from fastapi import FastAPI, APIRouter, Request, HTTPException, Body, Path as FPath, Header, Depends, Query
+from fastapi import APIRouter, HTTPException, Path as FPath, Header, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
+
+import dac
+from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
+from dac.core.actions import VAB, TAB
+from dac.core.scenario import use_scenario
 
 from matplotlib.figure import Figure
 from matplotlib._pylab_helpers import Gcf
 
-import dac
-from dac.core import Container, GCK, NodeBase, ActionNode, DataNode
-from dac.core.actions import PAB, VAB, SAB, TAB
-from dac.core.scenario import use_scenario
-
 import dac_web.schema as s
+
+logger = logging.getLogger(__name__)
 
 GCK_ID = "global"
 FIG_NUM = 1
@@ -24,12 +31,12 @@ router = APIRouter(
     dependencies=[Depends(require_token_header)] # for /docs purpose only, the validation is done in rev_proxy
 )
 
-current_scenario = "0.base.yaml"
-scenarios_dir = os.getenv("SCENARIO_DIR") or path.join(
+current_scenario: str = "0.base.yaml"
+scenarios_dir: str = os.getenv("SCENARIO_DIR") or path.join(
     path.dirname(dac.__file__), "scenarios"
 )
-quick_actions = use_scenario(path.join(scenarios_dir, current_scenario))
-container = Container.parse_save_config({})
+quick_actions: list[tuple[str, str, str, int]] | None = use_scenario(path.join(scenarios_dir, current_scenario))
+container: Container = Container.parse_save_config({})
 
 # -----------
 # init & save
@@ -279,7 +286,6 @@ async def get_actions_of_context(context_key_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    context = container.get_context(context_key)
     return s.ActionsResp(
         message="List actions of context",
         actions=[
@@ -418,25 +424,26 @@ async def ready():
     return JSONResponse(status_code=204, content={})
 
 
-def get_context_key(context_key_id: str):
+def get_context_key(context_key_id: str) -> NodeBase | None:
     if context_key_id == GCK_ID:
         return GCK
     else:
         try:
             return container.context_keys.get_node_by_uuid(context_key_id)
-        except:
+        except Exception:
             return None
 
 
-def get_nodetype_path(node_type: type[NodeBase]):
+def get_nodetype_path(node_type: type[NodeBase]) -> str:
     return f"{node_type.__module__}.{node_type.__qualname__}"
 
 
 def run_action(
-    action: ActionNode, queue: asyncio.Queue, loop, complete_cb: callable = None
+    action: ActionNode, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop, complete_cb: Callable | None = None
 ):
     def sync_put(evt: str, obj):
-        queue.put_nowait(f"event: {evt}\ndata: {json.dumps(obj)}\n\n")
+        msg = f"event: {evt}\ndata: {json.dumps(obj)}\n\n"
+        loop.call_soon_threadsafe(queue.put_nowait, msg)
 
     params = container.prepare_params_for_action(
         action._SIGNATURE, action._construct_config
@@ -478,11 +485,17 @@ def run_action(
     action._message = lambda s: sync_put('message', s)
 
     sync_put('started', None)
-    action.pre_run()
-    sync_put('message', f"[{action.name}]")
-    rst = action(**params)
-    action.post_run()
-    data_updated, action_status = completed(rst)
-    sync_put('completed', (data_updated, action_status.value))
-    
-    queue.put_nowait(None)
+    try:
+        action.pre_run()
+        sync_put('message', f"[{action.name}]")
+        rst = action(**params)
+        action.post_run()
+        data_updated, action_status = completed(rst)
+        sync_put('completed', (data_updated, action_status.value))
+    except Exception as e:
+        logger.exception("Action execution failed")
+        action.status = ActionNode.ActionStatus.FAILED
+        sync_put('completed', (False, action.status.value))
+        sync_put('message', f"Action failed: {e}")
+    finally:
+        loop.call_soon_threadsafe(queue.put_nowait, None)

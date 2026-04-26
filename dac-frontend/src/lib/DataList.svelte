@@ -49,7 +49,7 @@
     let matchedQuickActions = $derived.by(() =>
         selectedDatum
             ? availableQuickActions.filter(
-                  (qa) => qa.data_path === selectedDatum.type_path,
+                  (qa) => qa.data_path === (selectedDatum as DataItem).type_path,
               )
             : [],
     );
@@ -102,7 +102,7 @@
                 {#each matchedQuickActions as quickAction}
                     <DropdownItem
                         onclick={(e) => {
-                            if (onQuickAction)
+                            if (onQuickAction && selectedDatum)
                                 onQuickAction(selectedDatum, quickAction);
                         }}>{quickAction.action_name}</DropdownItem
                     >
