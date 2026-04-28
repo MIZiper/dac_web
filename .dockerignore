@@ -1,5 +1,12 @@
 **/node_modules
 **/dist
-
-**/*venv
-__pycache__
+**/dist-lib
+**/__pycache__
+**/*.pyc
+**/.venv
+**/uv.lock
+.git
+.gitignore
+*.md
+!backend/README.md
+!dac-frontend/README.md
