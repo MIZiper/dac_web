@@ -104,3 +104,19 @@ export interface ContextExchange {
 export interface ActionExchange {
     action_config: NodeConfig;
 }
+
+export interface ProjectItem {
+    id: string;
+    created_at: string;
+    updated_at: string;
+    publish_title: string | null;
+    publish_status: string | null;
+}
+
+export interface ProjectListResponse {
+    message: string;
+    projects: ProjectItem[];
+    total: number;
+    page: number;
+    page_size: number;
+}

@@ -131,3 +131,18 @@ class ContextsResp(DACResponse):
 class TypesResp(DACResponse):
     context_types: list[NodeType | str] | None = None
     action_types: list[NodeType | str] | None = None
+
+
+class ProjectItem(BaseModel):
+    id: str
+    created_at: str
+    updated_at: str
+    publish_title: str | None = None
+    publish_status: str | None = None
+
+
+class ProjectListResp(DACResponse):
+    projects: list[ProjectItem]
+    total: int
+    page: int
+    page_size: int

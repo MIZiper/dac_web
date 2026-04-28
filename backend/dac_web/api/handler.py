@@ -202,34 +202,66 @@ async def start_process_session():
 # -------------
 
 
-@router.get("/projects")
+@router.get("/projects", response_model=s.ProjectListResp)
 async def get_project_list(
     conn: Connection | None = Depends(get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
+    published_only: bool = Query(False),
 ):
     if conn is None:
         raise HTTPException(status_code=503, detail="Database not available")
+
     offset = (page - 1) * page_size
+
+    where_clause = "WHERE n.valid = TRUE"
+    count_params = []
+    if published_only:
+        where_clause += " AND p.id IS NOT NULL"
+
+    count_row = await conn.fetchrow(
+        f"""
+        SELECT COUNT(*) as total
+        FROM nodes n
+        LEFT JOIN publishes p ON p.node_id = n.id
+        {where_clause}
+        """,
+        *count_params,
+    )
+    total = count_row["total"]
+
     rows = await conn.fetch(
-        """
-        SELECT id, created_at, updated_at
-        FROM nodes
-        WHERE valid = TRUE
-        ORDER BY created_at DESC
+        f"""
+        SELECT n.id, n.created_at, n.updated_at,
+               p.title as publish_title, p.status::text as publish_status
+        FROM nodes n
+        LEFT JOIN publishes p ON p.node_id = n.id
+        {where_clause}
+        ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2
         """,
         page_size,
         offset,
     )
-    return [
-        {
-            "id": str(r["id"]),
-            "created_at": r["created_at"],
-            "updated_at": r["updated_at"],
-        }
+
+    projects = [
+        s.ProjectItem(
+            id=str(r["id"]),
+            created_at=r["created_at"].isoformat(),
+            updated_at=r["updated_at"].isoformat(),
+            publish_title=r["publish_title"],
+            publish_status=r["publish_status"],
+        )
         for r in rows
     ]
+
+    return s.ProjectListResp(
+        message="Project list retrieved",
+        projects=projects,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 async def read_project_config_file(project_id: str) -> dict | None:

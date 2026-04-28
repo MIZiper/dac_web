@@ -87,6 +87,7 @@ export async function initAnalysis(sess_id: string): Promise<() => void> {
     return () => {
         controller.abort();
         window.removeEventListener("beforeunload", beforeunloadHandler);
+        ax_api.post("/term", { [SESSID_KEY]: sess_id }).catch(() => {});
     };
 }
 
