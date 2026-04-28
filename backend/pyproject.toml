@@ -4,6 +4,11 @@ version = "0.2.1.dev0"
 description = "DAC analysis on web, the backend handlers."
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [
+    {name = "MIZiper"}
+]
+license = {text = "Apache-2.0"}
+license-files = ["LICENSE*"]
 dependencies = [
     "asyncpg>=0.31.0",
     "fastapi>=0.116.1",
