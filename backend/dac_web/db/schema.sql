@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     content JSONB DEFAULT '{}',
-    creator_signature VARCHAR(20),
+    creator_signature VARCHAR(255),
+    user_id VARCHAR(255),
     valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 
@@ -35,5 +36,6 @@ CREATE TABLE IF NOT EXISTS publishes (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status PubStatus, -- Registered, Approved, Rejected, Deleted
     node_id UUID NOT NULL,
+    user_id VARCHAR(255),
     FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
 );

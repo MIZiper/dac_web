@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Request, Query, Depends
 import dac_web.schema as s
 from dac_web.schema import SESSID_KEY
 from dac_web.db.connection import get_db
+from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -35,22 +36,31 @@ APP_LOG_ON = os.getenv("APP_LOG_ON")
 DBSTORE = os.getenv("DBSTORE", "true").lower() in ("true", "1", "yes")
 
 
-class UserManager(dict[str, tuple[str, asyncio.subprocess.Process]]):
+class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]]):
     def validate_sess(self, sess_id: str) -> bool:
         return sess_id is not None and sess_id in self
 
     def set_sess(
-        self, sess_id: str, conn_str: str, app_obj: asyncio.subprocess.Process
+        self, sess_id: str, conn_str: str, app_obj: asyncio.subprocess.Process,
+        owner_user_id: str | None = None,
     ):
-        self[sess_id] = conn_str, app_obj
+        self[sess_id] = conn_str, app_obj, owner_user_id
 
     def get_sess_conn(self, sess_id: str) -> str:
-        conn_str, app_obj = self[sess_id]
+        conn_str, app_obj, _ = self[sess_id]
         return conn_str
 
     def get_sess_obj(self, sess_id: str) -> asyncio.subprocess.Process:
-        conn_str, app_obj = self[sess_id]
+        conn_str, app_obj, _ = self[sess_id]
         return app_obj
+
+    def get_sess_owner(self, sess_id: str) -> str | None:
+        conn_str, app_obj, owner = self[sess_id]
+        return owner
+
+    def set_sess_owner(self, sess_id: str, owner_user_id: str):
+        conn_str, app_obj, _ = self[sess_id]
+        self[sess_id] = conn_str, app_obj, owner_user_id
 
     def remove_sess(self, sess_id: str):
         if sess_id in self:
@@ -60,8 +70,17 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process]]):
 user_manager = UserManager()
 
 
+@router.get("/auth/status", response_model=s.KeycloakStatus)
+async def auth_status():
+    return s.KeycloakStatus(**get_keycloak_config())
+
+
 @router.post("/load", response_model=s.ManProjectResp)
-async def load_project(data: s.InitProjectReq, conn: Connection | None = Depends(get_db)):
+async def load_project(
+    data: s.InitProjectReq,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
     project_id = data.project_id
     if not project_id:
         raise HTTPException(status_code=400, detail="Project ID is required")
@@ -74,7 +93,8 @@ async def load_project(data: s.InitProjectReq, conn: Connection | None = Depends
         config = await read_project_config_file(project_id)
 
     if config is not None:
-        sess_id = await start_process_session()
+        owner = current_user["sub"] if current_user else None
+        sess_id = await start_process_session(owner_user_id=owner)
         intconnstr = user_manager.get_sess_conn(sess_id)
         async with httpx.AsyncClient() as client:
             resp = await client.post(
@@ -93,8 +113,11 @@ async def load_project(data: s.InitProjectReq, conn: Connection | None = Depends
 
 
 @router.post("/new", response_model=s.ManProjectResp)
-async def new_process_session():
-    sess_id = await start_process_session()
+async def new_process_session(
+    current_user: dict | None = Depends(get_current_user),
+):
+    owner = current_user["sub"] if current_user else None
+    sess_id = await start_process_session(owner_user_id=owner)
     return s.ManProjectResp(
         message="Analysis started",
         project_id=None,
@@ -109,8 +132,7 @@ async def terminate_process_session(request: Request):
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
     try:
         p = user_manager.get_sess_obj(sess_id)
-        p.terminate()  # terminate first to flush out the outputs, otherwise below code blocks. strange but works.
-        # NOTE: it is said PIPE has a buffer limit, no idea what if output is long since it's always in demo phase :|
+        p.terminate()
         if APP_LOG_ON and LOG_DIR:
             out, err = await p.communicate()
             stdout_path = path.join(
@@ -133,7 +155,10 @@ async def terminate_process_session(request: Request):
 
 @router.post("/save", response_model=s.ManProjectResp)
 async def save_project(
-    request: Request, data: s.SaveProjectReq, conn: Connection | None = Depends(get_db)
+    request: Request,
+    data: s.SaveProjectReq,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
 ):
     sess_id = request.headers.get(SESSID_KEY)
     if sess_id is None or not user_manager.validate_sess(sess_id):
@@ -141,7 +166,20 @@ async def save_project(
 
     project_id = data.project_id
     publish_name = data.publish_name
-    signature = data.signature
+
+    if current_user is not None:
+        signature = current_user["sub"]
+        owner = user_manager.get_sess_owner(sess_id)
+        if owner is None:
+            user_manager.set_sess_owner(sess_id, signature)
+        elif owner != signature:
+            raise HTTPException(
+                status_code=403, detail="Session is owned by another user"
+            )
+    else:
+        if is_keycloak_enabled():
+            raise HTTPException(status_code=401, detail="Authentication required to save")
+        signature = data.signature or ""
 
     intconnstr = user_manager.get_sess_conn(sess_id)
     async with httpx.AsyncClient() as client:
@@ -150,15 +188,17 @@ async def save_project(
     if resp.status_code == 200:
         config = resp.json()["config"]
 
+        user_id = current_user["sub"] if current_user else None
+
         if DBSTORE:
             if conn is None:
                 raise HTTPException(status_code=503, detail="Database not available")
             fin_project_id = await save_project_config(
-                project_id, config, publish_name, signature, conn
+                project_id, config, publish_name, signature, conn, user_id
             )
         else:
             fin_project_id = await save_project_config_file(
-                project_id, config, publish_name, signature
+                project_id, config, publish_name, signature, user_id
             )
 
         return s.ManProjectResp(
@@ -175,7 +215,7 @@ async def save_project(
 # ------
 
 
-async def start_process_session():
+async def start_process_session(owner_user_id: str | None = None):
     sess_id = uuid4().hex
 
     process = await asyncio.create_subprocess_exec(
@@ -192,7 +232,7 @@ async def start_process_session():
         process.kill()
         raise HTTPException(status_code=500, detail="Subprocess startup timed out")
     port = bline.decode().split("...")[-1].strip()
-    user_manager.set_sess(sess_id, f"localhost:{port}", process)
+    user_manager.set_sess(sess_id, f"localhost:{port}", process, owner_user_id)
 
     return sess_id
 
@@ -289,7 +329,8 @@ async def read_project_config(project_id: str, conn: Connection) -> dict | None:
 
 
 async def save_project_config_file(
-    project_id: str, config: dict, publish_name: str, signature: str
+    project_id: str, config: dict, publish_name: str, signature: str,
+    user_id: str | None = None,
 ) -> str:
     dac_web_config = {
         "signature": signature,
@@ -309,6 +350,9 @@ async def save_project_config_file(
     else:
         fin_project_id = uuid4().hex
 
+    if user_id:
+        dac_web_config["user_id"] = user_id
+
     project_fpath = path.join(PROJDIR, fin_project_id)
     with open(project_fpath, mode="w") as fp:
         json.dump(
@@ -324,65 +368,64 @@ async def save_project_config_file(
 
 
 async def save_project_config(
-    project_id: str, config: dict, publish_name: str, signature: str, conn: Connection
+    project_id: str, config: dict, publish_name: str, signature: str, conn: Connection,
+    user_id: str | None = None,
 ) -> str:
     content = {"dac": config, "dac_web": {"version": __VERSION__}}
 
     async with conn.transaction():
-        # If no project_id provided, create a new node
         if not project_id or project_id=="new":
             r = await conn.fetchrow(
-                "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
+                "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
                 json.dumps(content),
                 signature,
+                user_id,
             )
             final_id = str(r["id"])
         else:
-            # check existing node
             row = await conn.fetchrow(
                 "SELECT creator_signature FROM nodes WHERE id = $1::uuid",
                 project_id,
             )
             if row:
                 if (existing_sig := row["creator_signature"]) is None or existing_sig != signature:
-                    # signature mismatch: create a new node and record inheritance
                     r = await conn.fetchrow(
-                        "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
+                        "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
                         json.dumps(content),
                         signature,
+                        user_id,
                     )
                     final_id = str(r["id"])
-                    # record history: new node inherits from previous project_id
                     await conn.execute(
                         "INSERT INTO histories (node_id, inherit_from_id) VALUES ($1::uuid, $2::uuid)",
                         final_id,
                         project_id,
                     )
                 else:
-                    # signature matches: update existing
                     await conn.execute(
-                        "UPDATE nodes SET content = $1::jsonb, creator_signature = $2 WHERE id = $3::uuid",
+                        "UPDATE nodes SET content = $1::jsonb, creator_signature = $2, user_id = $3 WHERE id = $4::uuid",
                         json.dumps(content),
                         signature,
+                        user_id,
                         project_id,
                     )
                     final_id = project_id
             else:
-                # not found: insert
                 r = await conn.fetchrow(
-                    "INSERT INTO nodes (content, creator_signature, valid) VALUES ($1::jsonb, $2, TRUE) RETURNING id",
+                    "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
                     json.dumps(content),
                     signature,
+                    user_id,
                 )
                 final_id = str(r["id"])
 
-        # publishing: record a simple entry in publishes table if requested
         if publish_name:
             await conn.execute(
-                "INSERT INTO publishes (title, node_id, status) VALUES ($1, $2::uuid, $3)",
+                "INSERT INTO publishes (title, node_id, status, user_id) VALUES ($1, $2::uuid, $3, $4)",
                 publish_name,
                 final_id,
                 "Registered",
+                user_id,
             )
 
     return final_id

@@ -66,7 +66,14 @@ class ManProjectResp(DACResponse):
 class SaveProjectReq(DACRequest):
     project_id: str
     publish_name: str
-    signature: str
+    signature: str = ""
+
+
+class KeycloakStatus(BaseModel):
+    keycloak_enabled: bool
+    keycloak_url: str = ""
+    keycloak_realm: str = ""
+    keycloak_client_id: str = ""
 
 
 class ProjectConfigResp(DACResponse):
