@@ -1,0 +1,35 @@
+{
+    "configurations": [
+        {
+            "name": "(Debugger) DAC frontend",
+            "type": "editor-browser",
+            "request": "launch",
+            "url": "http://localhost:5131",
+            "webRoot": "${workspaceFolder}/dac-frontend/",
+            "sourceMaps": true
+        },
+        {
+            "name": "(Debugger) DAC backend",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "--reload",
+                "--port=8031",
+                "dac_web.main:app",
+            ],
+            "justMyCode": false,
+            "env": {
+                    "APP_LOG_ON": "1",
+                    "DBSTORE": "true",
+                    "LOG_DIR": "./storage/logs/",
+                    "PROJECT_DIR": "./storage/projects/",
+                    "POSTGRES_PORT": "5431",
+                    "KEYCLOAK_URL": "http://localhost:8080",
+                    "KEYCLOAK_REALM": "miz",
+                    "KEYCLOAK_CLIENT_ID": "dac-frontend",
+                    "KEYCLOAK_CLIENT_SECRET": "",
+            }
+        }
+    ]
+}

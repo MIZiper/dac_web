@@ -32,10 +32,11 @@
             "options": {
                 "env": {
                     "APP_LOG_ON": "1",
+                    "DBSTORE": "true",
                     "LOG_DIR": "../storage/logs/",
                     "PROJECT_DIR": "../storage/projects/",
                     "POSTGRES_PORT": "5431",
-                    // "KEYCLOAK_URL": "http://localhost:8080/",
+                    // "KEYCLOAK_URL": "http://localhost:8080",
                     // "KEYCLOAK_REALM": "miz",
                     // "KEYCLOAK_CLIENT_ID": "dac-frontend",
                     // "KEYCLOAK_CLIENT_SECRET": "",
@@ -50,7 +51,7 @@
                 "&&",
                 "until /bin/nc -z localhost 8031; do sleep 1; done",
                 "&&",
-                "pnpm run dev --open",
+                "pnpm run dev --port 5131 --open",
             ],
             "options": {
                 "env": {

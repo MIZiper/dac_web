@@ -79,9 +79,9 @@ def verify_token(token: str) -> Optional[dict]:
             token,
             key,
             algorithms=["RS256"],
-            audience=KEYCLOAK_CLIENT_ID,
+            audience="account",  # all users can interact, further permission control to be defined
             issuer=f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}",
-            options={"verify_aud": True, "verify_exp": True},
+            options={"verify_aud": True, "verify_exp": True},  # TODO: ask frontend to refresh token if expires
         )
         return payload
 
