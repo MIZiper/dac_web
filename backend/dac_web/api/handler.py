@@ -88,9 +88,9 @@ async def load_project(
     if DBSTORE:
         if conn is None:
             raise HTTPException(status_code=503, detail="Database not available")
-        config = await read_project_config(project_id, conn)
+        config, title = await read_project_config(project_id, conn)
     else:
-        config = await read_project_config_file(project_id)
+        config, title = await read_project_config_file(project_id)
 
     if config is not None:
         owner = current_user["sub"] if current_user else None
@@ -104,6 +104,7 @@ async def load_project(
             return s.ManProjectResp(
                 message="Project loaded",
                 project_id=project_id,
+                title=title,
                 **{SESSID_KEY: sess_id},
             )
         else:
@@ -208,6 +209,7 @@ async def save_project(
         return s.ManProjectResp(
             message="Project saved",
             project_id=fin_project_id,
+            title=data.title or title,
             **{SESSID_KEY: None},
         )
     else:
@@ -298,28 +300,26 @@ async def get_project_list(
     )
 
 
-async def read_project_config_file(project_id: str) -> dict | None:
+async def read_project_config_file(project_id: str) -> tuple[dict | None, str | None]:
     if "/" in project_id or "\\" in project_id or ".." in project_id:
         raise HTTPException(status_code=400, detail="Invalid project ID")
     project_fpath = path.join(PROJDIR, project_id)
     if not path.isfile(project_fpath):
-        return None
+        return None, None
     with open(project_fpath, mode="r") as fp:
-        config = json.load(fp)["dac"]
-    return config
+        mconfig = json.load(fp)
+    return mconfig.get("dac"), mconfig.get("dac_web", {}).get("title")
 
 
-async def read_project_config(project_id: str, conn: Connection) -> dict | None:
-    # Read project configuration from DB `nodes` table where content->>'type' = 'project'
+async def read_project_config(project_id: str, conn: Connection) -> tuple[dict | None, str | None]:
     row = await conn.fetchrow(
         "SELECT content FROM nodes WHERE id = $1::uuid AND valid = TRUE",
         project_id,
     )
     if not row:
-        return None
+        return None, None
     content = json.loads(row["content"])
-    # stored format: { 'dac': {...}, 'dac_web': {...} }
-    return content.get("dac")
+    return content.get("dac"), content.get("dac_web", {}).get("title")
 
 
 async def save_project_config_file(

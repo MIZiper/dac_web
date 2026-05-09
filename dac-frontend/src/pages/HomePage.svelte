@@ -11,6 +11,7 @@
         Row,
         Spinner,
     } from "@sveltestrap/sveltestrap";
+    import { onMount } from "svelte";
     import { ax_api } from "../utils/FetchObjects";
     import type { ProjectItem, ProjectListResponse } from "../schema";
 
@@ -59,6 +60,10 @@
     }
 
     const totalPages = $derived(Math.ceil(total / pageSize) || 1);
+
+    onMount(() => {
+        document.title = "Projects | DAC Web";
+    });
 </script>
 
 <div class="home-page container-fluid p-4">

@@ -57,6 +57,7 @@
     const router = getContext<{ route: { getParams: (p: string) => void; params: { id: string } }; navigate: (p: string, opts?: any) => void }>("router");
     router.route.getParams("/projects/:id");
     let project_id = router.route.params.id;
+    let projectTitle = $state("");
 
     let config_in: Record<string, any> = $state({});
     let onTaskDone: ((c: Record<string, any> | null) => void) | null =
@@ -110,6 +111,7 @@
             });
             if (res.status == 200) {
                 let fin_project_id = res.data["project_id"];
+                projectTitle = res.data["title"] || title || "";
                 router.navigate("/projects/:id", {
                     params: {
                         id: fin_project_id,
@@ -146,6 +148,7 @@
                 const res = await ax_api.post("/new");
                 if (res.status == 200) {
                     sess_id = res.data[SESSID_KEY];
+                    projectTitle = "New Project";
                     cleanupAnalysis = await initAnalysis(sess_id);
                 } else {
                     message = `Failed to create session: ${res.status}`;
@@ -155,6 +158,7 @@
                 const res = await ax_api.post("/load", { project_id: project_id });
                 if (res.status == 200) {
                     sess_id = res.data[SESSID_KEY];
+                    projectTitle = res.data["title"] || "";
                     cleanupAnalysis = await initAnalysis(sess_id);
                 } else {
                     message = `Project not found (${res.status})`;
@@ -167,6 +171,12 @@
             console.error("init failed", e);
         }
         loading = 0;
+    });
+
+    $effect(() => {
+        document.title = projectTitle
+            ? `${projectTitle} | DAC Web`
+            : "DAC Web";
     });
 
     onDestroy(() => {
@@ -243,7 +253,7 @@
 </script>
 
 {#snippet contextMenuSnippet()}
-    <SaveProjectDropdown onSaveProject={saveProjectHandler} />
+    <SaveProjectDropdown onSaveProject={saveProjectHandler} {projectTitle} />
     <ScenarioList
         scenarios={appdata.scenarios}
         currentScenario={appdata.currentScenario}

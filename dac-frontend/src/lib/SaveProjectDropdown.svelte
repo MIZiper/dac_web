@@ -11,18 +11,25 @@
     import { keycloakService } from "../utils/KeycloakService.svelte";
 
     let signature = $state("");
-    let title = $state("");
     let isOpen = $state(false);
 
     let {
         onSaveProject,
+        projectTitle = "",
     }: {
         onSaveProject: (
             hashed_signature: string,
             title: string,
             saveAs: boolean,
         ) => void;
+        projectTitle?: string;
     } = $props();
+
+    let title = $state("");
+
+    $effect(() => {
+        title = projectTitle;
+    });
 
     function doSave(saveAs: boolean) {
         if (onSaveProject) {

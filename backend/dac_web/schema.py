@@ -61,6 +61,7 @@ class InitProjectReq(DACRequest):
 class ManProjectResp(DACResponse):
     session_id: str | None = Field(..., alias=SESSID_KEY)
     project_id: str | None = Field(...)
+    title: str | None = Field(None)
 
 
 class SaveProjectReq(DACRequest):
