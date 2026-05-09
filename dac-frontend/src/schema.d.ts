@@ -109,8 +109,8 @@ export interface ProjectItem {
     id: string;
     created_at: string;
     updated_at: string;
-    publish_title: string | null;
-    publish_status: string | null;
+    title: string | null;
+    creator_name: string | null;
 }
 
 export interface ProjectListResponse {

@@ -1,5 +1,6 @@
 <script lang="ts">
     import {
+        Alert,
         Button,
         Col,
         Progress,
@@ -45,6 +46,7 @@
     import { taskHolder } from "../tasks/TaskRouter.svelte";
     import StatsTable from "../lib/StatsTable.svelte";
     import SaveProjectDropdown from "../lib/SaveProjectDropdown.svelte";
+    import { keycloakService } from "../utils/KeycloakService.svelte";
 
     let loading = $state(0);
     let message = $state("");
@@ -96,14 +98,15 @@
 
     async function saveProjectHandler(
         hashed_signature: string,
-        publish_name: string,
+        title: string,
+        saveAs: boolean,
     ) {
         loading = 50;
         try {
             const res = await ax_api.post("/save", {
                 signature: hashed_signature,
-                project_id: project_id,
-                publish_name: publish_name,
+                project_id: saveAs ? "new" : project_id,
+                title: title,
             });
             if (res.status == 200) {
                 let fin_project_id = res.data["project_id"];
@@ -249,6 +252,12 @@
 {/snippet}
 
 <Progress style="height:4px" value={loading} animated />
+{#if keycloakService.enabled && !keycloakService.authenticated}
+    <Alert color="warning" class="mb-0 py-2 text-center">
+        You are not logged in. You can view and run analyses, but <b>saving is disabled</b>.
+        <button class="btn btn-link btn-sm p-0 ms-2" onclick={() => keycloakService.login()}>Login now</button>
+    </Alert>
+{/if}
 <div id="toast-holder">
     <Toast autohide body header="Message" bind:isOpen={toastIsOpen}>
         {message}

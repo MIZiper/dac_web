@@ -165,10 +165,14 @@ async def save_project(
         raise HTTPException(status_code=401, detail="Invalid or missing session ID")
 
     project_id = data.project_id
-    publish_name = data.publish_name
+    title = data.title
 
+    creator_name = None
     if current_user is not None:
         signature = current_user["sub"]
+        creator_name = current_user.get("given_name") and current_user.get("family_name") and \
+            f"{current_user['given_name']} {current_user['family_name']}" or \
+            current_user.get("given_name") or current_user.get("preferred_username") or ""
         owner = user_manager.get_sess_owner(sess_id)
         if owner is None:
             user_manager.set_sess_owner(sess_id, signature)
@@ -194,11 +198,11 @@ async def save_project(
             if conn is None:
                 raise HTTPException(status_code=503, detail="Database not available")
             fin_project_id = await save_project_config(
-                project_id, config, publish_name, signature, conn, user_id
+                project_id, config, title, signature, conn, user_id, creator_name
             )
         else:
             fin_project_id = await save_project_config_file(
-                project_id, config, publish_name, signature, user_id
+                project_id, config, title, signature, user_id, creator_name
             )
 
         return s.ManProjectResp(
@@ -247,7 +251,6 @@ async def get_project_list(
     conn: Connection | None = Depends(get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
-    published_only: bool = Query(False),
 ):
     if conn is None:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -255,27 +258,18 @@ async def get_project_list(
     offset = (page - 1) * page_size
 
     where_clause = "WHERE n.valid = TRUE"
-    count_params = []
-    if published_only:
-        where_clause += " AND p.id IS NOT NULL"
 
     count_row = await conn.fetchrow(
-        f"""
-        SELECT COUNT(*) as total
-        FROM nodes n
-        LEFT JOIN publishes p ON p.node_id = n.id
-        {where_clause}
-        """,
-        *count_params,
+        f"SELECT COUNT(*) as total FROM nodes n {where_clause}"
     )
     total = count_row["total"]
 
     rows = await conn.fetch(
         f"""
         SELECT n.id, n.created_at, n.updated_at,
-               p.title as publish_title, p.status::text as publish_status
+               n.content->'dac_web'->>'title' as title,
+               n.content->'dac_web'->>'creator_name' as creator_name
         FROM nodes n
-        LEFT JOIN publishes p ON p.node_id = n.id
         {where_clause}
         ORDER BY n.created_at DESC
         LIMIT $1 OFFSET $2
@@ -289,8 +283,8 @@ async def get_project_list(
             id=str(r["id"]),
             created_at=r["created_at"].isoformat(),
             updated_at=r["updated_at"].isoformat(),
-            publish_title=r["publish_title"],
-            publish_status=r["publish_status"],
+            title=r["title"],
+            creator_name=r["creator_name"],
         )
         for r in rows
     ]
@@ -329,13 +323,17 @@ async def read_project_config(project_id: str, conn: Connection) -> dict | None:
 
 
 async def save_project_config_file(
-    project_id: str, config: dict, publish_name: str, signature: str,
-    user_id: str | None = None,
+    project_id: str, config: dict, title: str, signature: str,
+    user_id: str | None = None, creator_name: str | None = None,
 ) -> str:
     dac_web_config = {
         "signature": signature,
         "version": __VERSION__,
     }
+    if title:
+        dac_web_config["title"] = title
+    if creator_name:
+        dac_web_config["creator_name"] = creator_name
 
     fin_project_id = project_id
     if project_id and project_id!="new":
@@ -368,10 +366,15 @@ async def save_project_config_file(
 
 
 async def save_project_config(
-    project_id: str, config: dict, publish_name: str, signature: str, conn: Connection,
-    user_id: str | None = None,
+    project_id: str, config: dict, title: str, signature: str, conn: Connection,
+    user_id: str | None = None, creator_name: str | None = None,
 ) -> str:
-    content = {"dac": config, "dac_web": {"version": __VERSION__}}
+    dac_web: dict = {"version": __VERSION__}
+    if title:
+        dac_web["title"] = title
+    if creator_name:
+        dac_web["creator_name"] = creator_name
+    content = {"dac": config, "dac_web": dac_web}
 
     async with conn.transaction():
         if not project_id or project_id=="new":
@@ -418,15 +421,6 @@ async def save_project_config(
                     user_id,
                 )
                 final_id = str(r["id"])
-
-        if publish_name:
-            await conn.execute(
-                "INSERT INTO publishes (title, node_id, status, user_id) VALUES ($1, $2::uuid, $3, $4)",
-                publish_name,
-                final_id,
-                "Registered",
-                user_id,
-            )
 
     return final_id
 

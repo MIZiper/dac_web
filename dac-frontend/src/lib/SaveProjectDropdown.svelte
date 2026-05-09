@@ -3,38 +3,33 @@
         Button,
         Col,
         Dropdown,
-        DropdownItem,
         DropdownMenu,
         DropdownToggle,
         Input,
-        Label,
         Row,
     } from "@sveltestrap/sveltestrap";
     import { keycloakService } from "../utils/KeycloakService.svelte";
 
     let signature = $state("");
-    let publish_name = $state("");
+    let title = $state("");
     let isOpen = $state(false);
 
     let {
         onSaveProject,
     }: {
-        onSaveProject: (hashed_signature: string, publish_name: string) => void;
+        onSaveProject: (
+            hashed_signature: string,
+            title: string,
+            saveAs: boolean,
+        ) => void;
     } = $props();
-    function saveProject() {
+
+    function doSave(saveAs: boolean) {
         if (onSaveProject) {
             onSaveProject(
                 keycloakService.enabled ? "" : signature,
-                "",
-            );
-        }
-        isOpen = false;
-    }
-    function publishProject() {
-        if (onSaveProject) {
-            onSaveProject(
-                keycloakService.enabled ? "" : signature,
-                publish_name,
+                title,
+                saveAs,
             );
         }
         isOpen = false;
@@ -45,42 +40,33 @@
     <DropdownToggle caret nav>Save</DropdownToggle>
     <DropdownMenu>
         <div style="margin: 5px;">
-            <Row>
-                {#if keycloakService.enabled}
-                    {#if keycloakService.authenticated}
-                        <Col>
-                            <p style="margin: 8px 0;">
-                                Signed in as <b>{keycloakService.username}</b>
-                            </p>
-                        </Col>
-                        <Col xs="auto">
-                            <Button onclick={saveProject}>Save</Button>
-                        </Col>
-                    {:else}
-                        <Col>
-                            <Button color="primary" onclick={() => keycloakService.login()}>
-                                Login to save
-                            </Button>
-                        </Col>
-                    {/if}
+            {#if keycloakService.enabled}
+                {#if keycloakService.authenticated}
+                    <p>
+                        Signed in as <b>{keycloakService.username}</b>
+                    </p>
                 {:else}
-                    <Col>
-                        <Input
-                            type="password"
-                            placeholder="Enter your signature"
-                            bind:value={signature}
-                        />
-                    </Col>
-                    <Col xs="auto">
-                        <Button onclick={saveProject}>Save</Button>
-                    </Col>
+                    <Button
+                        color="primary"
+                        onclick={() => keycloakService.login()}
+                    >
+                        Login to save
+                    </Button>
                 {/if}
-            </Row>
-            <p style="width: 400px; text-wrap-mode: wrap;">
+            {:else}
+                <Input
+                    type="password"
+                    placeholder="Enter your signature"
+                    bind:value={signature}
+                />
+            {/if}
+
+            <p class="mt-2" style="width: 400px; text-wrap-mode: wrap;">
                 {#if keycloakService.enabled}
                     <b>Save and identity</b> <br />
                     One analysis project can only be overwritten by the same user.
-                    If you are not the original creator, a new project id will be created.
+                    If you are not the original creator, a new project id will be
+                    created.
                 {:else}
                     <b>Save and signature</b> <br />
                     One analysis project can only be overwritten with same signature.
@@ -88,22 +74,20 @@
                     <br />
                     Signature is hashed, no raw value stored.
                 {/if}
-                <br /> <br />
-                <b>Publish</b> maintains featured projects, which can be loaded by
-                welcome screen browsing. Publish is not mandatory for saving.
             </p>
             {#if !keycloakService.enabled || keycloakService.authenticated}
                 <Row>
                     <Col>
-                        <Input
-                            placeholder="Publishing name"
-                            bind:value={publish_name}
-                        />
+                        <Input placeholder="Project title" bind:value={title} />
+                    </Col>
+                    <Col xs="auto" class="px-0">
+                        <Button color="primary" onclick={() => doSave(false)}
+                            >Save</Button
+                        >
                     </Col>
                     <Col xs="auto">
-                        <Button
-                            disabled={publish_name === ""}
-                            onclick={publishProject}>Save & Publish</Button
+                        <Button color="secondary" onclick={() => doSave(true)}
+                            >Save As</Button
                         >
                     </Col>
                 </Row>

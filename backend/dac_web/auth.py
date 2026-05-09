@@ -129,4 +129,6 @@ async def get_current_user(
     return {
         "sub": payload.get("sub"),
         "preferred_username": payload.get("preferred_username", ""),
+        "given_name": payload.get("given_name", ""),
+        "family_name": payload.get("family_name", ""),
     }

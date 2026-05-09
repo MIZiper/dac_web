@@ -59,7 +59,7 @@ export const keycloakService: {
                     keycloakService.authenticated = authenticated;
                     if (authenticated && _kc.tokenParsed) {
                         keycloakService.username =
-                            _kc.tokenParsed.preferred_username || null;
+                            _kc.tokenParsed.given_name || _kc.tokenParsed.preferred_username || null;
                         keycloakService.userId = _kc.tokenParsed.sub || null;
                     }
                 } catch {

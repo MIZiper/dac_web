@@ -1,13 +1,15 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import {
-        Badge,
-        Button,
-        Nav,
-        NavItem,
+        Card,
+        CardBody,
+        CardSubtitle,
+        CardText,
+        CardTitle,
+        Col,
         Pagination,
+        Row,
         Spinner,
-        Table,
     } from "@sveltestrap/sveltestrap";
     import { ax_api } from "../utils/FetchObjects";
     import type { ProjectItem, ProjectListResponse } from "../schema";
@@ -21,7 +23,6 @@
     let currentPage = $state(1);
     let pageSize = $state(10);
     let loading = $state(true);
-    let publishedOnly = $state(false);
 
     async function fetchProjects() {
         loading = true;
@@ -30,7 +31,6 @@
                 params: {
                     page: currentPage,
                     page_size: pageSize,
-                    published_only: publishedOnly,
                 },
             });
             projects = resp.data.projects;
@@ -46,12 +46,11 @@
 
     $effect(() => {
         void currentPage;
-        void publishedOnly;
         fetchProjects();
     });
 
-    function openProject(id: string) {
-        router.navigate("/projects/:id", { params: { id } });
+    function projectUrl(id: string): string {
+        return `/projects/${id}`;
     }
 
     function formatDate(iso: string): string {
@@ -65,21 +64,6 @@
 <div class="home-page container-fluid p-4">
     <h3 class="mb-3">Projects</h3>
 
-    <Nav tabs class="mb-3">
-        <NavItem>
-            <button
-                class="nav-link {!publishedOnly ? 'active' : ''}"
-                onclick={() => { publishedOnly = false; currentPage = 1; }}>All</button
-            >
-        </NavItem>
-        <NavItem>
-            <button
-                class="nav-link {publishedOnly ? 'active' : ''}"
-                onclick={() => { publishedOnly = true; currentPage = 1; }}>Published</button
-            >
-        </NavItem>
-    </Nav>
-
     {#if loading}
         <div class="text-center py-5">
             <Spinner />
@@ -87,43 +71,42 @@
     {:else if projects.length === 0}
         <p class="text-muted text-center py-5">No projects found.</p>
     {:else}
-        <Table bordered hover responsive size="sm">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Project ID</th>
-                    <th>Created</th>
-                    <th>Updated</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each projects as p (p.id)}
-                    <tr
-                        role="button"
-                        tabindex="0"
-                        class="project-row"
-                        onclick={() => openProject(p.id)}
-                        onkeydown={(e) => {
-                            if (e.key === "Enter") openProject(p.id);
-                        }}
-                    >
-                        <td>
-                            {#if p.publish_title}
-                                {p.publish_title}
-                                {#if p.publish_status === "Approved"}
-                                    <Badge color="success" class="ms-1">Approved</Badge>
+        <Row>
+            {#each projects as p (p.id)}
+                <Col sm="6" lg="4" class="mb-3">
+                    <Card class="project-card h-100 shadow-sm">
+                        <CardBody>
+                            <CardTitle>
+                                <a
+                                    href={projectUrl(p.id)}
+                                    class="text-decoration-none"
+                                >
+                                    {p.title || p.id.slice(0, 8) + "..."}
+                                </a>
+                            </CardTitle>
+                            <CardSubtitle class="mb-2">
+                                {#if p.creator_name}
+                                    {p.creator_name}
+                                {:else}
+                                    <span class="text-muted">&mdash;</span>
                                 {/if}
-                            {:else}
-                                <span class="text-muted">&mdash;</span>
-                            {/if}
-                        </td>
-                        <td><code>{p.id.slice(0, 8)}...</code></td>
-                        <td>{formatDate(p.created_at)}</td>
-                        <td>{formatDate(p.updated_at)}</td>
-                    </tr>
-                {/each}
-            </tbody>
-        </Table>
+                            </CardSubtitle>
+                            <CardText class="text-muted small mb-1">
+                                Created: {formatDate(p.created_at)}
+                            </CardText>
+                            <CardText class="text-muted small">
+                                Updated: {formatDate(p.updated_at)}
+                            </CardText>
+                            <CardText class="text-muted mt-2">
+                                <small>
+                                    <code class="project-id">{p.id}</code>
+                                </small>
+                            </CardText>
+                        </CardBody>
+                    </Card>
+                </Col>
+            {/each}
+        </Row>
 
         <div class="d-flex justify-content-between align-items-center mt-2">
             <small class="text-muted">
@@ -165,13 +148,14 @@
 </div>
 
 <style>
-    .project-row {
-        cursor: pointer;
+    :global(.project-card) {
+        transition: box-shadow 0.2s ease;
     }
-    .project-row:hover {
-        background-color: rgba(0, 0, 0, 0.04);
+    :global(.project-card:hover) {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
     }
-    code {
-        font-size: 0.8em;
+    .project-id {
+        font-size: 0.75rem;
+        user-select: all;
     }
 </style>

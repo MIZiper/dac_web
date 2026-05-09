@@ -65,7 +65,7 @@ class ManProjectResp(DACResponse):
 
 class SaveProjectReq(DACRequest):
     project_id: str
-    publish_name: str
+    title: str = ""
     signature: str = ""
 
 
@@ -144,8 +144,8 @@ class ProjectItem(BaseModel):
     id: str
     created_at: str
     updated_at: str
-    publish_title: str | None = None
-    publish_status: str | None = None
+    title: str | None = None
+    creator_name: str | None = None
 
 
 class ProjectListResp(DACResponse):
