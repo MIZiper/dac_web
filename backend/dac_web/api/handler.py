@@ -300,6 +300,16 @@ async def get_project_list(
     )
 
 
+async def read_project_full_config_file(project_id: str) -> dict | None:
+    if "/" in project_id or "\\" in project_id or ".." in project_id:
+        raise HTTPException(status_code=400, detail="Invalid project ID")
+    project_fpath = path.join(PROJDIR, project_id)
+    if not path.isfile(project_fpath):
+        return None
+    with open(project_fpath, mode="r") as fp:
+        return json.load(fp)
+
+
 async def read_project_config_file(project_id: str) -> tuple[dict | None, str | None]:
     if "/" in project_id or "\\" in project_id or ".." in project_id:
         raise HTTPException(status_code=400, detail="Invalid project ID")
@@ -363,6 +373,87 @@ async def save_project_config_file(
         )
 
     return fin_project_id
+
+
+@router.get("/projects/{project_id}/export", response_model=s.ProjectExportResp)
+async def export_project(
+    project_id: str,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if DBSTORE:
+        if conn is None:
+            raise HTTPException(status_code=503, detail="Database not available")
+        row = await conn.fetchrow(
+            "SELECT content FROM nodes WHERE id = $1::uuid AND valid = TRUE",
+            project_id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Project not found")
+        content = json.loads(row["content"])
+    else:
+        content = await read_project_full_config_file(project_id)
+        if content is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    dac_config = content.get("dac", {})
+    dac_web_meta = content.get("dac_web", {})
+
+    return s.ProjectExportResp(
+        message="Project exported",
+        project_id=project_id,
+        title=dac_web_meta.get("title"),
+        creator_name=dac_web_meta.get("creator_name"),
+        version=dac_web_meta.get("version"),
+        config=s.DACConfig.model_validate(dac_config),
+    )
+
+
+@router.post("/projects/import", response_model=s.ProjectImportResp)
+async def import_project(
+    data: s.ProjectImportReq,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    config = data.config.model_dump()
+    project_id = data.project_id
+    title = data.title
+
+    creator_name = data.creator_name
+    if current_user is not None:
+        signature = current_user["sub"]
+        if not creator_name:
+            creator_name = (
+                current_user.get("given_name")
+                and current_user.get("family_name")
+                and f"{current_user['given_name']} {current_user['family_name']}"
+                or current_user.get("given_name")
+                or current_user.get("preferred_username")
+                or ""
+            )
+    else:
+        if is_keycloak_enabled():
+            raise HTTPException(status_code=401, detail="Authentication required to import")
+        signature = data.signature or ""
+
+    user_id = current_user["sub"] if current_user else None
+
+    if DBSTORE:
+        if conn is None:
+            raise HTTPException(status_code=503, detail="Database not available")
+        fin_project_id = await save_project_config(
+            project_id, config, title, signature, conn, user_id, creator_name
+        )
+    else:
+        fin_project_id = await save_project_config_file(
+            project_id, config, title, signature, user_id, creator_name
+        )
+
+    return s.ProjectImportResp(
+        message="Project imported",
+        project_id=fin_project_id,
+        title=title or None,
+    )
 
 
 async def save_project_config(

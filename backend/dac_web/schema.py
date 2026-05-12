@@ -154,3 +154,24 @@ class ProjectListResp(DACResponse):
     total: int
     page: int
     page_size: int
+
+
+class ProjectExportResp(DACResponse):
+    project_id: str
+    title: str | None = None
+    creator_name: str | None = None
+    version: str | None = None
+    config: DACConfig
+
+
+class ProjectImportReq(BaseModel):
+    config: DACConfig
+    project_id: str | None = None
+    title: str = ""
+    signature: str = ""
+    creator_name: str | None = None
+
+
+class ProjectImportResp(DACResponse):
+    project_id: str
+    title: str | None = None
