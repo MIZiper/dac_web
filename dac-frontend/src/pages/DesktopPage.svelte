@@ -20,6 +20,8 @@
     let statusVariant: string = $state("info");
     let saveEnabled = $state(false);
     let savedConfig: string | null = $state(null);
+    let loadByIdInput = $state("");
+    let loadByIdLoading = $state(false);
 
     function setStatus(msg: string, variant = "info") {
         statusMsg = msg;
@@ -71,6 +73,15 @@
                 "danger",
             );
         }
+    }
+
+    async function loadById() {
+        const id = loadByIdInput.trim();
+        if (!id) return;
+        loadByIdLoading = true;
+        await downloadAndSend(id);
+        loadByIdLoading = false;
+        loadByIdInput = "";
     }
 
     async function saveBackToServer() {
@@ -174,6 +185,38 @@
             </Button>
         </div>
     {/if}
+
+    <div class="d-flex align-items-end gap-2 mb-3">
+        <div>
+            <label for="loadByIdInput" class="form-label mb-0 small text-muted">
+                Open by Project ID
+            </label>
+            <div class="d-flex gap-2">
+                <input
+                    id="loadByIdInput"
+                    type="text"
+                    class="form-control form-control-sm"
+                    style="width: 340px;"
+                    placeholder="Paste project ID (UUID) ..."
+                    bind:value={loadByIdInput}
+                    disabled={!desktopBridge.ready || loadByIdLoading}
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter") loadById(); }}
+                />
+                <Button
+                    color="primary"
+                    size="sm"
+                    onclick={loadById}
+                    disabled={!desktopBridge.ready || !loadByIdInput.trim() || loadByIdLoading}
+                >
+                    {#if loadByIdLoading}
+                        <Spinner size="sm" /> Loading
+                    {:else}
+                        Load
+                    {/if}
+                </Button>
+            </div>
+        </div>
+    </div>
 
     <h5 class="mb-3">Projects</h5>
 

@@ -27,7 +27,8 @@ if __name__ == "__main__" and __package__ is None:
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QSplitter, QStatusBar, QWidget,
+    QAction, QApplication, QMainWindow, QSplitter, QStatusBar,
+    QToolBar, QWidget,
 )
 
 from .bridge import BridgeFactory, BridgeMessage
@@ -46,6 +47,17 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
 
+        # Toolbar for webview controls (pywebview detached mode)
+        self._toolbar = QToolBar("Web View")
+        self._toolbar.setMovable(False)
+        self._toggle_webview_action = QAction("Show/Hide WebView", self)
+        self._toggle_webview_action.setCheckable(True)
+        self._toggle_webview_action.setChecked(True)
+        self._toggle_webview_action.triggered.connect(self._toggle_webview)
+        self._toolbar.addAction(self._toggle_webview_action)
+        self.addToolBar(Qt.TopToolBarArea, self._toolbar)
+        self._toolbar.setVisible(backend == "pywebview")
+
         # Config panel (shared across backends)
         self.config_panel = ConfigPanel(on_send_back=self._on_send_back)
 
@@ -61,8 +73,8 @@ class MainWindow(QMainWindow):
         else:
             self._setup_detached()
 
-        # Load the desktop page (hash-based routing to DesktopPage)
-        desktop_url = f"{self._dac_web_url}/#/desktop"
+        # Load the desktop page
+        desktop_url = f"{self._dac_web_url}/desktop"
         self.bridge.start(desktop_url, title=f"DAC Desktop — {self._dac_web_url}",
                          width=800, height=600)
 
@@ -120,6 +132,14 @@ class MainWindow(QMainWindow):
             "configJson": config_json,
         })
         self.status_bar.showMessage(f"Sent '{title}' back to web for saving.")
+
+    def _toggle_webview(self, checked: bool):
+        if checked:
+            self.bridge.show_window()
+            self.status_bar.showMessage("Web view shown.")
+        else:
+            self.bridge.hide_window()
+            self.status_bar.showMessage("Web view hidden.")
 
     # ── Lifecycle ───────────────────────────────────────────────────────
 

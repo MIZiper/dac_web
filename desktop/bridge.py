@@ -33,6 +33,8 @@ ACTION_ERROR = "error"
 ACTION_SEND_TO_WEB = "sendToWeb"
 ACTION_SET_TITLE = "setWindowTitle"
 ACTION_SET_SIZE = "setWindowSize"
+ACTION_SHOW = "showWindow"
+ACTION_HIDE = "hideWindow"
 ACTION_CLOSE = "close"
 
 # Known web → desktop message types
@@ -110,6 +112,14 @@ class BaseBridge(ABC):
         """Resize the web view window."""
 
     @abstractmethod
+    def show_window(self):
+        """Show / unhide the web view window."""
+
+    @abstractmethod
+    def hide_window(self):
+        """Hide the web view window."""
+
+    @abstractmethod
     def close(self):
         """Close the web view and release resources."""
 
@@ -141,13 +151,13 @@ class BridgeFactory:
     def available_backends() -> list[str]:
         backends: list[str] = []
         try:
-            from PyQt5.QtWebEngineWidgets import QWebEngineView  # noqa: F401
-            backends.append("qt")
-        except ImportError:
-            pass
-        try:
             import webview  # noqa: F401
             backends.append("pywebview")
         except ImportError:
             pass
-        return backends or ["qt"]
+        try:
+            from PyQt5.QtWebEngineWidgets import QWebEngineView  # noqa: F401
+            backends.append("qt")
+        except ImportError:
+            pass
+        return backends or ["pywebview"]

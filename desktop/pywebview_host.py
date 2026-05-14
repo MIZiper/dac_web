@@ -6,7 +6,7 @@ Entry point spawned by PyWebViewBridge. It:
   - Notifies the parent on window close.
 
 Usage:
-    python desktop/pywebview_host.py --url http://server/#/desktop
+    python desktop/pywebview_host.py --url http://server/desktop
                                      [--title "DAC"] [--width 800] [--height 600]
 """
 
@@ -75,6 +75,10 @@ class _WebViewHost:
                 self._set_title(msg.get("title", ""))
             elif action == "setWindowSize":
                 self._set_size(msg.get("width", 800), msg.get("height", 600))
+            elif action == "showWindow":
+                self._show_window()
+            elif action == "hideWindow":
+                self._hide_window()
             elif action == "close":
                 self._close_window()
                 break
@@ -103,6 +107,20 @@ class _WebViewHost:
         if self._window:
             try:
                 self._window.resize(width, height)
+            except Exception:
+                pass
+
+    def _show_window(self):
+        if self._window:
+            try:
+                self._window.show()
+            except Exception:
+                pass
+
+    def _hide_window(self):
+        if self._window:
+            try:
+                self._window.hide()
             except Exception:
                 pass
 

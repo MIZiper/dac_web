@@ -14,7 +14,8 @@ import threading
 
 from .bridge import (
     BridgeMessage, BaseBridge, OnMessageCallback, OnClosedCallback,
-    ACTION_SEND_TO_WEB, ACTION_SET_TITLE, ACTION_SET_SIZE, ACTION_CLOSE,
+    ACTION_SEND_TO_WEB, ACTION_SET_TITLE, ACTION_SET_SIZE,
+    ACTION_SHOW, ACTION_HIDE, ACTION_CLOSE,
     ACTION_ERROR,
 )
 
@@ -112,6 +113,12 @@ class PyWebViewBridge(BaseBridge):
             "width": width,
             "height": height,
         })
+
+    def show_window(self):
+        self._write_stdin({"action": ACTION_SHOW})
+
+    def hide_window(self):
+        self._write_stdin({"action": ACTION_HIDE})
 
     def close(self):
         if self._running:
