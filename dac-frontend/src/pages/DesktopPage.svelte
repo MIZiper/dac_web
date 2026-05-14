@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { ax_api } from "../utils/FetchObjects";
+    import { desktopBridge } from "../utils/desktopBridge.svelte";
+    import type { BridgeMessage } from "../utils/desktopBridge.svelte";
     import {
         Card, CardBody, CardSubtitle, CardText, CardTitle,
         Col, Row, Spinner, Alert, Button, Badge,
@@ -12,7 +14,6 @@
     let currentPage = $state(1);
     let pageSize = $state(10);
     let loading = $state(true);
-    let bridgeReady = $state(false);
     let currentProjectId: string | null = $state(null);
     let currentTitle: string | null = $state(null);
     let statusMsg = $state("");
@@ -25,18 +26,10 @@
         statusVariant = variant;
     }
 
-    // Expose a function for the desktop app to call (sends config back for saving)
-    (window as any).desktopReceiveConfig = async function (title: string, configJson: string) {
-        setStatus("Received config from desktop, saving...", "info");
-        currentTitle = title;
-        savedConfig = configJson;
-        saveEnabled = true;
-    };
+    // ── Send config to desktop app ──────────────────────────────────
 
-    // Send config to desktop app via bridge
     function sendToDesktop(projectId: string, title: string, config: any) {
-        const bridge = (window as any).dacDesktop;
-        if (!bridge || typeof bridge.loadConfig !== "function") {
+        if (!desktopBridge.ready) {
             setStatus("Desktop bridge not available", "danger");
             return;
         }
@@ -45,12 +38,19 @@
         saveEnabled = false;
         savedConfig = null;
         try {
-            bridge.loadConfig(projectId, title, JSON.stringify(config));
+            const configJson = JSON.stringify(config);
+            desktopBridge.sendMessage("loadConfig", {
+                projectId,
+                title,
+                configJson,
+            });
             setStatus(`Sent "${title}" to desktop for local analysis.`, "success");
         } catch (e: any) {
             setStatus(`Bridge error: ${e.message}`, "danger");
         }
     }
+
+    // ── API calls ───────────────────────────────────────────────────
 
     async function downloadAndSend(projectId: string) {
         setStatus("Downloading project config...", "info");
@@ -59,9 +59,17 @@
             const data = resp.data;
             const config = data.config;
             const title = data.title || projectId.slice(0, 8) + "...";
-            sendToDesktop(projectId, title, { config, title, creator_name: data.creator_name, version: data.version });
+            sendToDesktop(projectId, title, {
+                config,
+                title,
+                creator_name: data.creator_name,
+                version: data.version,
+            });
         } catch (e: any) {
-            setStatus(`Download failed: ${e.response?.data?.detail || e.message}`, "danger");
+            setStatus(
+                `Download failed: ${e.response?.data?.detail || e.message}`,
+                "danger",
+            );
         }
     }
 
@@ -79,7 +87,10 @@
             setStatus(`Saved! Project ID: ${resp.data.project_id}`, "success");
             saveEnabled = false;
         } catch (e: any) {
-            setStatus(`Save failed: ${e.response?.data?.detail || e.message}`, "danger");
+            setStatus(
+                `Save failed: ${e.response?.data?.detail || e.message}`,
+                "danger",
+            );
         }
     }
 
@@ -99,6 +110,8 @@
         }
     }
 
+    // ── Effects & lifecycle ─────────────────────────────────────────
+
     $effect(() => {
         void currentPage;
         fetchProjects();
@@ -113,24 +126,35 @@
     onMount(() => {
         document.title = "Desktop DAC Bridge";
 
-        // Wait for Qt WebChannel to inject the bridge
-        function checkBridge() {
-            if ((window as any).dacDesktop) {
-                bridgeReady = true;
-                setStatus("Connected to desktop application.", "success");
-                return;
-            }
-            setTimeout(checkBridge, 200);
-        }
-        checkBridge();
+        // Listen for config sent back from desktop for saving
+        const unsubReceive = desktopBridge.onMessage(
+            "receiveConfig",
+            (msg: BridgeMessage) => {
+                const title = msg.title as string;
+                const configJson = msg.configJson as string;
+                setStatus("Received config from desktop, saving...", "info");
+                currentTitle = title;
+                savedConfig = configJson;
+                saveEnabled = true;
+            },
+        );
+
+        // Wait for the bridge to be ready
+        desktopBridge.waitForReady().then(() => {
+            setStatus("Connected to desktop application.", "success");
+        });
+
+        return () => {
+            unsubReceive();
+        };
     });
 </script>
 
 <div class="container-fluid p-4">
     <h3 class="mb-2">
         DAC Desktop Bridge
-        {#if bridgeReady}
-            <Badge color="success" pill>Connected</Badge>
+        {#if desktopBridge.ready}
+            <Badge color="success" pill>Connected ({desktopBridge.type})</Badge>
         {:else}
             <Badge color="secondary" pill>Waiting for desktop...</Badge>
         {/if}
@@ -180,7 +204,7 @@
                                 color="outline-primary"
                                 size="sm"
                                 onclick={() => downloadAndSend(p.id)}
-                                disabled={!bridgeReady}
+                                disabled={!desktopBridge.ready}
                             >
                                 Open in Desktop
                             </Button>
