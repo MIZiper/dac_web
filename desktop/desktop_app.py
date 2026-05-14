@@ -176,6 +176,10 @@ def main():
         available = BridgeFactory.available_backends()
         backend = available[0]
 
+    # QtWebEngineWidgets must be imported before QApplication is created
+    if backend == "qt":
+        import PyQt5.QtWebEngineWidgets  # noqa: F401
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     font = QFont()
