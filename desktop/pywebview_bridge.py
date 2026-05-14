@@ -16,7 +16,7 @@ from .bridge import (
     BridgeMessage, BaseBridge, OnMessageCallback, OnClosedCallback,
     ACTION_SEND_TO_WEB, ACTION_SET_TITLE, ACTION_SET_SIZE,
     ACTION_SHOW, ACTION_HIDE, ACTION_CLOSE,
-    ACTION_ERROR,
+    ACTION_ERROR, ACTION_RELOAD,
 )
 
 
@@ -119,6 +119,9 @@ class PyWebViewBridge(BaseBridge):
 
     def hide_window(self):
         self._write_stdin({"action": ACTION_HIDE})
+
+    def reload_page(self):
+        self._write_stdin({"action": ACTION_RELOAD})
 
     def close(self):
         if self._running:

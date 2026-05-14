@@ -55,6 +55,9 @@ class MainWindow(QMainWindow):
         self._toggle_webview_action.setChecked(True)
         self._toggle_webview_action.triggered.connect(self._toggle_webview)
         self._toolbar.addAction(self._toggle_webview_action)
+        self._reload_action = QAction("Reload Page", self)
+        self._reload_action.triggered.connect(self._reload_page)
+        self._toolbar.addAction(self._reload_action)
         self.addToolBar(Qt.TopToolBarArea, self._toolbar)
         self._toolbar.setVisible(backend == "pywebview")
 
@@ -140,6 +143,10 @@ class MainWindow(QMainWindow):
         else:
             self.bridge.hide_window()
             self.status_bar.showMessage("Web view hidden.")
+
+    def _reload_page(self):
+        self.bridge.reload_page()
+        self.status_bar.showMessage("Web page reloading...")
 
     # ── Lifecycle ───────────────────────────────────────────────────────
 

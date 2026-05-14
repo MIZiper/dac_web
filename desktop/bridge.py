@@ -36,6 +36,7 @@ ACTION_SET_SIZE = "setWindowSize"
 ACTION_SHOW = "showWindow"
 ACTION_HIDE = "hideWindow"
 ACTION_CLOSE = "close"
+ACTION_RELOAD = "reload"
 
 # Known web → desktop message types
 TYPE_LOAD_CONFIG = "loadConfig"
@@ -118,6 +119,10 @@ class BaseBridge(ABC):
     @abstractmethod
     def hide_window(self):
         """Hide the web view window."""
+
+    @abstractmethod
+    def reload_page(self):
+        """Reload the web page."""
 
     @abstractmethod
     def close(self):

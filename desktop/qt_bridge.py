@@ -81,6 +81,9 @@ class QtWebEngineBridge(BaseBridge):
     def hide_window(self):
         pass
 
+    def reload_page(self):
+        self._web_view.reload()
+
     def close(self):
         pass
 

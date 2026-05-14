@@ -79,6 +79,8 @@ class _WebViewHost:
                 self._show_window()
             elif action == "hideWindow":
                 self._hide_window()
+            elif action == "reload":
+                self._reload_page()
             elif action == "close":
                 self._close_window()
                 break
@@ -121,6 +123,13 @@ class _WebViewHost:
         if self._window:
             try:
                 self._window.hide()
+            except Exception:
+                pass
+
+    def _reload_page(self):
+        if self._window:
+            try:
+                self._window.evaluate_js("location.reload()")
             except Exception:
                 pass
 
