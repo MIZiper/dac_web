@@ -86,7 +86,7 @@
                                     href={projectUrl(p.id)}
                                     class="text-decoration-none"
                                 >
-                                    {p.title || p.id.slice(0, 8) + "..."}
+                                    {p.title || "..." + p.id.slice(-8)}
                                 </a>
                             </CardTitle>
                             <CardSubtitle class="mb-2">

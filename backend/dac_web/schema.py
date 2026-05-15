@@ -14,8 +14,15 @@ class DACResponse(BaseModel):
 
 class DACConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
-    contexts: list[dict]
-    actions: list[dict]
+    contexts: list[dict] = Field(default_factory=list)
+    actions: list[dict] = Field(default_factory=list)
+
+
+class ProjectConfig(BaseModel):
+    """Unified project config matching the storage format {"dac": ..., "dac_web": ...}."""
+    model_config = ConfigDict(extra="allow")
+    dac: DACConfig = Field(default_factory=lambda: DACConfig(contexts=[], actions=[]))
+    dac_web: dict = Field(default_factory=dict)
 
 
 class DACFile(BaseModel):
@@ -154,3 +161,19 @@ class ProjectListResp(DACResponse):
     total: int
     page: int
     page_size: int
+
+
+class ProjectExportResp(DACResponse):
+    project_id: str
+    config: ProjectConfig
+
+
+class ProjectImportReq(BaseModel):
+    config: ProjectConfig
+    project_id: str | None = None
+    signature: str = ""
+
+
+class ProjectImportResp(DACResponse):
+    project_id: str
+    title: str | None = None
