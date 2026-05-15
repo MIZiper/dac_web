@@ -397,15 +397,19 @@ async def export_project(
             raise HTTPException(status_code=404, detail="Project not found")
 
     dac_config = content.get("dac", {})
-    dac_web_meta = content.get("dac_web", {})
+    dac_web_full = content.get("dac_web", {})
+    dac_web_meta = {
+        k: v for k, v in dac_web_full.items()
+        if k not in ("signature", "user_id")
+    }
 
     return s.ProjectExportResp(
         message="Project exported",
         project_id=project_id,
-        title=dac_web_meta.get("title"),
-        creator_name=dac_web_meta.get("creator_name"),
-        version=dac_web_meta.get("version"),
-        config=s.DACConfig.model_validate(dac_config),
+        config=s.ProjectConfig(
+            dac=s.DACConfig.model_validate(dac_config) if dac_config else s.DACConfig(contexts=[], actions=[]),
+            dac_web=dac_web_meta,
+        ),
     )
 
 
@@ -415,11 +419,13 @@ async def import_project(
     conn: Connection | None = Depends(get_db),
     current_user: dict | None = Depends(get_current_user),
 ):
-    config = data.config.model_dump()
+    unified = data.config
+    dac_config = unified.dac.model_dump()
+    dac_web_meta = unified.dac_web or {}
     project_id = data.project_id
-    title = data.title
+    title = dac_web_meta.get("title", "")
 
-    creator_name = data.creator_name
+    creator_name = dac_web_meta.get("creator_name")
     if current_user is not None:
         signature = current_user["sub"]
         if not creator_name:
@@ -442,11 +448,11 @@ async def import_project(
         if conn is None:
             raise HTTPException(status_code=503, detail="Database not available")
         fin_project_id = await save_project_config(
-            project_id, config, title, signature, conn, user_id, creator_name
+            project_id, dac_config, title, signature, conn, user_id, creator_name
         )
     else:
         fin_project_id = await save_project_config_file(
-            project_id, config, title, signature, user_id, creator_name
+            project_id, dac_config, title, signature, user_id, creator_name
         )
 
     return s.ProjectImportResp(

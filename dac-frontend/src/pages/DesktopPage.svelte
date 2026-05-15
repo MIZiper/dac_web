@@ -59,14 +59,9 @@
         try {
             const resp = await ax_api.get(`/projects/${projectId}/export`);
             const data = resp.data;
-            const config = data.config;
-            const title = data.title || projectId.slice(0, 8) + "...";
-            sendToDesktop(projectId, title, {
-                config,
-                title,
-                creator_name: data.creator_name,
-                version: data.version,
-            });
+            const unifiedConfig = data.config;
+            const title = unifiedConfig.dac_web?.title || projectId.slice(0, 8) + "...";
+            sendToDesktop(projectId, title, unifiedConfig);
         } catch (e: any) {
             setStatus(
                 `Download failed: ${e.response?.data?.detail || e.message}`,
@@ -89,12 +84,10 @@
         setStatus("Saving to server...", "info");
         try {
             const parsed = JSON.parse(savedConfig);
-            const body: any = {
-                config: parsed.config || parsed,
-                title: currentTitle || "",
+            const resp = await ax_api.post("/projects/import", {
+                config: parsed,
                 project_id: currentProjectId,
-            };
-            const resp = await ax_api.post("/projects/import", body);
+            });
             setStatus(`Saved! Project ID: ${resp.data.project_id}`, "success");
             saveEnabled = false;
         } catch (e: any) {
