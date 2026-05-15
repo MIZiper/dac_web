@@ -31,7 +31,7 @@ from PyQt5.QtWidgets import (
     QToolBar, QWidget,
 )
 
-from .bridge import BridgeFactory, BridgeMessage
+from dac.gui.remote.bridge import BridgeFactory, BridgeMessage
 from .config_panel import ConfigPanel
 
 
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
 
     def _setup_embedded(self):
         """QtWebEngineView is embedded as a widget in a splitter."""
-        from .qt_bridge import QtWebEngineBridge
+        from dac.gui.remote.qt_bridge import QtWebEngineBridge
         qt_bridge = self.bridge  # type: QtWebEngineBridge
         splitter = QSplitter()
         splitter.addWidget(qt_bridge.get_widget())
