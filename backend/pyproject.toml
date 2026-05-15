@@ -1,6 +1,6 @@
 [project]
 name = "miz-dac_web"
-version = "0.2.1.dev0"
+version = "0.3.0.dev0"
 description = "DAC analysis on web, the backend handlers."
 readme = "README.md"
 requires-python = ">=3.12"
