@@ -20,6 +20,7 @@
     let statusVariant: string = $state("info");
     let saveEnabled = $state(false);
     let savedConfig: string | null = $state(null);
+    let saveTitleInput = $state("");
     let loadByIdInput = $state("");
     let loadByIdLoading = $state(false);
 
@@ -60,7 +61,7 @@
             const resp = await ax_api.get(`/projects/${projectId}/export`);
             const data = resp.data;
             const unifiedConfig = data.config;
-            const title = unifiedConfig.dac_web?.title || projectId.slice(0, 8) + "...";
+            const title = unifiedConfig.dac_web?.title || "..." + projectId.slice(-8);
             sendToDesktop(projectId, title, unifiedConfig);
         } catch (e: any) {
             setStatus(
@@ -81,9 +82,16 @@
 
     async function saveBackToServer() {
         if (!savedConfig || !currentProjectId) return;
+        const title = saveTitleInput.trim();
+        if (!title) {
+            setStatus("Please enter a title before saving.", "warning");
+            return;
+        }
         setStatus("Saving to server...", "info");
         try {
             const parsed = JSON.parse(savedConfig);
+            parsed.dac_web = parsed.dac_web || {};
+            parsed.dac_web.title = title;
             const resp = await ax_api.post("/projects/import", {
                 config: parsed,
                 project_id: currentProjectId,
@@ -136,9 +144,10 @@
             (msg: BridgeMessage) => {
                 const title = msg.title as string;
                 const configJson = msg.configJson as string;
-                setStatus("Received config from desktop, saving...", "info");
+                setStatus("Received config from desktop — enter title and save.", "info");
                 currentTitle = title;
                 savedConfig = configJson;
+                saveTitleInput = title || currentTitle || "";
                 saveEnabled = true;
             },
         );
@@ -172,10 +181,22 @@
 
     {#if saveEnabled && savedConfig}
         <div class="mb-3 p-3 border rounded bg-light">
-            <strong>{currentTitle}</strong> updated locally.
-            <Button color="primary" size="sm" class="ms-3" onclick={saveBackToServer}>
-                Save Back to Server
-            </Button>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <label for="saveTitleInput" class="form-label mb-0 text-nowrap fw-bold">
+                    Title:
+                </label>
+                <input
+                    id="saveTitleInput"
+                    type="text"
+                    class="form-control form-control-sm"
+                    style="max-width: 300px;"
+                    bind:value={saveTitleInput}
+                    onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter") saveBackToServer(); }}
+                />
+                <Button color="primary" size="sm" onclick={saveBackToServer}>
+                    Save Back to Server
+                </Button>
+            </div>
         </div>
     {/if}
 
@@ -224,7 +245,7 @@
                     <Card class="project-card h-100 shadow-sm">
                         <CardBody>
                             <CardTitle>
-                                {p.title || p.id.slice(0, 8) + "..."}
+                                {p.title || "..." + p.id.slice(-8)}
                             </CardTitle>
                             <CardSubtitle class="mb-2">
                                 {#if p.creator_name}
