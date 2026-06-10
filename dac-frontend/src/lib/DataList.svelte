@@ -104,7 +104,13 @@
                         onclick={(e) => {
                             if (onQuickAction && selectedDatum)
                                 onQuickAction(selectedDatum, quickAction);
-                        }}>{quickAction.action_name}</DropdownItem
+                        }}>
+                        {quickAction.mode === "create"
+                            ? `+ ${quickAction.action_name}`
+                            : quickAction.mode === true
+                                ? `+> ${quickAction.action_name}`
+                                : quickAction.action_name}
+                    </DropdownItem
                     >
                 {/each}
                 {#if matchedQuickActions.length > 0}

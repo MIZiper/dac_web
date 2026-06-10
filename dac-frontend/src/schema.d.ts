@@ -24,6 +24,7 @@ export interface DataQuickAction {
     action_name: string,
     action_path: string,
     idx: number,
+    mode: string | boolean,
 }
 
 export interface ScenarioItem {

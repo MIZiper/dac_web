@@ -191,6 +191,7 @@
         context: DataItem,
         action: ActionItem,
         quick_str: string = "",
+        refreshActions: boolean = false,
     ) {
         const query_str = `${SESSID_KEY}=${sess_id}${quick_str}`;
         const es = new EventSource(
@@ -225,6 +226,9 @@
                 action.status = statusMap.get(action_status) || "Failed";
                 if (data_updated && appdata.currentContext) {
                     getCurrentData(appdata.currentContext).then();
+                }
+                if (refreshActions && appdata.currentContext) {
+                    getCurrentActions(appdata.currentContext).then();
                 }
             } catch (err) {
                 console.error("Failed to parse completed event data", err);
@@ -315,17 +319,35 @@
                     data={appdata.data}
                     availableQuickActions={appdata.availableQuickActions}
                     onQuickAction={(d, q) => {
-                        let fakeAction: ActionItem = {
-                            name: q.action_name,
-                            uuid: "quick",
-                            status: "New",
-                            type_path: q.action_path,
-                        };
-                        if (appdata.currentContext) {
+                        if (!appdata.currentContext) return;
+                        const ctx = appdata.currentContext;
+                        const queryStr = `&data_uuid=${d.uuid}&idx=${q.idx}`;
+                        if (q.mode === "create") {
+                            ax_app
+                                .get(
+                                    `/${ctx.uuid}/actions/quick/run?${SESSID_KEY}=${sess_id}${queryStr}`,
+                                )
+                                .then(() => {
+                                    getCurrentActions(ctx).then();
+                                })
+                                .catch((e) => {
+                                    console.error(
+                                        "Quick action create failed:",
+                                        e,
+                                    );
+                                });
+                        } else {
+                            let fakeAction: ActionItem = {
+                                name: q.action_name,
+                                uuid: "quick",
+                                status: "New",
+                                type_path: q.action_path,
+                            };
                             runAction(
-                                appdata.currentContext,
+                                ctx,
                                 fakeAction,
-                                `&data_uuid=${d.uuid}&idx=${q.idx}`,
+                                queryStr,
+                                q.mode === true,
                             ).then();
                         }
                     }}

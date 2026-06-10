@@ -56,6 +56,7 @@ class QuickAction(BaseModel):
     action_path: str
     action_name: str
     idx: int
+    mode: str | bool = False
 
 class ContextMeta(BaseModel):
     name: str

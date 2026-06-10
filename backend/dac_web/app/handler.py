@@ -1,10 +1,11 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
 import threading
 from os import path
-from typing import Callable
+from typing import Callable, get_origin, get_args, Union as _Union
 
 from fastapi import APIRouter, HTTPException, Path as FPath, Header, Depends, Query
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -35,7 +36,7 @@ current_scenario: str = "0.base.yaml"
 scenarios_dir: str = os.getenv("SCENARIO_DIR") or path.join(
     path.dirname(dac.__file__), "scenarios"
 )
-quick_actions: list[tuple[str, str, str, int]] | None = use_scenario(path.join(scenarios_dir, current_scenario))
+quick_actions: list[tuple[str, str, str, int, bool | str]] | None = use_scenario(path.join(scenarios_dir, current_scenario))
 container: Container = Container.parse_save_config({})
 
 # -----------
@@ -73,8 +74,9 @@ async def list_scenarios():
                 data_path=dpath,
                 action_path=apath,
                 action_name=aname,
-                idx=idx
-            ) for (dpath, apath, aname, idx) in quick_actions
+                idx=idx,
+                mode=mode
+            ) for (dpath, apath, aname, idx, mode) in quick_actions
         ] if quick_actions else None
     )
 
@@ -99,8 +101,9 @@ async def switch_to_scenario(data: s.ScenarioReq):
                 data_path=dpath,
                 action_path=apath,
                 action_name=aname,
-                idx=idx
-            ) for (dpath, apath, aname, idx) in quick_actions
+                idx=idx,
+                mode=mode
+            ) for (dpath, apath, aname, idx, mode) in quick_actions
         ] if quick_actions else None
     )
 
@@ -362,8 +365,52 @@ async def event_stream(action):
     if isinstance(action, VAB):
         action.canvas.draw_idle() # plot in thread doesn't trigger websocket communication?
 
+def _is_list_annotation(ann):
+    if ann is inspect.Parameter.empty:
+        return False
+    origin = get_origin(ann)
+    if origin is list:
+        return True
+    if origin is _Union:
+        for t in get_args(ann):
+            if t is type(None):
+                continue
+            if _is_list_annotation(t):
+                return True
+    return False
+
+
+def _find_data_param_info(action_type: type[ActionNode], data_param_name: str):
+    sig = action_type._SIGNATURE
+    if isinstance(sig, dict):  # SAB
+        for sub_type in action_type._SEQUENCE:
+            param = sub_type._SIGNATURE.parameters.get(data_param_name)
+            if param is not None:
+                return param, _is_list_annotation(param.annotation)
+        return None, False
+    else:
+        param = sig.parameters.get(data_param_name)
+        if param is None:
+            return None, False
+        return param, _is_list_annotation(param.annotation)
+
+
+def _merge_quick_action_config(action: ActionNode, action_type: type[ActionNode], data_param_name: str, data_value, other_params: dict):
+    sig = action_type._SIGNATURE
+    if isinstance(sig, dict):  # SAB
+        for sub_name in sig:
+            sub_cfg = other_params.get(sub_name, {})
+            sub_cfg[data_param_name] = data_value
+            action._construct_config[sub_name] = sub_cfg
+        for sub_name, sub_cfg in other_params.items():
+            if sub_name not in action._construct_config:
+                action._construct_config[sub_name] = sub_cfg
+    else:
+        action._construct_config.update({data_param_name: data_value, **other_params})
+
+
 @router.get("/{context_key_id}/actions/quick/run")
-async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), idx: int=Query(...), mode: str="oneshot"):
+async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), idx: int=Query(...)):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
@@ -371,18 +418,36 @@ async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), i
     data = context.get_node_by_uuid(data_uuid)
     if data is None:
         raise HTTPException(status_code=404, detail="No such data")
-    
-    qat: tuple[type[ActionNode], str, dict] = data.QUICK_ACTIONS[idx]
-    action_type, data_param_name, other_params = qat
-    
+
+    qat: tuple = data.QUICK_ACTIONS[idx]
+    action_type, data_param_name, other_params = qat[:3]
+    qa_mode = qat[3] if len(qat) > 3 else False
+
+    # determine if data param expects a list type
+    param_info, is_list = _find_data_param_info(action_type, data_param_name)
+    data_value = [data.name] if is_list else data.name
+
     action = action_type(context_key=context_key)
-    action._construct_config = {data_param_name: [data.name], **other_params} # TODO: it's only one data node here
-    
-    return StreamingResponse(
-        event_stream(action),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
-    )
+    action.get_construct_config()
+    _merge_quick_action_config(action, action_type, data_param_name, data_value, other_params)
+
+    do_run = qa_mode != "create"
+    do_save = qa_mode is True or qa_mode == "create"
+
+    if do_save:
+        container.actions.append(action)
+
+    if do_run:
+        return StreamingResponse(
+            event_stream(action),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
+        )
+    else:
+        return s.ActionCreateResp(
+            message=f"Created quick action '{action.name}'",
+            action_uuid=action.uuid,
+        )
 
 @router.get("/{context_key_id}/actions/{action_id}/run")
 async def run_action_by_id(context_key_id: str, action_id: str):
