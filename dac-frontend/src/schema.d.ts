@@ -2,6 +2,7 @@ export interface DataItem {
     name: string,
     uuid: string,
     type_path: string,
+    qualified_name?: string,
     children?: DataItem[],
 }
 

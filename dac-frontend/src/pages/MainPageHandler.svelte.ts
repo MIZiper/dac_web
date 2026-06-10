@@ -133,10 +133,11 @@ export async function fetchContexts() {
 export async function getCurrentData(context: DataItem) {
     try {
         const res = await ax_app.get(`/${context.uuid}/data`);
-        const _build = (d: { name: string; uuid: string; type: string; children?: any[] }): DataItem => ({
+        const _build = (d: { name: string; uuid: string; type: string; qualified_name?: string; children?: any[] }): DataItem => ({
             name: d['name'],
             uuid: d['uuid'],
             type_path: d['type'],
+            qualified_name: d['qualified_name'],
             children: d['children'] ? d['children'].map((c) => _build(c)) : [],
         });
         appdata.data = (res.data['data'] || []).map((d: any) => _build(d));
@@ -353,4 +354,20 @@ export async function deleteAction(context: DataItem, action: ActionItem) {
     } catch (e) {
         handleError("deleteAction", e);
     }
+}
+
+export function filterNodesByType(data: DataItem[], typePath: string): DataItem[] {
+    const results: DataItem[] = [];
+    function walk(nodes: DataItem[]) {
+        for (const node of nodes) {
+            if (node.type_path === typePath) {
+                results.push(node);
+            }
+            if (node.children) {
+                walk(node.children);
+            }
+        }
+    }
+    walk(data);
+    return results;
 }

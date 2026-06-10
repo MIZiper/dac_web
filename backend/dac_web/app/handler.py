@@ -236,12 +236,14 @@ async def get_context_data(context_key_id: str):
         raise HTTPException(status_code=404, detail="No such context key")
     context = container.get_context(context_key)
 
-    def build(n: DataNode):
+    def build(n: DataNode, prefix: str = ""):
+        qname = f"{prefix}/{n.name}" if prefix else n.name
         return s.DataMeta(
             name=n.name,
             uuid=n.uuid,
             type=get_nodetype_path(type(n)),
-            children=[build(c) for c in n.children]
+            qualified_name=qname,
+            children=[build(c, qname) for c in n.children]
         )
 
     return s.DataResp(

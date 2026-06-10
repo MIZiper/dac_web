@@ -42,6 +42,7 @@ class DataMeta(BaseModel):
     name: str
     uuid: str | None = None
     type: str
+    qualified_name: str | None = None
     children: list["DataMeta"] | None = None
 
 

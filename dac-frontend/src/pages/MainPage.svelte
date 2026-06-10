@@ -439,7 +439,7 @@
 </Row>
 
 {#if taskHolder.currentComponent && onTaskDone}
-    <taskHolder.currentComponent {config_in} {onTaskDone} />
+    <taskHolder.currentComponent {config_in} {onTaskDone} availableData={appdata.data} />
 {/if}
 
 <StatsTable bind:this={tblRef} />
