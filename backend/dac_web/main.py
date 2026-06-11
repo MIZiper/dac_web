@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -7,13 +8,19 @@ from fastapi.responses import FileResponse
 from dac_web.db.connection import init_pool, close_pool
 
 from dac_web.api.rev_proxy import router as rev_router
-from dac_web.api.handler import router as api_router
+from dac_web.api.handler import router as api_router, user_manager
 from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
 
+_cleanup_task: asyncio.Task | None = None
+
 async def lifespan(app: FastAPI):
+    global _cleanup_task
     await init_pool()
+    _cleanup_task = asyncio.create_task(user_manager._cleanup_orphans())
     yield
+    if _cleanup_task:
+        _cleanup_task.cancel()
     await close_pool()
 
 tags_metadata = [

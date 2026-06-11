@@ -28,7 +28,7 @@ router = APIRouter()
 
 
 
-sse_client = httpx.AsyncClient(timeout=None)
+sse_client = httpx.AsyncClient(timeout=httpx.Timeout(None, connect=5.0))
 
 @router.get("/{context_key_id}/actions/{action_id}/run")
 async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Request, sessid: str | None = Query(None, alias=SESSID_KEY)):
@@ -67,7 +67,7 @@ async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Req
 
 
 
-http_client = httpx.AsyncClient()
+http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=5.0))
 
 @router.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
@@ -84,7 +84,6 @@ async def proxy_http(
     url = f"http://{conn}/{path}"
     body = await request.body()
 
-    # forward original headers but ensure session id header is present
     headers = dict(request.headers)
     headers[SESSID_KEY] = uuid
 

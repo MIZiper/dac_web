@@ -25,6 +25,9 @@ async def init_pool():
             database=DB_NAME,
             host=DB_HOST,
             port=DB_PORT,
+            min_size=1,
+            max_size=4,
+            command_timeout=30.0,
         )
     except Exception as e:
         logger.warning("Database connection failed, falling back to file storage: %s", e)

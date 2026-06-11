@@ -66,6 +66,17 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
         if sess_id in self:
             del self[sess_id]
 
+    async def _cleanup_orphans(self):
+        while True:
+            await asyncio.sleep(300)
+            dead = []
+            for sess_id, (_, p, _) in list(self.items()):
+                if p.returncode is not None:
+                    dead.append(sess_id)
+            for sess_id in dead:
+                logger.info("Removing orphaned session: %s", sess_id)
+                self.remove_sess(sess_id)
+
 
 user_manager = UserManager()
 
@@ -135,15 +146,15 @@ async def terminate_process_session(request: Request):
         p = user_manager.get_sess_obj(sess_id)
         p.terminate()
         if APP_LOG_ON and LOG_DIR:
-            out, err = await p.communicate()
-            stdout_path = path.join(
-                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
-            )
-            stderr_path = path.join(
-                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log"
-            )
-            Path(stdout_path).write_bytes(out or b"")
-            Path(stderr_path).write_bytes(err or b"")
+                out, err = await p.communicate()
+                stdout_path = path.join(
+                    LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
+                )
+                stderr_path = path.join(
+                    LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log"
+                )
+                await asyncio.to_thread(Path(stdout_path).write_bytes, out or b"")
+                await asyncio.to_thread(Path(stderr_path).write_bytes, err or b"")
         user_manager.remove_sess(sess_id)
         return s.DACResponse(
             message="Analysis terminated",
@@ -306,8 +317,8 @@ async def read_project_full_config_file(project_id: str) -> dict | None:
     project_fpath = path.join(PROJDIR, project_id)
     if not path.isfile(project_fpath):
         return None
-    with open(project_fpath, mode="r") as fp:
-        return json.load(fp)
+    content = await asyncio.to_thread(Path(project_fpath).read_text)
+    return json.loads(content)
 
 
 async def read_project_config_file(project_id: str) -> tuple[dict | None, str | None]:
@@ -316,8 +327,8 @@ async def read_project_config_file(project_id: str) -> tuple[dict | None, str | 
     project_fpath = path.join(PROJDIR, project_id)
     if not path.isfile(project_fpath):
         return None, None
-    with open(project_fpath, mode="r") as fp:
-        mconfig = json.load(fp)
+    content = await asyncio.to_thread(Path(project_fpath).read_text)
+    mconfig = json.loads(content)
     return mconfig.get("dac"), mconfig.get("dac_web", {}).get("title")
 
 
@@ -349,8 +360,8 @@ async def save_project_config_file(
     if project_id and project_id!="new":
         project_fpath = path.join(PROJDIR, project_id)
         if path.isfile(project_fpath):
-            with open(project_fpath, mode="r") as fp:
-                mconfig = json.load(fp)
+            content = await asyncio.to_thread(Path(project_fpath).read_text)
+            mconfig = json.loads(content)
             config_web = mconfig.get("dac_web", {})
             if "signature" not in config_web or config_web["signature"] != signature:
                 dac_web_config["inherit"] = project_id
@@ -362,15 +373,14 @@ async def save_project_config_file(
         dac_web_config["user_id"] = user_id
 
     project_fpath = path.join(PROJDIR, fin_project_id)
-    with open(project_fpath, mode="w") as fp:
-        json.dump(
-            {
-                "dac": config,
-                "dac_web": dac_web_config,
-            },
-            fp,
-            indent=2,
-        )
+    content_str = json.dumps(
+        {
+            "dac": config,
+            "dac_web": dac_web_config,
+        },
+        indent=2,
+    )
+    await asyncio.to_thread(Path(project_fpath).write_text, content_str)
 
     return fin_project_id
 
@@ -472,12 +482,13 @@ async def save_project_config(
     if creator_name:
         dac_web["creator_name"] = creator_name
     content = {"dac": config, "dac_web": dac_web}
+    content_json = json.dumps(content)
 
     async with conn.transaction():
         if not project_id or project_id=="new":
             r = await conn.fetchrow(
                 "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
-                json.dumps(content),
+                content_json,
                 signature,
                 user_id,
             )
@@ -491,7 +502,7 @@ async def save_project_config(
                 if (existing_sig := row["creator_signature"]) is None or existing_sig != signature:
                     r = await conn.fetchrow(
                         "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
-                        json.dumps(content),
+                        content_json,
                         signature,
                         user_id,
                     )
@@ -504,7 +515,7 @@ async def save_project_config(
                 else:
                     await conn.execute(
                         "UPDATE nodes SET content = $1::jsonb, creator_signature = $2, user_id = $3 WHERE id = $4::uuid",
-                        json.dumps(content),
+                        content_json,
                         signature,
                         user_id,
                         project_id,
@@ -513,7 +524,7 @@ async def save_project_config(
             else:
                 r = await conn.fetchrow(
                     "INSERT INTO nodes (content, creator_signature, user_id, valid) VALUES ($1::jsonb, $2, $3, TRUE) RETURNING id",
-                    json.dumps(content),
+                    content_json,
                     signature,
                     user_id,
                 )

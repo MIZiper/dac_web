@@ -3,7 +3,7 @@ import inspect
 import json
 import logging
 import os
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from os import path
 from typing import Callable, get_origin, get_args, Union as _Union
 
@@ -38,6 +38,18 @@ scenarios_dir: str = os.getenv("SCENARIO_DIR") or path.join(
 )
 quick_actions: list[tuple[str, str, str, int, bool | str]] | None = use_scenario(path.join(scenarios_dir, current_scenario))
 container: Container = Container.parse_save_config({})
+_action_executor = ThreadPoolExecutor(max_workers=4)
+_action_index: dict[str, ActionNode] = {}
+
+
+def _rebuild_action_index():
+    _action_index.clear()
+    for a in container.actions:
+        _action_index[a.uuid] = a
+
+
+def _get_action_by_uuid(action_id: str) -> ActionNode | None:
+    return _action_index.get(action_id)
 
 # -----------
 # init & save
@@ -48,6 +60,7 @@ container: Container = Container.parse_save_config({})
 async def init(config: s.DACConfig):
     global container
     container = Container.parse_save_config(config.model_dump())
+    _rebuild_action_index()
     return s.DACResponse(message="Init done")
 
 
@@ -315,6 +328,7 @@ async def create_action_for_context(context_key_id: str, data: s.ActionCreate):
     action_type = Container.GetClass(action_config.type)
     action = action_type(context_key=context_key)
     container.actions.append(action)
+    _rebuild_action_index()
     return s.ActionCreateResp(
         message=f"Create action '{action.name}'",
         action_uuid=action.uuid,
@@ -326,7 +340,7 @@ async def get_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
+    action = _get_action_by_uuid(action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     return s.ActionExchange(
@@ -339,7 +353,7 @@ async def update_action_config(context_key_id: str, action_id: str, data: s.Acti
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
+    action = _get_action_by_uuid(action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     action_config = data.action_config
@@ -353,8 +367,7 @@ async def event_stream(action):
     queue = asyncio.Queue()
     loop = asyncio.get_running_loop()
 
-    t = threading.Thread(target=run_action, args=(action, queue, loop))
-    t.start()
+    future = loop.run_in_executor(_action_executor, run_action, action, queue, loop)
 
     event_id = 0
     while True:
@@ -363,7 +376,7 @@ async def event_stream(action):
         if item is None:
             break
         yield f"id: {event_id}\n{item}"
-    t.join()
+    await asyncio.wrap_future(future)
     if isinstance(action, VAB):
         action.canvas.draw_idle() # plot in thread doesn't trigger websocket communication?
 
@@ -438,6 +451,7 @@ async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), i
 
     if do_save:
         container.actions.append(action)
+        _rebuild_action_index()
 
     if do_run:
         return StreamingResponse(
@@ -456,7 +470,7 @@ async def run_action_by_id(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
+    action = _get_action_by_uuid(action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
 
@@ -472,10 +486,11 @@ async def delete_action(context_key_id: str, action_id: str):
     context_key = get_context_key(context_key_id)
     if context_key is None:
         raise HTTPException(status_code=404, detail="No such context key")
-    action = next(filter(lambda a: a.uuid == action_id, container.actions), None)
+    action = _get_action_by_uuid(action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="No such action")
     container.actions.remove(action)
+    _rebuild_action_index()
     return s.DACResponse(
         message=f"Delete action '{action.name}'",
     )
