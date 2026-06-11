@@ -32,7 +32,7 @@ router = APIRouter(
     dependencies=[Depends(require_token_header)] # for /docs purpose only, the validation is done in rev_proxy
 )
 
-current_scenario: str = os.getenv("SCENARIO_DEF", "0.base.yaml")
+current_scenario: str = os.getenv("SCENARIO_DEFAULT", "0.base.yaml")
 scenarios_dir: str = os.getenv("SCENARIO_DIR") or path.join(
     path.dirname(dac.__file__), "scenarios"
 )
