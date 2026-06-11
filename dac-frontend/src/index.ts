@@ -1,3 +1,5 @@
+export { filterNodesByType } from "./pages/MainPageHandler.svelte";
+
 export { navTeleport } from "./utils/NavibarSnippet.svelte";
 export { taskHolder, type TaskBaseProps } from "./tasks/TaskRouter.svelte";
 

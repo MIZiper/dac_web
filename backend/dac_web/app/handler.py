@@ -427,7 +427,7 @@ async def quick_action_on_data(context_key_id: str, data_uuid: str=Query(...), i
 
     # determine if data param expects a list type
     param_info, is_list = _find_data_param_info(action_type, data_param_name)
-    data_value = [data.name] if is_list else data.name
+    data_value = [context.get_qualified_name(data)] if is_list else context.get_qualified_name(data)
 
     action = action_type(context_key=context_key)
     action.get_construct_config()
