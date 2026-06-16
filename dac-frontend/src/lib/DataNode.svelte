@@ -40,10 +40,8 @@
         <span class="arrow-placeholder"></span>
     {/if}
     <div class="data-main" role="none" onclick={(e) => popDataMenu(datum, e)}>
-        <div class="data-name">{datum.name}</div>
-        <div class="data-type">
-            <code>{String(datum.type_path).split(".").slice(-1)}</code>
-        </div>
+        <span class="data-name">{datum.name}</span>
+        <span class="data-type"><code>{String(datum.type_path).split(".").slice(-1)}</code></span>
     </div>
 </div>
 
@@ -62,28 +60,35 @@
 <style>
     .data-node {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 6px;
     }
     .arrow {
-        width: 12px;
+        width: 8px;
+        font-size: 10px;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
     }
     .arrow-placeholder {
-        width: 12px;
+        width: 8px;
     }
     .data-main {
         flex: 1;
         cursor: pointer;
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px dashed #666;
     }
     .data-name {
-        font-weight: 500;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        font-weight: bold;
     }
     .data-type {
         font-size: 0.8rem;
         color: var(--bs-secondary-text, #666);
+        flex-shrink: 0;
+        margin-left: auto;
+        padding-right: 2px;
     }
 </style>
