@@ -7,7 +7,7 @@ import threading
 from os import path
 from typing import Callable, get_origin, get_args, Union as _Union
 
-from fastapi import APIRouter, HTTPException, Path as FPath, Header, Depends, Query
+from fastapi import APIRouter, HTTPException, Path as FPath, Header, Depends, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 import dac
@@ -28,8 +28,19 @@ FIG_NUM = 1
 def require_token_header(sess_id: str=Header(..., alias=s.SESSID_KEY)):
     return sess_id
 
+
+_cached_auth_token: str | None = None
+
+
+def _cache_auth_token(request: Request):
+    global _cached_auth_token
+    auth = request.headers.get("Authorization")
+    if auth and auth.startswith("Bearer "):
+        _cached_auth_token = auth[7:]
+
+
 router = APIRouter(
-    dependencies=[Depends(require_token_header)] # for /docs purpose only, the validation is done in rev_proxy
+    dependencies=[Depends(require_token_header), Depends(_cache_auth_token)] # for /docs purpose only, the validation is done in rev_proxy
 )
 
 current_scenario: str = os.getenv("SCENARIO_DEFAULT", "0.base.yaml")
@@ -550,6 +561,9 @@ def run_action(
 
     action._progress = lambda i, n: sync_put('progress', (i, n))
     action._message = lambda s: sync_put('message', s)
+
+    if getattr(action, '_REQUIRES_AUTH_TOKEN', False) and _cached_auth_token:
+        action._auth_token = _cached_auth_token
 
     sync_put('started', None)
     try:
