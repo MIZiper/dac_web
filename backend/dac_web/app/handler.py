@@ -576,7 +576,7 @@ def run_action(
     except Exception as e:
         logger.exception("Action execution failed")
         action.status = ActionNode.ActionStatus.FAILED
-        sync_put('completed', (False, action.status.value))
         sync_put('message', f"Action failed: {e}")
+        sync_put('completed', (False, action.status.value))
     finally:
         loop.call_soon_threadsafe(queue.put_nowait, None)
