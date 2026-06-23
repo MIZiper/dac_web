@@ -5,6 +5,7 @@ export interface TaskBaseProps {
     config_in: Record<string, any>,
     onTaskDone: (config_out: Record<string, any> | null) => void,
     availableData?: DataItem[],
+    fetchFn?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
 }
 
 import NameEditor from "./NameEditor.svelte";

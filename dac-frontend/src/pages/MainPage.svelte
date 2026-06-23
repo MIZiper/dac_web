@@ -439,7 +439,14 @@
 </Row>
 
 {#if taskHolder.currentComponent && onTaskDone}
-    <taskHolder.currentComponent {config_in} {onTaskDone} availableData={appdata.data} />
+    <taskHolder.currentComponent {config_in} {onTaskDone} availableData={appdata.data}
+        fetchFn={(input, init) => {
+            const headers = new Headers(init?.headers);
+            const token = keycloakService.token;
+            if (token) headers.set("Authorization", `Bearer ${token}`);
+            return fetch(input, { ...init, headers });
+        }}
+    />
 {/if}
 
 <StatsTable bind:this={tblRef} />
