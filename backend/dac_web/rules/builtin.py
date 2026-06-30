@@ -21,7 +21,7 @@ class LoadActionToAnbRule(ActionReplacementRule):
         "Requires a mapping from file paths to ANB node + channel identifiers."
     )
 
-    def transform(self, action: dict) -> ReplaceOutcome:
+    async def transform(self, action: dict) -> ReplaceOutcome:
         fpaths: list[str] = action.get("fpaths", [])
 
         if not fpaths:

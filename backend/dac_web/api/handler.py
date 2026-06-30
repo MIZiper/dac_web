@@ -537,7 +537,7 @@ async def import_preview(data: s.ImportPreviewReq):
     registry = ReplacementRegistry.instance()
     config = data.config
     dac_config = config.dac.model_dump() if hasattr(config.dac, "model_dump") else config.dac
-    outcomes = registry.process_all(dac_config)
+    outcomes = await registry.process_all(dac_config)
     actions = dac_config.get("actions", [])
 
     replacements: list[s.ActionReplacementItem] = []
@@ -604,7 +604,7 @@ async def import_apply(
             # Use the replacement proposed during preview — re-run the rule
             from dac_web.import_replace import ReplacementRegistry
             registry = ReplacementRegistry.instance()
-            outcome = registry.process(action)
+            outcome = await registry.process(action)
             if outcome.action is not None:
                 final_actions.append(outcome.action)
             else:
