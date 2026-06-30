@@ -179,3 +179,63 @@ class ProjectImportReq(BaseModel):
 class ProjectImportResp(DACResponse):
     project_id: str
     title: str | None = None
+
+
+# ── Import-Preview / Import-Apply (two-phase import with action replacement) ──
+
+
+from enum import Enum as _Enum
+
+
+class ReplacementStatus(str, _Enum):
+    RESOLVED = "resolved"
+    UNRESOLVED = "unresolved"
+    UNCHANGED = "unchanged"
+
+
+class ActionReplacementItem(BaseModel):
+    """One action replacement proposed by a rule during import preview."""
+    action_index: int
+    action_uuid: str
+    original: dict
+    replacement: dict | None = None
+    rule_name: str | None = None
+    status: ReplacementStatus
+    summary: str
+    reason: str = ""
+
+
+class ImportPreviewSummary(BaseModel):
+    total_actions: int
+    resolved: int
+    unresolved: int
+    unchanged: int
+
+
+class ImportPreviewReq(BaseModel):
+    config: ProjectConfig
+
+
+class ImportPreviewResp(DACResponse):
+    replacements: list[ActionReplacementItem]
+    summary: ImportPreviewSummary
+
+
+class ActionDecision(BaseModel):
+    """User's decision on one replacement."""
+    action_index: int
+    action_uuid: str
+    approved: bool
+    override_replacement: dict | None = None
+
+
+class ImportApplyReq(BaseModel):
+    config: ProjectConfig
+    decisions: list[ActionDecision]
+    title: str = ""
+    signature: str = ""
+
+
+class ImportApplyResp(DACResponse):
+    project_id: str
+    title: str | None = None

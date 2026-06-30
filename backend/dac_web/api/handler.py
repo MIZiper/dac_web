@@ -521,3 +521,136 @@ async def save_project_config(
 
     return final_id
 
+
+# ── Two-phase import with action replacement ──
+
+
+@router.post("/projects/import-preview", response_model=s.ImportPreviewResp)
+async def import_preview(data: s.ImportPreviewReq):
+    """Preview action replacements for a project config before importing.
+
+    Runs all registered replacement rules against every action and returns
+    a report the user can review and approve/reject/edit.
+    """
+    from dac_web.import_replace import ReplacementRegistry, ReplacementStatus
+
+    registry = ReplacementRegistry.instance()
+    config = data.config
+    dac_config = config.dac.model_dump() if hasattr(config.dac, "model_dump") else config.dac
+    outcomes = registry.process_all(dac_config)
+    actions = dac_config.get("actions", [])
+
+    replacements: list[s.ActionReplacementItem] = []
+    resolved = unresolved = unchanged = 0
+
+    for i, outcome in enumerate(outcomes):
+        original = actions[i] if i < len(actions) else {}
+        item = s.ActionReplacementItem(
+            action_index=i,
+            action_uuid=original.get("_uuid_", ""),
+            original=original,
+            replacement=outcome.action,
+            status=outcome.status,
+            summary=outcome.summary,
+            reason=outcome.reason,
+        )
+        if outcome.status == ReplacementStatus.RESOLVED:
+            resolved += 1
+        elif outcome.status == ReplacementStatus.UNRESOLVED:
+            unresolved += 1
+        else:
+            unchanged += 1
+        replacements.append(item)
+
+    return s.ImportPreviewResp(
+        message="Preview complete",
+        replacements=replacements,
+        summary=s.ImportPreviewSummary(
+            total_actions=len(actions),
+            resolved=resolved,
+            unresolved=unresolved,
+            unchanged=unchanged,
+        ),
+    )
+
+
+@router.post("/projects/import-apply", response_model=s.ImportApplyResp)
+async def import_apply(
+    data: s.ImportApplyReq,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    """Apply user-approved replacement decisions and save the project."""
+    dac_config = (
+        data.config.dac.model_dump()
+        if hasattr(data.config.dac, "model_dump")
+        else data.config.dac
+    )
+    actions: list[dict] = dac_config.get("actions", [])
+    decisions_by_index = {d.action_index: d for d in data.decisions}
+
+    final_actions: list[dict] = []
+    for i, action in enumerate(actions):
+        decision = decisions_by_index.get(i)
+        if decision is None or not decision.approved:
+            final_actions.append(action)
+            continue
+        override = decision.override_replacement
+        if override:
+            merged = {**action, **override}
+            merged.setdefault("_uuid_", action.get("_uuid_", ""))
+            final_actions.append(merged)
+        else:
+            # Use the replacement proposed during preview — re-run the rule
+            from dac_web.import_replace import ReplacementRegistry
+            registry = ReplacementRegistry.instance()
+            outcome = registry.process(action)
+            if outcome.action is not None:
+                final_actions.append(outcome.action)
+            else:
+                final_actions.append(action)
+
+    final_config = {**dac_config, "actions": final_actions}
+
+    dac_web_meta = data.config.dac_web or {}
+    title = data.title or dac_web_meta.get("title", "")
+    creator_name = dac_web_meta.get("creator_name")
+    project_id = None
+
+    if current_user is not None:
+        signature = current_user["sub"]
+        if not creator_name:
+            creator_name = (
+                current_user.get("given_name")
+                and current_user.get("family_name")
+                and f"{current_user['given_name']} {current_user['family_name']}"
+                or current_user.get("given_name")
+                or current_user.get("preferred_username")
+                or ""
+            )
+    else:
+        if is_keycloak_enabled():
+            raise HTTPException(
+                status_code=401, detail="Authentication required to import"
+            )
+        signature = data.signature or ""
+
+    user_id = current_user["sub"] if current_user else None
+
+    if DBSTORE:
+        if conn is None:
+            raise HTTPException(status_code=503, detail="Database not available")
+        fin_project_id = await save_project_config(
+            project_id, final_config, title, signature, conn, user_id, creator_name
+        )
+    else:
+        fin_project_id = await save_project_config_file(
+            project_id, final_config, title, signature, user_id, creator_name
+        )
+
+    return s.ImportApplyResp(
+        message="Project imported with replacements applied",
+        project_id=fin_project_id,
+        title=title or None,
+    )
+

@@ -122,3 +122,47 @@ export interface ProjectListResponse {
     page: number;
     page_size: number;
 }
+
+// ── Import / replacement types ──
+
+export interface ProjectConfig {
+    dac: { contexts: any[]; actions: any[]; [key: string]: any };
+    dac_web?: Record<string, any>;
+}
+
+export type ReplacementStatus = "resolved" | "unresolved" | "unchanged";
+
+export interface ActionReplacementItem {
+    action_index: number;
+    action_uuid: string;
+    original: Record<string, any>;
+    replacement: Record<string, any> | null;
+    rule_name: string | null;
+    status: ReplacementStatus;
+    summary: string;
+    reason: string;
+}
+
+export interface ImportPreviewResp {
+    message: string;
+    replacements: ActionReplacementItem[];
+    summary: {
+        total_actions: number;
+        resolved: number;
+        unresolved: number;
+        unchanged: number;
+    };
+}
+
+export interface ActionDecision {
+    action_index: number;
+    action_uuid: string;
+    approved: boolean;
+    override_replacement?: Record<string, any>;
+}
+
+export interface ImportApplyResp {
+    message: string;
+    project_id: string;
+    title: string | null;
+}

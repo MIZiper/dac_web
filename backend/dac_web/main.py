@@ -13,6 +13,8 @@ from dac_web.webagg_starlette import app as mpl_app
 
 async def lifespan(app: FastAPI):
     await init_pool()
+    from dac_web.import_replace.discovery import discover_rules
+    discover_rules()
     yield
     await close_pool()
 

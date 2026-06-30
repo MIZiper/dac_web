@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import {
+        Button,
         Card,
         CardBody,
         CardSubtitle,
@@ -67,7 +68,16 @@
 </script>
 
 <div class="home-page container-fluid p-4">
-    <h3 class="mb-3">Projects</h3>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Projects</h3>
+        <Button
+            color="outline-primary"
+            size="sm"
+            onclick={() => router.navigate("/import")}
+        >
+            Import Project
+        </Button>
+    </div>
 
     {#if loading}
         <div class="text-center py-5">
