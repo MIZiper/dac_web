@@ -67,7 +67,7 @@ async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Req
 
 
 
-http_client = httpx.AsyncClient()
+http_client = httpx.AsyncClient() # NOTE: stupid but httpx rev_proxy will trigger system proxy rules ... even localhost
 
 @router.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
