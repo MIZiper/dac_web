@@ -8,19 +8,19 @@ on:
     types: [published]
 
 jobs:
-  publish-npm:
+  publish:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: dac-frontend
-
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org/
       - run: npm install
       - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
