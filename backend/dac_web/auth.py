@@ -7,7 +7,6 @@ to allow backward-compatible operation without authentication.
 
 import logging
 import os
-from functools import lru_cache
 from typing import Optional
 
 import httpx
@@ -37,27 +36,35 @@ def get_keycloak_config() -> dict:
     }
 
 
-@lru_cache(maxsize=1)
-def _get_jwks() -> dict:
+_jwks_cache: dict | None = None
+
+
+async def _get_jwks() -> dict:
+    global _jwks_cache
+    if _jwks_cache is not None:
+        return _jwks_cache
     if not is_keycloak_enabled():
-        return {}
+        _jwks_cache = {}
+        return _jwks_cache
     jwks_url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
     try:
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(jwks_url)
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(jwks_url)
             resp.raise_for_status()
-            return resp.json()
+            _jwks_cache = resp.json()
+            return _jwks_cache
     except Exception as e:
         logger.error("Failed to fetch JWKS from Keycloak: %s", e)
-        return {}
+        _jwks_cache = {}
+        return _jwks_cache
 
 
-def verify_token(token: str) -> Optional[dict]:
+async def verify_token(token: str) -> Optional[dict]:
     """Verify a JWT token and return decoded claims, or None if invalid."""
     if not is_keycloak_enabled():
         return None
 
-    jwks = _get_jwks()
+    jwks = await _get_jwks()
     if not jwks:
         return None
 
@@ -121,7 +128,7 @@ async def get_current_user(
         return None
 
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = await verify_token(token)
 
     if payload is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

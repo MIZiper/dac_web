@@ -36,7 +36,8 @@ async def favicon(request):
 
 
 async def single_figure_page(request):
-    ws_uri = f"ws://{request.headers['host']}/"
+    scheme = "wss" if request.url.scheme == "https" else "ws"
+    ws_uri = f"{scheme}://{request.headers['host']}/"
     prefix = ""
 
     html = f"""

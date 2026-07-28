@@ -39,3 +39,6 @@ CREATE TABLE IF NOT EXISTS publishes (
     user_id VARCHAR(255),
     FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_nodes_valid_created ON nodes(valid, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_nodes_content_title ON nodes((content->'dac_web'->>'title'));
