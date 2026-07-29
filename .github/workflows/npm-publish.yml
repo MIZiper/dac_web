@@ -25,4 +25,4 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org/
       - run: npm install
-      - run: npm publish --access public --tag latest
+      - run: npm publish --tag latest
