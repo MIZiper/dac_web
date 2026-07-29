@@ -3,10 +3,10 @@
 
 name: Node.js Package
 
-on: push
-  # release:
-  #   types:
-  #   - published
+on:
+  release:
+    types:
+    - published
 
 permissions:
   id-token: write
