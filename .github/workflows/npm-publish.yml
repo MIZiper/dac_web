@@ -3,9 +3,10 @@
 
 name: Node.js Package
 
-on:
-  release:
-    types: [published]
+on: push
+  # release:
+  #   types:
+  #   - published
 
 jobs:
   publish:
@@ -23,4 +24,4 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org/
       - run: npm install
-      - run: npm publish --access public
+      - run: npm publish --access public --tag latest

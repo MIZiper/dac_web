@@ -2,8 +2,8 @@
 FROM node:22-slim AS frontend-builder
 WORKDIR /app
 RUN npm install -g pnpm
-COPY dac-frontend/package.json dac-frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY dac-frontend/package.json dac-frontend/pnpm-workspace.yaml ./
+RUN pnpm install
 COPY dac-frontend/ ./
 RUN pnpm build
 
@@ -31,8 +31,12 @@ ENV LOG_DIR=/app/storage/logs
 ENV PROJECT_DIR=/app/storage/projects
 ENV PROJECT_SAVE_DIR=/app/storage/projects_save
 ENV APP_LOG_ON=1
-ENV DBSTORE=true
-ENV POSTGRES_HOST=postgres
+ENV DBSTORE=false
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
+ENV POSTGRES_DB=dac
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=password
 ENV KEYCLOAK_URL=""
 ENV KEYCLOAK_REALM=""
 ENV KEYCLOAK_CLIENT_ID=""
