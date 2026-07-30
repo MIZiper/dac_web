@@ -20,13 +20,13 @@ RUN pip-compile pyproject.toml --output-file=requirements.txt
 RUN pip install -r requirements.txt
 
 # Copy backend source and install the package
-COPY backend/ ./
-RUN pip install .
+COPY backend/ ./backend-src
+RUN pip install ./backend-src
 
 # Copy built frontend from Stage 1
-COPY --from=frontend-builder /app/dist /app/frontend/dist
+COPY --from=frontend-builder /app/dist /app/frontend-dist
 
-ENV FRONTEND_DIST=/app/frontend/dist
+ENV FRONTEND_DIST=/app/frontend-dist
 ENV LOG_DIR=/app/storage/logs
 ENV PROJECT_DIR=/app/storage/projects
 ENV PROJECT_SAVE_DIR=/app/storage/projects_save
@@ -44,4 +44,4 @@ ENV KEYCLOAK_CLIENT_SECRET=""
 
 EXPOSE 8000
 
-CMD ["python", "-m", "dac_web.main"]
+CMD ["uvicorn", "dac_web.main:app", "--host", "0.0.0.0", "--port", "8000"]
