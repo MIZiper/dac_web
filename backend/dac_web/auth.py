@@ -18,6 +18,7 @@ from jose.exceptions import ExpiredSignatureError, JWTClaimsError
 logger = logging.getLogger(__name__)
 
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "")
+KEYCLOAK_URL_PUBLIC = os.getenv("KEYCLOAK_URL_PUBLIC") or KEYCLOAK_URL
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "")
 KEYCLOAK_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "")
@@ -30,7 +31,7 @@ def is_keycloak_enabled() -> bool:
 def get_keycloak_config() -> dict:
     return {
         "keycloak_enabled": is_keycloak_enabled(),
-        "keycloak_url": KEYCLOAK_URL,
+        "keycloak_url": KEYCLOAK_URL_PUBLIC,
         "keycloak_realm": KEYCLOAK_REALM,
         "keycloak_client_id": KEYCLOAK_CLIENT_ID,
     }
@@ -87,7 +88,7 @@ async def verify_token(token: str) -> Optional[dict]:
             key,
             algorithms=["RS256"],
             audience="account",  # all users can interact, further permission control to be defined
-            issuer=f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}",
+            issuer=f"{KEYCLOAK_URL_PUBLIC}/realms/{KEYCLOAK_REALM}",
             options={"verify_aud": True, "verify_exp": True},  # TODO: ask frontend to refresh token if expires
         )
         return payload
