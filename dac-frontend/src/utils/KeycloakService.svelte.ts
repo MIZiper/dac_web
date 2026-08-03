@@ -14,6 +14,8 @@ export const keycloakService: {
     init: () => Promise<void>;
     login: () => Promise<void>;
     logout: () => Promise<void>;
+    ensureToken: (minValidity?: number) => Promise<void>;
+    dispose: () => void;
 } = $state({
     enabled: false,
     authenticated: false,
@@ -62,6 +64,14 @@ export const keycloakService: {
                             _kc.tokenParsed.given_name || _kc.tokenParsed.preferred_username || null;
                         keycloakService.userId = _kc.tokenParsed.sub || null;
                     }
+
+                    _kc.onTokenExpired = () => {
+                        _kc!.updateToken(30).then(() => {
+                            keycloakService.token = _kc!.token ?? null;
+                        }).catch(() => {
+                            keycloakService.authenticated = false;
+                        });
+                    };
                 } catch {
                     keycloakService.enabled = true;
                     keycloakService.authenticated = false;
@@ -89,5 +99,21 @@ export const keycloakService: {
     async logout() {
         if (!_kc) return;
         await _kc.logout({ redirectUri: window.location.href });
+    },
+
+    async ensureToken(minValidity: number = 30) {
+        if (!_kc?.authenticated) return;
+        try {
+            await _kc.updateToken(minValidity);
+            keycloakService.token = _kc.token ?? null;
+        } catch {
+            keycloakService.authenticated = false;
+        }
+    },
+
+    dispose() {
+        _kc = null;
+        _initialized = false;
+        _initPromise = null;
     },
 });
