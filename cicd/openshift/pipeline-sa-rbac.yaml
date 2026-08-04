@@ -1,0 +1,16 @@
+# OpenShift RBAC — One-time setup
+# Grant the Tekton pipeline service account permission to push images to the internal registry
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pipeline-image-builder
+  namespace: dac
+subjects:
+  - kind: ServiceAccount
+    name: pipeline
+    namespace: dac
+roleRef:
+  kind: ClusterRole
+  name: system:image-builder
+  apiGroup: rbac.authorization.k8s.io

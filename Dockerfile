@@ -3,7 +3,12 @@ FROM node:22-slim AS frontend-builder
 WORKDIR /app
 RUN npm install -g pnpm
 COPY dac-frontend/package.json dac-frontend/pnpm-workspace.yaml ./
-RUN pnpm install
+RUN --mount=type=secret,id=ado_pat \
+    ADO_PAT=$(cat /run/secrets/ado_pat) && \
+    echo "@xdm:registry=https://pkgs.dev.azure.com/[org]/_packaging/[feed]/npm/registry/" >> .npmrc && \
+    echo "//pkgs.dev.azure.com/[org]/_packaging/[feed]/npm/registry/:_authToken=${ADO_PAT}" >> .npmrc && \
+    pnpm install && \
+    rm .npmrc
 COPY dac-frontend/ ./
 RUN pnpm build
 
@@ -13,11 +18,16 @@ WORKDIR /app
 
 RUN mkdir -p /app/storage/logs /app/storage/projects /app/storage/projects_save
 
-# Install Python dependencies (layer cached when pyproject.toml unchanged)
+# Install pip-tools from public PyPI (no secret needed)
 RUN pip install pip-tools
+
 COPY backend/pyproject.toml backend/README.md ./
-RUN pip-compile pyproject.toml --output-file=requirements.txt
-RUN pip install -r requirements.txt
+
+RUN --mount=type=secret,id=ado_pat \
+    ADO_PAT=$(cat /run/secrets/ado_pat) && \
+    export PIP_EXTRA_INDEX_URL="https://[org]:${ADO_PAT}@pkgs.dev.azure.com/[org]/_packaging/[feed]/pypi/simple/" && \
+    pip-compile pyproject.toml --output-file=requirements.txt && \
+    pip install -r requirements.txt
 
 # Copy backend source and install the package
 COPY backend/ ./backend-src

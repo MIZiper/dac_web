@@ -1,0 +1,136 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: dac-web-pipeline
+spec:
+  params:
+    - name: git-url
+      type: string
+    - name: git-revision
+      type: string
+    - name: image-tag
+      type: string
+  workspaces:
+    - name: source
+  tasks:
+    - name: clone
+      workspaces:
+        - name: output
+          workspace: source
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+      taskSpec:
+        params:
+          - name: url
+            type: string
+          - name: revision
+            type: string
+        workspaces:
+          - name: output
+        steps:
+          - name: clone
+            image: alpine/git:latest
+            script: |
+              set -e
+              git clone "$(params.url)" "$(workspaces.output.path)"
+              cd "$(workspaces.output.path)"
+              git checkout "$(params.revision)"
+              git submodule update --init --recursive
+
+    - name: build
+      runAfter:
+        - clone
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: image-tag
+          value: $(params.image-tag)
+      taskSpec:
+        params:
+          - name: image-tag
+            type: string
+        workspaces:
+          - name: source
+        steps:
+          - name: build-and-push
+            image: quay.io/buildah/stable:v1.38
+            env:
+              - name: ADO_PAT
+                valueFrom:
+                  secretKeyRef:
+                    name: ado-pat
+                    key: PAT
+              - name: STORAGE_DRIVER
+                value: vfs
+              - name: IMAGE_TAG
+                value: $(params.image-tag)
+              - name: SOURCE_PATH
+                value: $(workspaces.source.path)
+            script: |
+              set -e
+
+              IMAGE="image-registry.openshift-image-registry.svc:5000/dac/dac-web:${IMAGE_TAG}"
+
+              SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              echo "${SA_TOKEN}" | buildah login \
+                --authfile=/tmp/auth.json \
+                --username serviceaccount \
+                --password-stdin \
+                --tls-verify=false \
+                image-registry.openshift-image-registry.svc:5000
+
+              buildah bud \
+                --storage-driver=vfs \
+                --secret=id=ado_pat,env=ADO_PAT \
+                --layers \
+                --authfile=/tmp/auth.json \
+                -t "${IMAGE}" \
+                -f "${SOURCE_PATH}/Dockerfile" \
+                "${SOURCE_PATH}"
+
+              buildah push \
+                --storage-driver=vfs \
+                --authfile=/tmp/auth.json \
+                "${IMAGE}"
+
+    - name: deploy
+      runAfter:
+        - build
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: image-tag
+          value: $(params.image-tag)
+      taskSpec:
+        params:
+          - name: image-tag
+            type: string
+        workspaces:
+          - name: source
+        steps:
+          - name: deploy
+            image: quay.io/openshift/origin-cli:latest
+            env:
+              - name: IMAGE_TAG
+                value: $(params.image-tag)
+              - name: SOURCE_PATH
+                value: $(workspaces.source.path)
+            script: |
+              set -e
+
+              IMAGE="image-registry.openshift-image-registry.svc:5000/dac/dac-web:${IMAGE_TAG}"
+
+              oc apply -f "${SOURCE_PATH}/cicd/openshift/deployment.yaml" -n dac
+
+              oc set image deployment/dac-web \
+                dac-web="${IMAGE}" \
+                -n dac
+
+              oc rollout status deployment/dac-web \
+                -n dac \
+                --timeout=300s

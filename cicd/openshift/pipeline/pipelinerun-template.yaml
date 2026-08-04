@@ -1,0 +1,44 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: dac-web-pipelinerun
+  namespace: dac
+objects:
+  - apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      name: dac-web-pr-${IMAGE_TAG}
+      namespace: dac
+      labels:
+        app: dac-web
+    spec:
+      pipelineRef:
+        name: dac-web-pipeline
+      params:
+        - name: git-url
+          value: "${GIT_URL}"
+        - name: git-revision
+          value: "${GIT_REVISION}"
+        - name: image-tag
+          value: "${IMAGE_TAG}"
+      workspaces:
+        - name: source
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+      timeouts:
+        pipeline: 30m
+parameters:
+  - name: IMAGE_TAG
+    description: Container image tag (e.g. git short SHA)
+    required: true
+  - name: GIT_URL
+    description: Git repository URL
+    required: true
+  - name: GIT_REVISION
+    description: Git commit SHA or branch
+    required: true

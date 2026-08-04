@@ -1,0 +1,80 @@
+# Azure DevOps Pipeline — Trigger OpenShift Tekton CI/CD
+#
+# Pre-requisites (set up once in ADO Portal → Pipelines → Library → Variable Groups):
+#   Group name: dac-secrets
+#   Variables:
+#     OPENSHIFT_SERVER   — https://api.<cluster>.example.com:6443
+#     OPENSHIFT_TOKEN    — sha256~...  (type: secret)
+#     AZURE_PAT          — Azure Artifacts PAT with Packaging (Read) scope  (type: secret)
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  - group: dac-secrets
+
+stages:
+  - stage: build_and_deploy
+    displayName: Build & Deploy on OpenShift
+    jobs:
+      - job: trigger_tekton
+        displayName: Trigger Tekton Pipeline
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              curl -sL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz | tar xzf - oc
+              sudo mv oc /usr/local/bin/
+            displayName: Install oc CLI
+
+          - script: |
+              oc login $(OPENSHIFT_SERVER) --token=$(OPENSHIFT_TOKEN) --insecure-skip-tls-verify
+              oc project dac 2>/dev/null || oc new-project dac
+            displayName: Login to OpenShift
+
+          - script: |
+              oc create secret generic ado-pat \
+                --from-literal=PAT=$(AZURE_PAT) \
+                --dry-run=client -o yaml | oc apply -f -
+            displayName: Sync Azure PAT → OpenShift Secret
+
+          - script: |
+              SHORT_SHA=$(echo $(Build.SourceVersion) | cut -c1-7)
+              oc process -f cicd/openshift/pipeline/pipelinerun-template.yaml \
+                -p IMAGE_TAG=$(SHORT_SHA) \
+                -p GIT_URL=$(Build.Repository.Uri) \
+                -p GIT_REVISION=$(Build.SourceVersion) \
+                -n dac \
+                | oc apply -f -
+            displayName: Submit PipelineRun
+
+          - script: |
+              SHORT_SHA=$(echo $(Build.SourceVersion) | cut -c1-7)
+              RUN_NAME="dac-web-pr-${SHORT_SHA}"
+
+              echo "Waiting for PipelineRun ${RUN_NAME} to complete..."
+              for i in $(seq 1 180); do
+                STATUS=$(oc get pipelinerun "${RUN_NAME}" -n dac \
+                  -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || echo "Unknown")
+                case "${STATUS}" in
+                  True)
+                    echo "PipelineRun succeeded"
+                    exit 0
+                    ;;
+                  False)
+                    echo "PipelineRun failed — fetching logs:"
+                    oc get pipelinerun "${RUN_NAME}" -n dac -o yaml 2>/dev/null || true
+                    exit 1
+                    ;;
+                  *)
+                    echo "  ...${STATUS} (elapsed $((i * 10))s)"
+                    sleep 10
+                    ;;
+                esac
+              done
+              echo "PipelineRun timed out"
+              exit 1
+            displayName: Wait for PipelineRun to complete
