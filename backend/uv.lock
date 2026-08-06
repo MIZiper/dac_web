@@ -484,7 +484,7 @@ wheels = [
 
 [[package]]
 name = "miz-dac"
-version = "0.6.1"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -494,14 +494,14 @@ dependencies = [
     { name = "pyyaml" },
     { name = "scipy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/1c/57527cd66626a89d1f1d387c40d4a42bfd451fe1a215ad454bbc1d017755/miz_dac-0.6.1.tar.gz", hash = "sha256:f122ff94d13fd53b0206fc417e1fc39591935bb9b24b204ed7f7d7ebdd8beccf", size = 173114, upload-time = "2026-06-10T21:06:43.153Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/b6/3e261286d2b40defeed3b5398ca23b1a55ae60395aa54d71ffc7a5a0a0f3/miz_dac-0.7.0.tar.gz", hash = "sha256:5240562983cae5b4cddc5d50619fdc0bcd416020c0c3fe7c1ba3b4b05cf51d3d", size = 201965, upload-time = "2026-07-16T20:18:19.016Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/d1/e8b55122c4de88d279fd93a0cf1684e843c6522a9c81a5d7890a393ec64a/miz_dac-0.6.1-py3-none-any.whl", hash = "sha256:3964496f55d6f6b546d3cadc9140e97bdf99180d9671b655ff2d28210c21955d", size = 74028, upload-time = "2026-06-10T21:06:42.232Z" },
+    { url = "https://files.pythonhosted.org/packages/39/8c/eebdf09e0d26991d7a7a69714bf8eec04132da1cd9faad5ea253a4983395/miz_dac-0.7.0-py3-none-any.whl", hash = "sha256:f18904411166fd4cabdabe07211074fc9587710658e6f9ca35deeb2079790e84", size = 104510, upload-time = "2026-07-16T20:18:17.942Z" },
 ]
 
 [[package]]
 name = "miz-dac-web"
-version = "0.3.0.dev0"
+version = "0.3.0.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
@@ -522,7 +522,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
-    { name = "miz-dac", specifier = ">=0.6.1" },
+    { name = "miz-dac", specifier = ">=0.7.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
     { name = "starlette", specifier = ">=0.47.2" },

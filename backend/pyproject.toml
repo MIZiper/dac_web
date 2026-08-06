@@ -1,6 +1,6 @@
 [project]
 name = "miz-dac_web"
-version = "0.3.0.dev0"
+version = "0.3.0.dev1"
 description = "DAC analysis on web, the backend handlers."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,7 +14,7 @@ dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
     "matplotlib>=3.10.5",
-    "miz-dac>=0.6.1",
+    "miz-dac>=0.7.0",
     "pydantic>=2.11.7",
     "python-jose[cryptography]>=3.3.0",
     "starlette>=0.47.2",
