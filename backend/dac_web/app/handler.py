@@ -20,7 +20,7 @@ from matplotlib.figure import Figure
 from matplotlib._pylab_helpers import Gcf
 
 import dac_web.schema as s
-from dac_web.config import DEBUG
+from dac_web.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,8 @@ router = APIRouter(
     dependencies=[Depends(require_token_header), Depends(_cache_auth_token)] # for /docs purpose only, the validation is done in rev_proxy
 )
 
-current_scenario: str = os.getenv("SCENARIO_DEFAULT", "0.base.yaml")
-scenarios_dir: str = os.getenv("SCENARIO_DIR") or path.join(
-    path.dirname(dac.__file__), "scenarios"
-)
+current_scenario: str = settings.scenario_default
+scenarios_dir: str = settings.scenario_dir
 quick_actions: list[tuple[str, str, str, int, bool | str]] | None = use_scenario(path.join(scenarios_dir, current_scenario))
 container: Container = Container.parse_save_config({})
 _action_executor = ThreadPoolExecutor(max_workers=4)
@@ -595,7 +593,7 @@ def run_action(
         action.status = ActionNode.ActionStatus.FAILED
         err_msg = f"Action failed: {e}"
         sync_put('message', err_msg)
-        if DEBUG:
+        if settings.debug:
             tb = "".join(
                 _traceback.format_exception(type(e), e, e.__traceback__)
             )

@@ -1,13 +1,82 @@
 import logging
-import os
 import sys
+from os import path
 
-DEBUG = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+
+    debug: bool = False
+    """Enable debug-level logging and verbose error responses."""
+
+    app_log_on: bool = False
+    """Capture subprocess stdout/stderr to files on termination."""
+
+    log_dir: str = "./storage/logs"
+    """Directory for per-session subprocess log files."""
+
+    dbstore: bool = True
+    """Use PostgreSQL (True) or flat JSON files (False) for project storage."""
+
+    postgres_user: str = "postgres"
+    postgres_password: str = "password"
+    postgres_db: str = "dac"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+
+    keycloak_url: str = ""
+    keycloak_url_public: str = ""
+    keycloak_realm: str = ""
+    keycloak_client_id: str = ""
+    keycloak_client_secret: str = ""
+
+    project_dir: str = "./storage/projects"
+    """Directory for active project JSON files (file-based storage)."""
+
+    project_save_dir: str = "./storage/projects_save"
+    """Directory for published/shared project JSON files (file-based storage)."""
+
+    frontend_dist: str = ""
+    """Path to built Svelte frontend. When set, FastAPI serves the SPA."""
+
+    scenario_default: str = "0.base.yaml"
+    """Default scenario YAML filename loaded at session startup."""
+
+    scenario_dir: str = ""
+    """Directory for scenario YAML files. Falls back to dac package scenarios/."""
+
+    dac_web_rules_package: str = "dac_web.rules"
+    """Python package path for auto-discovering ActionReplacementRule subclasses."""
+
+    @field_validator("keycloak_url_public", mode="after")
+    @classmethod
+    def _fallback_keycloak_url_public(cls, v: str, info) -> str:
+        if not v:
+            return info.data.get("keycloak_url", "")
+        return v
+
+    @field_validator("scenario_dir", mode="after")
+    @classmethod
+    def _fallback_scenario_dir(cls, v: str) -> str:
+        if not v:
+            import dac
+            return path.join(path.dirname(dac.__file__), "scenarios")
+        return v
+
+
+settings = Settings()
 
 
 def setup_logging():
     logger = logging.getLogger("dac_web")
-    if DEBUG:
+    if settings.debug:
         logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(logging.Formatter(

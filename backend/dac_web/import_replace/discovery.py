@@ -6,14 +6,12 @@ own rules package. Default: ``dac_web.rules``.
 
 import importlib
 import logging
-import os
 import pkgutil
 
 from dac_web.import_replace import ReplacementRegistry, ActionReplacementRule
+from dac_web.config import settings
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_PACKAGE = "dac_web.rules"
 
 
 def _iter_subclasses(mod, base=ActionReplacementRule):
@@ -32,7 +30,7 @@ def discover_rules(package: str | None = None):
 
     Called once at application startup.
     """
-    pkg = package or os.environ.get("DAC_WEB_RULES_PACKAGE", _DEFAULT_PACKAGE)
+    pkg = package or settings.dac_web_rules_package
 
     try:
         rules_pkg = importlib.import_module(pkg)

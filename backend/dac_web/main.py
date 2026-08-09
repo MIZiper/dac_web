@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from dac_web.config import DEBUG, setup_logging
+from dac_web.config import settings, setup_logging
 from dac_web.db.connection import init_pool, close_pool
 
 from dac_web.api.rev_proxy import router as rev_router
@@ -45,8 +45,8 @@ app.include_router(
     app_doc_router, prefix="/app", tags=["APP"]
 )  # for /docs purpose only, and seems the /app routing is overshadowed by rev_router (๑•̀ㅂ•́)و✧
 
-FRONTEND_DIST = os.getenv("FRONTEND_DIST")
-if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):
+FRONTEND_DIST = settings.frontend_dist
+if FRONTEND_DIST and os.path.isdir(FRONTEND_DIST):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIST), name="static")
 
     @app.get("/")

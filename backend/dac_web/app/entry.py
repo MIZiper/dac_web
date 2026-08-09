@@ -12,7 +12,7 @@ from matplotlib._pylab_helpers import Gcf
 
 from dac_web.app.handler import FIG_NUM, router as dac_router
 from dac_web.webagg_starlette import app as mpl_app
-from dac_web.config import DEBUG
+from dac_web.config import settings
 import dac_web.schema as s
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ async def _http_exception_handler(request: Request, exc: Exception):
     status_code = getattr(exc, "status_code", 500)
     detail = str(exc.detail) if hasattr(exc, "detail") else str(exc)
     err = s.DACErrorResponse(code=status_code, message=detail, detail=None)
-    if DEBUG:
+    if settings.debug:
         tb = traceback.format_exc()
         err.detail = s.DACErrorDetail(
             traceback=tb,
@@ -39,7 +39,7 @@ async def _http_exception_handler(request: Request, exc: Exception):
 async def _generic_exception_handler(request: Request, exc: Exception):
     import traceback
     err = s.DACErrorResponse(code=500, message="Internal server error", detail=None)
-    if DEBUG:
+    if settings.debug:
         tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         err.detail = s.DACErrorDetail(
             traceback=tb,

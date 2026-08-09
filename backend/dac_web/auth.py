@@ -6,7 +6,6 @@ to allow backward-compatible operation without authentication.
 """
 
 import logging
-import os
 from typing import Optional
 
 import httpx
@@ -15,25 +14,21 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError, JWTClaimsError
 
-logger = logging.getLogger(__name__)
+from dac_web.config import settings
 
-KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "")
-KEYCLOAK_URL_PUBLIC = os.getenv("KEYCLOAK_URL_PUBLIC") or KEYCLOAK_URL
-KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "")
-KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "")
-KEYCLOAK_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "")
+logger = logging.getLogger(__name__)
 
 
 def is_keycloak_enabled() -> bool:
-    return bool(KEYCLOAK_URL and KEYCLOAK_REALM and KEYCLOAK_CLIENT_ID)
+    return bool(settings.keycloak_url and settings.keycloak_realm and settings.keycloak_client_id)
 
 
 def get_keycloak_config() -> dict:
     return {
         "keycloak_enabled": is_keycloak_enabled(),
-        "keycloak_url": KEYCLOAK_URL_PUBLIC,
-        "keycloak_realm": KEYCLOAK_REALM,
-        "keycloak_client_id": KEYCLOAK_CLIENT_ID,
+        "keycloak_url": settings.keycloak_url_public,
+        "keycloak_realm": settings.keycloak_realm,
+        "keycloak_client_id": settings.keycloak_client_id,
     }
 
 
@@ -47,7 +42,7 @@ async def _get_jwks() -> dict:
     if not is_keycloak_enabled():
         _jwks_cache = {}
         return _jwks_cache
-    jwks_url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+    jwks_url = f"{settings.keycloak_url}/realms/{settings.keycloak_realm}/protocol/openid-connect/certs"
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(jwks_url)
@@ -88,7 +83,7 @@ async def verify_token(token: str) -> Optional[dict]:
             key,
             algorithms=["RS256"],
             audience="account",  # all users can interact, further permission control to be defined
-            issuer=f"{KEYCLOAK_URL_PUBLIC}/realms/{KEYCLOAK_REALM}",
+            issuer=f"{settings.keycloak_url_public}/realms/{settings.keycloak_realm}",
             options={"verify_aud": True, "verify_exp": True},  # TODO: ask frontend to refresh token if expires
         )
         return payload

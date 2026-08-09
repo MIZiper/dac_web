@@ -21,7 +21,7 @@ from fastapi.responses import Response, StreamingResponse
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from dac_web.api.handler import user_manager, SESSID_KEY
-from dac_web.config import DEBUG
+from dac_web.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ async def proxy_sse_run_action(context_key_id: str, action_id: str, request: Req
         except httpx.RequestError as e:
             logger.error("SSE proxy request failed: %s", e)
             err_payload = {"message": str(e)}
-            if DEBUG:
+            if settings.debug:
                 err_payload["detail"] = {
                     "endpoint": url,
                     "timestamp": "",  # will be filled by frontend
@@ -102,7 +102,7 @@ async def proxy_http(
         logger.error("Proxy request failed: %s", e)
         raise HTTPException(status_code=502, detail=f"Upstream request failed: {e}")
 
-    if response.status_code >= 400 and DEBUG:
+    if response.status_code >= 400 and settings.debug:
         try:
             body_json = json.loads(response.content)
         except (json.JSONDecodeError, UnicodeDecodeError):

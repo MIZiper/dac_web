@@ -6,7 +6,6 @@ Create, read, save, terminate app services.
 import asyncio
 import json
 import logging
-import os
 import sys
 from datetime import datetime
 from importlib.metadata import version
@@ -23,7 +22,7 @@ from datetime import timezone as _timezone
 
 import dac_web.schema as s
 from dac_web.schema import SESSID_KEY
-from dac_web.config import DEBUG
+from dac_web.config import settings
 from dac_web.db.connection import get_db
 from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled
 
@@ -32,12 +31,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 APPMOD_ENTRY = "dac_web.app.entry"
-PROJDIR = os.getenv("PROJECT_DIR", "./storage/projects")
-SAVEDIR = os.getenv("PROJECT_SAVE_DIR", "./storage/projects_save")
+PROJDIR = settings.project_dir
+SAVEDIR = settings.project_save_dir
 __VERSION__ = version("miz-dac_web")
-LOG_DIR = os.getenv("LOG_DIR", "./storage/logs")
-APP_LOG_ON = os.getenv("APP_LOG_ON")
-DBSTORE = os.getenv("DBSTORE", "true").lower() in ("true", "1", "yes")
+LOG_DIR = settings.log_dir
+APP_LOG_ON = settings.app_log_on
+DBSTORE = settings.dbstore
 STDERR_RING_SIZE = 500
 STDERR_TAIL_SIZE = 20
 
@@ -131,7 +130,7 @@ def _make_error_response(
     sess_id: str = "",
 ) -> s.DACErrorResponse:
     detail = None
-    if DEBUG:
+    if settings.debug:
         tb = ""
         if exc:
             tb = "".join(
@@ -205,7 +204,7 @@ async def load_project(
                 pass
             _raise_http(
                 500,
-                f"Project load failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if DEBUG else ""),
+                f"Project load failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if settings.debug else ""),
                 endpoint="/api/load",
                 sess_id=sess_id,
             )
@@ -325,7 +324,7 @@ async def save_project(
             pass
         _raise_http(
             500,
-            f"Project save failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if DEBUG else ""),
+            f"Project save failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if settings.debug else ""),
             endpoint="/api/save",
             sess_id=sess_id,
         )
