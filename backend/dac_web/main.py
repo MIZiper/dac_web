@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from dac_web.config import DEBUG, setup_logging
 from dac_web.db.connection import init_pool, close_pool
 
 from dac_web.api.rev_proxy import router as rev_router
@@ -16,6 +17,7 @@ _cleanup_task: asyncio.Task | None = None
 
 async def lifespan(app: FastAPI):
     global _cleanup_task
+    setup_logging()
     await init_pool()
     from dac_web.import_replace.discovery import discover_rules
     discover_rules()

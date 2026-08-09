@@ -3,6 +3,7 @@ import inspect
 import json
 import logging
 import os
+import traceback as _traceback
 from concurrent.futures import ThreadPoolExecutor
 from os import path
 from typing import Callable, get_origin, get_args, Union as _Union
@@ -19,6 +20,7 @@ from matplotlib.figure import Figure
 from matplotlib._pylab_helpers import Gcf
 
 import dac_web.schema as s
+from dac_web.config import DEBUG
 
 logger = logging.getLogger(__name__)
 
@@ -591,7 +593,13 @@ def run_action(
     except Exception as e:
         logger.exception("Action execution failed")
         action.status = ActionNode.ActionStatus.FAILED
-        sync_put('message', f"Action failed: {e}")
+        err_msg = f"Action failed: {e}"
+        sync_put('message', err_msg)
+        if DEBUG:
+            tb = "".join(
+                _traceback.format_exception(type(e), e, e.__traceback__)
+            )
+            sync_put('debug_error', tb)
         sync_put('completed', (False, action.status.value))
     finally:
         loop.call_soon_threadsafe(queue.put_nowait, None)

@@ -166,3 +166,16 @@ export interface ImportApplyResp {
     project_id: string;
     title: string | null;
 }
+
+export interface DACErrorDetail {
+    traceback?: string;
+    stderr?: string;
+    endpoint?: string;
+    timestamp?: string;
+}
+
+export interface DACErrorInfo {
+    code: number;
+    message: string;
+    detail?: DACErrorDetail;
+}

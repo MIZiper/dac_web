@@ -18,8 +18,12 @@ import httpx
 from asyncpg import Connection
 from fastapi import APIRouter, HTTPException, Request, Query, Depends
 
+import traceback as _traceback
+from datetime import timezone as _timezone
+
 import dac_web.schema as s
 from dac_web.schema import SESSID_KEY
+from dac_web.config import DEBUG
 from dac_web.db.connection import get_db
 from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled
 
@@ -34,9 +38,16 @@ __VERSION__ = version("miz-dac_web")
 LOG_DIR = os.getenv("LOG_DIR", "./storage/logs")
 APP_LOG_ON = os.getenv("APP_LOG_ON")
 DBSTORE = os.getenv("DBSTORE", "true").lower() in ("true", "1", "yes")
+STDERR_RING_SIZE = 500
+STDERR_TAIL_SIZE = 20
 
 
 class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]]):
+    def __init__(self):
+        super().__init__()
+        self._stderr_buffers: dict[str, list[str]] = {}
+        self._stderr_tasks: dict[str, asyncio.Task] = {}
+
     def validate_sess(self, sess_id: str) -> bool:
         return sess_id is not None and sess_id in self
 
@@ -45,6 +56,7 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
         owner_user_id: str | None = None,
     ):
         self[sess_id] = conn_str, app_obj, owner_user_id
+        self._stderr_buffers[sess_id] = []
 
     def get_sess_conn(self, sess_id: str) -> str:
         conn_str, app_obj, _ = self[sess_id]
@@ -62,9 +74,39 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
         conn_str, app_obj, _ = self[sess_id]
         self[sess_id] = conn_str, app_obj, owner_user_id
 
+    def get_stderr_tail(self, sess_id: str, n: int = STDERR_TAIL_SIZE) -> str:
+        buf = self._stderr_buffers.get(sess_id, [])
+        return "\n".join(buf[-n:])
+
+    def start_stderr_reader(self, sess_id: str, process: asyncio.subprocess.Process):
+        async def _reader():
+            buf = self._stderr_buffers.get(sess_id, [])
+            try:
+                while process.stderr:
+                    line = await process.stderr.readline()
+                    if not line:
+                        break
+                    decoded = line.decode(errors="replace").rstrip("\n")
+                    buf.append(decoded)
+                    if len(buf) > STDERR_RING_SIZE:
+                        del buf[: len(buf) - STDERR_RING_SIZE]
+                    logger.debug("subprocess stderr [%s]: %s", sess_id[:8], decoded)
+            except Exception:
+                pass
+        self._stderr_tasks[sess_id] = asyncio.create_task(_reader())
+
+    def stop_stderr_reader(self, sess_id: str):
+        task = self._stderr_tasks.pop(sess_id, None)
+        if task and not task.done():
+            task.cancel()
+
     def remove_sess(self, sess_id: str):
         if sess_id in self:
             del self[sess_id]
+        task = self._stderr_tasks.pop(sess_id, None)
+        if task and not task.done():
+            task.cancel()
+        self._stderr_buffers.pop(sess_id, None)
 
     async def _cleanup_orphans(self):
         while True:
@@ -81,6 +123,43 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
 user_manager = UserManager()
 
 
+def _make_error_response(
+    status_code: int,
+    message: str,
+    exc: BaseException | None = None,
+    endpoint: str = "",
+    sess_id: str = "",
+) -> s.DACErrorResponse:
+    detail = None
+    if DEBUG:
+        tb = ""
+        if exc:
+            tb = "".join(
+                _traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
+        stderr = ""
+        if sess_id:
+            stderr = user_manager.get_stderr_tail(sess_id)
+        detail = s.DACErrorDetail(
+            traceback=tb,
+            stderr=stderr,
+            endpoint=endpoint,
+            timestamp=datetime.now(_timezone.utc).isoformat(),
+        )
+    logger.error(
+        "API error %d: %s%s",
+        status_code,
+        message,
+        f"\n{detail.traceback}" if detail and detail.traceback else "",
+    )
+    return s.DACErrorResponse(code=status_code, message=message, detail=detail)
+
+
+def _raise_http(status_code: int, message: str, exc: BaseException | None = None, endpoint: str = "", sess_id: str = ""):
+    err = _make_error_response(status_code, message, exc, endpoint, sess_id)
+    raise HTTPException(status_code=status_code, detail=err.model_dump())
+
+
 @router.get("/auth/status", response_model=s.KeycloakStatus)
 async def auth_status():
     return s.KeycloakStatus(**get_keycloak_config())
@@ -94,11 +173,11 @@ async def load_project(
 ):
     project_id = data.project_id
     if not project_id:
-        raise HTTPException(status_code=400, detail="Project ID is required")
+        _raise_http(400, "Project ID is required", endpoint="/api/load")
 
     if DBSTORE:
         if conn is None:
-            raise HTTPException(status_code=503, detail="Database not available")
+            _raise_http(503, "Database not available", endpoint="/api/load")
         config, title = await read_project_config(project_id, conn)
     else:
         config, title = await read_project_config_file(project_id)
@@ -119,9 +198,19 @@ async def load_project(
                 **{SESSID_KEY: sess_id},
             )
         else:
-            raise HTTPException(status_code=500, detail="Project load failed")
+            sub_err = ""
+            try:
+                sub_err = resp.text
+            except Exception:
+                pass
+            _raise_http(
+                500,
+                f"Project load failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if DEBUG else ""),
+                endpoint="/api/load",
+                sess_id=sess_id,
+            )
     else:
-        raise HTTPException(status_code=404, detail="Project not found")
+        _raise_http(404, "Project not found", endpoint="/api/load")
 
 
 @router.post("/new", response_model=s.ManProjectResp)
@@ -141,11 +230,12 @@ async def new_process_session(
 async def terminate_process_session(request: Request):
     sess_id = (await request.json()).get(SESSID_KEY)
     if not user_manager.validate_sess(sess_id):
-        raise HTTPException(status_code=401, detail="Invalid or missing session ID")
+        _raise_http(401, "Invalid or missing session ID", endpoint="/api/term")
     try:
         p = user_manager.get_sess_obj(sess_id)
         p.terminate()
         if APP_LOG_ON and LOG_DIR:
+                user_manager.stop_stderr_reader(sess_id)
                 out, err = await p.communicate()
                 stdout_path = path.join(
                     LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
@@ -160,8 +250,12 @@ async def terminate_process_session(request: Request):
             message="Analysis terminated",
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to terminate analysis: {str(e)}"
+        _raise_http(
+            500,
+            f"Failed to terminate analysis: {str(e)}",
+            exc=e,
+            endpoint="/api/term",
+            sess_id=sess_id,
         )
 
 
@@ -174,7 +268,7 @@ async def save_project(
 ):
     sess_id = request.headers.get(SESSID_KEY)
     if sess_id is None or not user_manager.validate_sess(sess_id):
-        raise HTTPException(status_code=401, detail="Invalid or missing session ID")
+        _raise_http(401, "Invalid or missing session ID", endpoint="/api/save")
 
     project_id = data.project_id
     title = data.title
@@ -189,12 +283,12 @@ async def save_project(
         if owner is None:
             user_manager.set_sess_owner(sess_id, signature)
         elif owner != signature:
-            raise HTTPException(
-                status_code=403, detail="Session is owned by another user"
+            _raise_http(
+                403, "Session is owned by another user", endpoint="/api/save"
             )
     else:
         if is_keycloak_enabled():
-            raise HTTPException(status_code=401, detail="Authentication required to save")
+            _raise_http(401, "Authentication required to save", endpoint="/api/save")
         signature = data.signature or ""
 
     intconnstr = user_manager.get_sess_conn(sess_id)
@@ -208,7 +302,7 @@ async def save_project(
 
         if DBSTORE:
             if conn is None:
-                raise HTTPException(status_code=503, detail="Database not available")
+                _raise_http(503, "Database not available", endpoint="/api/save")
             fin_project_id = await save_project_config(
                 project_id, config, title, signature, conn, user_id, creator_name
             )
@@ -224,7 +318,17 @@ async def save_project(
             **{SESSID_KEY: None},
         )
     else:
-        raise HTTPException(status_code=500, detail="Project save failed")
+        sub_err = ""
+        try:
+            sub_err = resp.text
+        except Exception:
+            pass
+        _raise_http(
+            500,
+            f"Project save failed: subprocess returned {resp.status_code}" + (f" — {sub_err}" if DEBUG else ""),
+            endpoint="/api/save",
+            sess_id=sess_id,
+        )
 
 
 # ------
@@ -243,13 +347,21 @@ async def start_process_session(owner_user_id: str | None = None):
         stderr=asyncio.subprocess.PIPE,
     )
 
+    user_manager.set_sess(sess_id, "", process, owner_user_id)
+    user_manager.start_stderr_reader(sess_id, process)
+
     try:
         bline = await asyncio.wait_for(process.stdout.readline(), timeout=10.0)
     except asyncio.TimeoutError:
         process.kill()
-        raise HTTPException(status_code=500, detail="Subprocess startup timed out")
+        _raise_http(
+            500,
+            "Subprocess startup timed out",
+            endpoint="/api/new",
+            sess_id=sess_id,
+        )
     port = bline.decode().split("...")[-1].strip()
-    user_manager.set_sess(sess_id, f"localhost:{port}", process, owner_user_id)
+    user_manager[sess_id] = (f"localhost:{port}", process, owner_user_id)
 
     return sess_id
 
@@ -266,7 +378,7 @@ async def get_project_list(
     page_size: int = Query(10, le=100),
 ):
     if conn is None:
-        raise HTTPException(status_code=503, detail="Database not available")
+        _raise_http(503, "Database not available", endpoint="/api/projects")
 
     offset = (page - 1) * page_size
 
@@ -313,7 +425,7 @@ async def get_project_list(
 
 async def read_project_full_config_file(project_id: str) -> dict | None:
     if "/" in project_id or "\\" in project_id or ".." in project_id:
-        raise HTTPException(status_code=400, detail="Invalid project ID")
+        _raise_http(400, "Invalid project ID")
     project_fpath = path.join(PROJDIR, project_id)
     if not path.isfile(project_fpath):
         return None
@@ -323,7 +435,7 @@ async def read_project_full_config_file(project_id: str) -> dict | None:
 
 async def read_project_config_file(project_id: str) -> tuple[dict | None, str | None]:
     if "/" in project_id or "\\" in project_id or ".." in project_id:
-        raise HTTPException(status_code=400, detail="Invalid project ID")
+        _raise_http(400, "Invalid project ID")
     project_fpath = path.join(PROJDIR, project_id)
     if not path.isfile(project_fpath):
         return None, None
@@ -393,18 +505,18 @@ async def export_project(
 ):
     if DBSTORE:
         if conn is None:
-            raise HTTPException(status_code=503, detail="Database not available")
+            _raise_http(503, "Database not available", endpoint="/api/projects/{project_id}/export")
         row = await conn.fetchrow(
             "SELECT content FROM nodes WHERE id = $1::uuid AND valid = TRUE",
             project_id,
         )
         if not row:
-            raise HTTPException(status_code=404, detail="Project not found")
+            _raise_http(404, "Project not found", endpoint="/api/projects/{project_id}/export")
         content = json.loads(row["content"])
     else:
         content = await read_project_full_config_file(project_id)
         if content is None:
-            raise HTTPException(status_code=404, detail="Project not found")
+            _raise_http(404, "Project not found", endpoint="/api/projects/{project_id}/export")
 
     dac_config = content.get("dac", {})
     dac_web_full = content.get("dac_web", {})
@@ -449,14 +561,14 @@ async def import_project(
             )
     else:
         if is_keycloak_enabled():
-            raise HTTPException(status_code=401, detail="Authentication required to import")
+            _raise_http(401, "Authentication required to import", endpoint="/api/projects/import")
         signature = data.signature or ""
 
     user_id = current_user["sub"] if current_user else None
 
     if DBSTORE:
         if conn is None:
-            raise HTTPException(status_code=503, detail="Database not available")
+            _raise_http(503, "Database not available", endpoint="/api/projects/import")
         fin_project_id = await save_project_config(
             project_id, dac_config, title, signature, conn, user_id, creator_name
         )
@@ -641,8 +753,8 @@ async def import_apply(
             )
     else:
         if is_keycloak_enabled():
-            raise HTTPException(
-                status_code=401, detail="Authentication required to import"
+            _raise_http(
+                401, "Authentication required to import", endpoint="/api/projects/import-apply"
             )
         signature = data.signature or ""
 
@@ -650,7 +762,7 @@ async def import_apply(
 
     if DBSTORE:
         if conn is None:
-            raise HTTPException(status_code=503, detail="Database not available")
+            _raise_http(503, "Database not available", endpoint="/api/projects/import-apply")
         fin_project_id = await save_project_config(
             project_id, final_config, title, signature, conn, user_id, creator_name
         )

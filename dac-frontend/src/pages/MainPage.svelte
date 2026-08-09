@@ -42,7 +42,7 @@
     } from "./MainPageHandler.svelte";
     import { getContext, onMount, onDestroy } from "svelte";
     import YAML from "yaml";
-    import type { ActionItem, DataItem } from "../schema";
+    import type { ActionItem, DataItem, DACErrorDetail } from "../schema";
     import { taskHolder } from "../tasks/TaskRouter.svelte";
     import StatsTable from "../lib/StatsTable.svelte";
     import SaveProjectDropdown from "../lib/SaveProjectDropdown.svelte";
@@ -51,6 +51,8 @@
     let loading = $state(0);
     let message = $state("");
     let toastIsOpen = $state(false);
+    let errorDetail: import("../schema").DACErrorDetail | undefined = $state(undefined);
+    let showDetail = $state(false);
 
     let tblRef: { set: (title: string, headers: Record<string, string[]>, data: (string | number)[][]) => void } | undefined = $state();
 
@@ -69,8 +71,11 @@
     $effect(() => {
         if (appdata.errorMessage) {
             message = appdata.errorMessage;
+            errorDetail = appdata.errorDetail;
             toastIsOpen = true;
+            showDetail = false;
             appdata.errorMessage = '';
+            appdata.errorDetail = undefined;
         }
     });
 
@@ -246,6 +251,30 @@
                 console.error("Failed to parse message event data", err);
             }
         });
+        es.addEventListener("debug_error", (e) => {
+            errorDetail = {
+                traceback: e.data,
+                timestamp: new Date().toISOString(),
+            };
+            showDetail = true;
+        });
+        es.addEventListener("error", (e) => {
+            try {
+                const err = JSON.parse(e.data);
+                message = err.message || "Subprocess error";
+                if (err.detail) {
+                    errorDetail = err.detail;
+                    showDetail = true;
+                }
+                toastIsOpen = true;
+            } catch (_) {
+                message = "Connection to analysis server lost";
+                toastIsOpen = true;
+            }
+            loading = 0;
+            activeSSE.delete(es);
+            es.close();
+        });
         es.onerror = () => {
             message = "Connection to analysis server lost";
             toastIsOpen = true;
@@ -273,8 +302,39 @@
     </Alert>
 {/if}
 <div id="toast-holder">
-    <Toast autohide body header="Message" bind:isOpen={toastIsOpen}>
-        {message}
+    <Toast autohide={!errorDetail} body header="Message" bind:isOpen={toastIsOpen}>
+        <div>
+            <div>{message}</div>
+            {#if errorDetail}
+                <div class="mt-2">
+                    <button
+                        class="btn btn-sm btn-outline-secondary"
+                        onclick={() => showDetail = !showDetail}
+                    >
+                        {showDetail ? "Hide" : "Show"} details
+                    </button>
+                    {#if showDetail && errorDetail.traceback}
+                        <pre class="error-detail error-traceback">{errorDetail.traceback}</pre>
+                    {/if}
+                    {#if showDetail && errorDetail.stderr}
+                        <div class="mt-1">
+                            <strong>Subprocess stderr (last 20 lines):</strong>
+                            <pre class="error-detail">{errorDetail.stderr}</pre>
+                        </div>
+                    {/if}
+                    {#if showDetail && errorDetail.endpoint}
+                        <div class="mt-1">
+                            <strong>Endpoint:</strong> {errorDetail.endpoint}
+                        </div>
+                    {/if}
+                    {#if showDetail && errorDetail.timestamp}
+                        <div class="mt-1">
+                            <strong>Time:</strong> {errorDetail.timestamp}
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+        </div>
     </Toast>
 </div>
 
@@ -457,5 +517,23 @@
         right: 10px;
         bottom: 10px;
         z-index: 9999;
+        max-width: 600px;
+    }
+
+    .error-detail {
+        font-size: 0.75rem;
+        max-height: 200px;
+        overflow-y: auto;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 4px;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .error-traceback {
+        max-height: 300px;
     }
 </style>

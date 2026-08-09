@@ -1,4 +1,4 @@
-import type { ActionItem, ActionStatus, ActionType, DataItem, DataQuickAction, ScenarioItem } from "../schema";
+import type { ActionItem, ActionStatus, ActionType, DataItem, DataQuickAction, ScenarioItem, DACErrorDetail } from "../schema";
 import { ax_api, ax_app } from "../utils/FetchObjects";
 import { DEFAULT_NAME, SESSID_KEY, GCK_ID } from "../utils/FetchObjects";
 
@@ -13,6 +13,7 @@ export const appdata: {
     currentContext: DataItem | null,
     currentScenario: ScenarioItem | null,
     errorMessage: string,
+    errorDetail: DACErrorDetail | undefined,
 } = $state({
     data: [],
     actions: [],
@@ -24,6 +25,7 @@ export const appdata: {
     currentContext: null,
     currentScenario: null,
     errorMessage: '',
+    errorDetail: undefined,
 });
 
 export function resetAppdata() {
@@ -37,6 +39,7 @@ export function resetAppdata() {
     appdata.currentContext = null;
     appdata.currentScenario = null;
     appdata.errorMessage = '';
+    appdata.errorDetail = undefined;
 }
 
 export const statusMap: Map<number, ActionStatus> = new Map([
@@ -47,9 +50,17 @@ export const statusMap: Map<number, ActionStatus> = new Map([
 ]);
 
 function handleError(context: string, e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const dacInfo = (e as any)?._dacInfo;
+    if (dacInfo) {
+        appdata.errorMessage = dacInfo.message;
+        appdata.errorDetail = dacInfo.detail;
+    } else if (e instanceof Error) {
+        appdata.errorMessage = e.message;
+    } else {
+        appdata.errorMessage = String(e);
+    }
+    appdata.errorDetail = appdata.errorDetail || undefined;
     console.error(`Error in ${context}:`, e);
-    appdata.errorMessage = msg;
 }
 
 export async function initAnalysis(sess_id: string): Promise<() => void> {

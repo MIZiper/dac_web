@@ -4,6 +4,19 @@ from dac.core import ActionNode
 SESSID_KEY = "dac-sess_id"
 
 
+class DACErrorDetail(BaseModel):
+    traceback: str = ""
+    stderr: str = ""
+    endpoint: str = ""
+    timestamp: str = ""
+
+
+class DACErrorResponse(BaseModel):
+    code: int
+    message: str
+    detail: DACErrorDetail | None = None
+
+
 class DACRequest(BaseModel):
     pass
 

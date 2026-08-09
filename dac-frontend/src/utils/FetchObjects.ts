@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { DACErrorInfo, DACErrorDetail } from "../schema";
 
 export const app_prefix = "/app";
 export const api_prefix = "/api";
@@ -47,4 +48,36 @@ export const ax_app = axios.create({
         }
         return config;
     });
+
+    instance.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            const dacInfo: DACErrorInfo = {
+                code: error.response?.status || 0,
+                message: error.message || "Unknown error",
+                detail: undefined,
+            };
+
+            const data = error.response?.data;
+            if (data && typeof data === "object") {
+                if (data.message) {
+                    dacInfo.message = data.message;
+                }
+                if (data.code !== undefined) {
+                    dacInfo.code = data.code;
+                }
+                if (data.detail && typeof data.detail === "object") {
+                    dacInfo.detail = {
+                        traceback: data.detail.traceback,
+                        stderr: data.detail.stderr,
+                        endpoint: data.detail.endpoint || error.config?.url,
+                        timestamp: data.detail.timestamp,
+                    } as DACErrorDetail;
+                }
+            }
+
+            error._dacInfo = dacInfo;
+            return Promise.reject(error);
+        },
+    );
 });
