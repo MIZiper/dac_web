@@ -97,6 +97,8 @@ class KeycloakStatus(BaseModel):
     keycloak_url: str = ""
     keycloak_realm: str = ""
     keycloak_client_id: str = ""
+    admin_role: str = ""
+    admin_available: bool = False
 
 
 class ProjectConfigResp(DACResponse):
@@ -252,3 +254,30 @@ class ImportApplyReq(BaseModel):
 class ImportApplyResp(DACResponse):
     project_id: str
     title: str | None = None
+
+
+class SessionInfo(BaseModel):
+    sess_id: str
+    pid: int | None = None
+    owner_user_id: str | None = None
+    project_id: str | None = None
+    conn_str: str | None = None
+    created_at: str = ""
+    uptime_seconds: float = 0
+    cpu_percent: float | None = None
+    memory_rss_mb: float | None = None
+    returncode: int | None = None
+    status: str = "unknown"
+
+
+class SessionLogs(BaseModel):
+    sess_id: str
+    stdout: str = ""
+    stderr: str = ""
+    log_file_stdout: str | None = None
+    log_file_stderr: str | None = None
+
+
+class AdminSessionsResp(BaseModel):
+    sessions: list[SessionInfo]
+    total: int

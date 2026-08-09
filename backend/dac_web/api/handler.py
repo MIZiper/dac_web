@@ -7,6 +7,8 @@ import asyncio
 import json
 import logging
 import sys
+import time
+import glob as _glob
 from datetime import datetime
 from importlib.metadata import version
 from os import path
@@ -14,6 +16,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import httpx
+import psutil
 from asyncpg import Connection
 from fastapi import APIRouter, HTTPException, Request, Query, Depends
 
@@ -24,7 +27,7 @@ import dac_web.schema as s
 from dac_web.schema import SESSID_KEY
 from dac_web.config import settings
 from dac_web.db.connection import get_db
-from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled
+from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ __VERSION__ = version("miz-dac_web")
 LOG_DIR = settings.log_dir
 APP_LOG_ON = settings.app_log_on
 DBSTORE = settings.dbstore
-STDERR_RING_SIZE = 500
+STDERR_RING_SIZE = settings.log_buffer_size
 STDERR_TAIL_SIZE = 20
 
 
@@ -46,6 +49,12 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
         super().__init__()
         self._stderr_buffers: dict[str, list[str]] = {}
         self._stderr_tasks: dict[str, asyncio.Task] = {}
+        self._stdout_buffers: dict[str, list[str]] = {}
+        self._stdout_tasks: dict[str, asyncio.Task] = {}
+        self._created_at: dict[str, float] = {}
+        self._project_id: dict[str, str | None] = {}
+        self._resource_stats: dict[str, dict] = {}
+        self._process_handles: dict[str, psutil.Process] = {}
 
     def validate_sess(self, sess_id: str) -> bool:
         return sess_id is not None and sess_id in self
@@ -56,6 +65,11 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
     ):
         self[sess_id] = conn_str, app_obj, owner_user_id
         self._stderr_buffers[sess_id] = []
+        self._stdout_buffers[sess_id] = []
+        self._created_at[sess_id] = time.time()
+
+    def set_project_id(self, sess_id: str, project_id: str | None):
+        self._project_id[sess_id] = project_id
 
     def get_sess_conn(self, sess_id: str) -> str:
         conn_str, app_obj, _ = self[sess_id]
@@ -99,13 +113,61 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
         if task and not task.done():
             task.cancel()
 
+    def start_stdout_reader(self, sess_id: str, process: asyncio.subprocess.Process):
+        async def _reader():
+            buf = self._stdout_buffers.get(sess_id, [])
+            try:
+                while process.stdout:
+                    line = await process.stdout.readline()
+                    if not line:
+                        break
+                    decoded = line.decode(errors="replace").rstrip("\n")
+                    buf.append(decoded)
+                    if len(buf) > STDERR_RING_SIZE:
+                        del buf[: len(buf) - STDERR_RING_SIZE]
+                    logger.debug("subprocess stdout [%s]: %s", sess_id[:8], decoded)
+            except Exception:
+                pass
+        self._stdout_tasks[sess_id] = asyncio.create_task(_reader())
+
+    def stop_stdout_reader(self, sess_id: str):
+        task = self._stdout_tasks.pop(sess_id, None)
+        if task and not task.done():
+            task.cancel()
+
+    def get_logs(self, sess_id: str) -> tuple[str, str, str | None, str | None]:
+        """Return (stdout, stderr, log_file_stdout, log_file_stderr) for a session.
+
+        For active sessions, returns buffer contents.
+        For terminated sessions, checks LOG_DIR for saved log files.
+        """
+        if sess_id in self:
+            stdout_buf = self._stdout_buffers.get(sess_id, [])
+            stderr_buf = self._stderr_buffers.get(sess_id, [])
+            return "\n".join(stdout_buf), "\n".join(stderr_buf), None, None
+
+        log_out = None
+        log_err = None
+        if LOG_DIR:
+            stdout_files = _glob.glob(path.join(LOG_DIR, f"*-{sess_id}.out.log"))
+            stderr_files = _glob.glob(path.join(LOG_DIR, f"*-{sess_id}.err.log"))
+            if stdout_files:
+                log_out = stdout_files[0]
+            if stderr_files:
+                log_err = stderr_files[0]
+        return "", "", log_out, log_err
+
     def remove_sess(self, sess_id: str):
         if sess_id in self:
             del self[sess_id]
-        task = self._stderr_tasks.pop(sess_id, None)
-        if task and not task.done():
-            task.cancel()
+        self.stop_stderr_reader(sess_id)
+        self.stop_stdout_reader(sess_id)
         self._stderr_buffers.pop(sess_id, None)
+        self._stdout_buffers.pop(sess_id, None)
+        self._created_at.pop(sess_id, None)
+        self._project_id.pop(sess_id, None)
+        self._resource_stats.pop(sess_id, None)
+        self._process_handles.pop(sess_id, None)
 
     async def _cleanup_orphans(self):
         while True:
@@ -117,6 +179,41 @@ class UserManager(dict[str, tuple[str, asyncio.subprocess.Process, str | None]])
             for sess_id in dead:
                 logger.info("Removing orphaned session: %s", sess_id)
                 self.remove_sess(sess_id)
+
+    async def _collect_resources(self):
+        while True:
+            await asyncio.sleep(10)
+            for sess_id, (_, process, _) in list(self.items()):
+                if process.returncode is not None:
+                    prev = self._resource_stats.get(sess_id, {})
+                    self._resource_stats[sess_id] = {
+                        "cpu_percent": prev.get("cpu_percent"),
+                        "memory_rss": prev.get("memory_rss"),
+                        "status": f"exited({process.returncode})",
+                        "pid": process.pid,
+                    }
+                    continue
+                try:
+                    if sess_id not in self._process_handles:
+                        self._process_handles[sess_id] = psutil.Process(process.pid)
+                    p = self._process_handles[sess_id]
+                    cpu = p.cpu_percent()
+                    mem = p.memory_info().rss
+                    self._resource_stats[sess_id] = {
+                        "cpu_percent": round(cpu, 1),
+                        "memory_rss": mem,
+                        "status": "running",
+                        "pid": process.pid,
+                    }
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    self._resource_stats[sess_id] = {
+                        "cpu_percent": None,
+                        "memory_rss": None,
+                        "status": "exited" if process.returncode is not None else "zombie",
+                        "pid": process.pid,
+                    }
+                except Exception:
+                    pass
 
 
 user_manager = UserManager()
@@ -161,7 +258,10 @@ def _raise_http(status_code: int, message: str, exc: BaseException | None = None
 
 @router.get("/auth/status", response_model=s.KeycloakStatus)
 async def auth_status():
-    return s.KeycloakStatus(**get_keycloak_config())
+    config = get_keycloak_config()
+    config["admin_role"] = settings.admin_role
+    config["admin_available"] = is_keycloak_enabled() or bool(settings.admin_token) or True
+    return s.KeycloakStatus(**config)
 
 
 @router.post("/load", response_model=s.ManProjectResp)
@@ -190,6 +290,7 @@ async def load_project(
                 f"http://{intconnstr}/init", json=config, headers={SESSID_KEY: sess_id}
             )
         if resp.status_code == 200:
+            user_manager.set_project_id(sess_id, project_id)
             return s.ManProjectResp(
                 message="Project loaded",
                 project_id=project_id,
@@ -235,15 +336,18 @@ async def terminate_process_session(request: Request):
         p.terminate()
         if APP_LOG_ON and LOG_DIR:
                 user_manager.stop_stderr_reader(sess_id)
-                out, err = await p.communicate()
+                user_manager.stop_stdout_reader(sess_id)
+                await p.wait()
+                stdout_content = "\n".join(user_manager._stdout_buffers.get(sess_id, []))
+                stderr_content = "\n".join(user_manager._stderr_buffers.get(sess_id, []))
                 stdout_path = path.join(
                     LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
                 )
                 stderr_path = path.join(
                     LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log"
                 )
-                await asyncio.to_thread(Path(stdout_path).write_bytes, out or b"")
-                await asyncio.to_thread(Path(stderr_path).write_bytes, err or b"")
+                await asyncio.to_thread(Path(stdout_path).write_text, stdout_content)
+                await asyncio.to_thread(Path(stderr_path).write_text, stderr_content)
         user_manager.remove_sess(sess_id)
         return s.DACResponse(
             message="Analysis terminated",
@@ -310,6 +414,7 @@ async def save_project(
                 project_id, config, title, signature, user_id, creator_name
             )
 
+        user_manager.set_project_id(sess_id, fin_project_id)
         return s.ManProjectResp(
             message="Project saved",
             project_id=fin_project_id,
@@ -361,8 +466,102 @@ async def start_process_session(owner_user_id: str | None = None):
         )
     port = bline.decode().split("...")[-1].strip()
     user_manager[sess_id] = (f"localhost:{port}", process, owner_user_id)
+    user_manager.start_stdout_reader(sess_id, process)
 
     return sess_id
+
+
+# ----------
+# Admin APIs
+# ----------
+
+
+@router.get("/admin/sessions", response_model=s.AdminSessionsResp)
+async def admin_list_sessions(
+    _: None = Depends(require_admin),
+):
+    sessions: list[s.SessionInfo] = []
+    for sess_id, (conn_str, process, owner) in user_manager.items():
+        created_at = user_manager._created_at.get(sess_id, 0)
+        uptime = time.time() - created_at if created_at else 0
+        stats = user_manager._resource_stats.get(sess_id, {})
+        sessions.append(s.SessionInfo(
+            sess_id=sess_id,
+            pid=process.pid,
+            owner_user_id=owner,
+            project_id=user_manager._project_id.get(sess_id),
+            conn_str=conn_str,
+            created_at=datetime.fromtimestamp(created_at, _timezone.utc).isoformat() if created_at else "",
+            uptime_seconds=round(uptime, 1),
+            cpu_percent=stats.get("cpu_percent"),
+            memory_rss_mb=round(stats["memory_rss"] / 1024 / 1024, 1) if stats.get("memory_rss") else None,
+            returncode=process.returncode,
+            status=stats.get("status", "running" if process.returncode is None else f"exited({process.returncode})"),
+        ))
+    return s.AdminSessionsResp(sessions=sessions, total=len(sessions))
+
+
+@router.post("/admin/sessions/{sess_id}/term", response_model=s.DACResponse)
+async def admin_terminate_session(
+    sess_id: str,
+    _: None = Depends(require_admin),
+):
+    if not user_manager.validate_sess(sess_id):
+        _raise_http(404, "Session not found", endpoint="/api/admin/sessions/term")
+    try:
+        p = user_manager.get_sess_obj(sess_id)
+        p.terminate()
+        if APP_LOG_ON and LOG_DIR:
+            user_manager.stop_stderr_reader(sess_id)
+            user_manager.stop_stdout_reader(sess_id)
+            await p.wait()
+            stdout_content = "\n".join(user_manager._stdout_buffers.get(sess_id, []))
+            stderr_content = "\n".join(user_manager._stderr_buffers.get(sess_id, []))
+            stdout_path = path.join(
+                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.out.log"
+            )
+            stderr_path = path.join(
+                LOG_DIR, f"{datetime.now().strftime('%Y%m%d%H%M%S')}-{sess_id}.err.log"
+            )
+            await asyncio.to_thread(Path(stdout_path).write_text, stdout_content)
+            await asyncio.to_thread(Path(stderr_path).write_text, stderr_content)
+        user_manager.remove_sess(sess_id)
+        return s.DACResponse(message=f"Session {sess_id} terminated")
+    except Exception as e:
+        _raise_http(500, f"Failed to terminate: {str(e)}", exc=e, endpoint="/api/admin/sessions/term")
+
+
+@router.get("/admin/sessions/{sess_id}/logs", response_model=s.SessionLogs)
+async def admin_session_logs(
+    sess_id: str,
+    _: None = Depends(require_admin),
+):
+    stdout_buf, stderr_buf, log_out, log_err = user_manager.get_logs(sess_id)
+
+    stdout_content = stdout_buf
+    stderr_content = stderr_buf
+
+    if log_out:
+        try:
+            stdout_content = await asyncio.to_thread(Path(log_out).read_text)
+        except Exception:
+            pass
+    if log_err:
+        try:
+            stderr_content = await asyncio.to_thread(Path(log_err).read_text)
+        except Exception:
+            pass
+
+    if not stdout_content and not stderr_content and not log_out and not log_err:
+        _raise_http(404, "No logs found for this session", endpoint="/api/admin/sessions/logs")
+
+    return s.SessionLogs(
+        sess_id=sess_id,
+        stdout=stdout_content,
+        stderr=stderr_content,
+        log_file_stdout=log_out,
+        log_file_stderr=log_err,
+    )
 
 
 # -------------

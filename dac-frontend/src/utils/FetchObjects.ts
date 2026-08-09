@@ -7,15 +7,26 @@ const mpl_prefix = "/mpl";
 
 export const FIG_NUM = 1;
 export const SESSID_KEY = "dac-sess_id";
+export const ADMIN_KEY = "X-Admin-Token";
 export const GCK_ID = 'global';
 export const DEFAULT_NAME = '[New Context]';
 export const app_mpl = `${app_prefix}${mpl_prefix}`; // /app/mpl
 export const api_mpl = `${api_prefix}${mpl_prefix}`; // /api/mpl
 
 let _getToken: (() => string | null) | null = null;
+let _adminToken: string | null = null;
 
 export function setAuthTokenProvider(provider: () => string | null) {
     _getToken = provider;
+}
+
+export function setAdminToken(token: string | null) {
+    _adminToken = token;
+    if (token) {
+        ax_api.defaults.headers.common[ADMIN_KEY] = token;
+    } else {
+        delete ax_api.defaults.headers.common[ADMIN_KEY];
+    }
 }
 
 export const ax_api = axios.create({

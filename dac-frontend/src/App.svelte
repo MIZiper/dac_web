@@ -36,6 +36,11 @@
       <NavItem>
         <NavLink href="/projects/new" target="_blank">New Project</NavLink>
       </NavItem>
+      {#if keycloakService.isAdmin}
+        <NavItem>
+          <NavLink href="/admin">Admin</NavLink>
+        </NavItem>
+      {/if}
       {#if keycloakService.enabled}
         {#if keycloakService.authenticated}
           <NavItem>

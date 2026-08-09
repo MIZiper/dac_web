@@ -135,3 +135,34 @@ async def get_current_user(
         "given_name": payload.get("given_name", ""),
         "family_name": payload.get("family_name", ""),
     }
+
+
+async def require_admin(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
+) -> None:
+    """FastAPI dependency: require admin access.
+
+    - Keycloak enabled: checks token has settings.admin_role in resource_access.{client_id}.roles.
+    - Keycloak disabled + admin_token set: checks X-Admin-Token header.
+    - Keycloak disabled + admin_token empty: allows all (dev mode).
+
+    Raises HTTPException(403) on failure, HTTPException(401) if auth required but missing.
+    """
+    if is_keycloak_enabled():
+        if credentials is None:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        token = credentials.credentials
+        payload = await verify_token(token)
+        if payload is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        resource_access = payload.get("resource_access", {})
+        client_roles = resource_access.get(settings.keycloak_client_id, {})
+        roles: list[str] = client_roles.get("roles", [])
+        if settings.admin_role not in roles:
+            raise HTTPException(status_code=403, detail="Admin access required")
+    else:
+        if settings.admin_token:
+            admin_token = request.headers.get("X-Admin-Token", "")
+            if admin_token != settings.admin_token:
+                raise HTTPException(status_code=403, detail="Invalid admin token")

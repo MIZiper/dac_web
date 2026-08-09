@@ -14,17 +14,21 @@ from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
 
 _cleanup_task: asyncio.Task | None = None
+_resource_task: asyncio.Task | None = None
 
 async def lifespan(app: FastAPI):
-    global _cleanup_task
+    global _cleanup_task, _resource_task
     setup_logging()
     await init_pool()
     from dac_web.import_replace.discovery import discover_rules
     discover_rules()
     _cleanup_task = asyncio.create_task(user_manager._cleanup_orphans())
+    _resource_task = asyncio.create_task(user_manager._collect_resources())
     yield
     if _cleanup_task:
         _cleanup_task.cancel()
+    if _resource_task:
+        _resource_task.cancel()
     await close_pool()
 
 tags_metadata = [

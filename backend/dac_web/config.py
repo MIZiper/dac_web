@@ -52,6 +52,15 @@ class Settings(BaseSettings):
     scenario_dir: str = ""
     """Directory for scenario YAML files. Falls back to dac package scenarios/."""
 
+    admin_token: str = ""
+    """Static admin token for non-Keycloak deployments. Sent as X-Admin-Token header."""
+
+    admin_role: str = "dac-admin"
+    """Keycloak realm role name required for admin access."""
+
+    log_buffer_size: int = 2000
+    """Number of lines retained in per-session stdout/stderr ring buffers."""
+
     dac_web_rules_package: str = "dac_web.rules"
     """Python package path for auto-discovering ActionReplacementRule subclasses."""
 
