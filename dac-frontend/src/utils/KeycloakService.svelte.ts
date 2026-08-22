@@ -11,6 +11,8 @@ export const keycloakService: {
     username: string | null;
     userId: string | null;
     token: string | null;
+    isAdmin: boolean;
+    adminAvailable: boolean;
     init: () => Promise<void>;
     login: () => Promise<void>;
     logout: () => Promise<void>;
@@ -22,6 +24,8 @@ export const keycloakService: {
     username: null,
     userId: null,
     token: null,
+    isAdmin: false,
+    adminAvailable: false,
 
     async init() {
         if (_initialized) return;
@@ -35,10 +39,17 @@ export const keycloakService: {
                     keycloak_url: string;
                     keycloak_realm: string;
                     keycloak_client_id: string;
+                    admin_role: string;
+                    admin_available: boolean;
                 };
+
+                keycloakService.adminAvailable = config.admin_available;
 
                 if (!config.keycloak_enabled) {
                     keycloakService.enabled = false;
+                    if (config.admin_available) {
+                        keycloakService.isAdmin = true;
+                    }
                     _initialized = true;
                     return;
                 }
@@ -63,6 +74,9 @@ export const keycloakService: {
                         keycloakService.username =
                             _kc.tokenParsed.given_name || _kc.tokenParsed.preferred_username || null;
                         keycloakService.userId = _kc.tokenParsed.sub || null;
+                        const resourceAccess: Record<string, { roles?: string[] }> = _kc.tokenParsed.resource_access || {};
+                        const clientRoles: string[] = resourceAccess[config.keycloak_client_id]?.roles || [];
+                        keycloakService.isAdmin = clientRoles.includes(config.admin_role);
                     }
 
                     _kc.onTokenExpired = () => {

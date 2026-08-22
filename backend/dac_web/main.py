@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from dac_web.config import settings, setup_logging
 from dac_web.db.connection import init_pool, close_pool
 
 from dac_web.api.rev_proxy import router as rev_router
@@ -13,16 +14,21 @@ from dac_web.app.handler import router as app_doc_router
 from dac_web.webagg_starlette import app as mpl_app
 
 _cleanup_task: asyncio.Task | None = None
+_resource_task: asyncio.Task | None = None
 
 async def lifespan(app: FastAPI):
-    global _cleanup_task
+    global _cleanup_task, _resource_task
+    setup_logging()
     await init_pool()
     from dac_web.import_replace.discovery import discover_rules
     discover_rules()
     _cleanup_task = asyncio.create_task(user_manager._cleanup_orphans())
+    _resource_task = asyncio.create_task(user_manager._collect_resources())
     yield
     if _cleanup_task:
         _cleanup_task.cancel()
+    if _resource_task:
+        _resource_task.cancel()
     await close_pool()
 
 tags_metadata = [
@@ -43,8 +49,8 @@ app.include_router(
     app_doc_router, prefix="/app", tags=["APP"]
 )  # for /docs purpose only, and seems the /app routing is overshadowed by rev_router (๑•̀ㅂ•́)و✧
 
-FRONTEND_DIST = os.getenv("FRONTEND_DIST")
-if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):
+FRONTEND_DIST = settings.frontend_dist
+if FRONTEND_DIST and os.path.isdir(FRONTEND_DIST):
     app.mount("/static", StaticFiles(directory=FRONTEND_DIST), name="static")
 
     @app.get("/")
