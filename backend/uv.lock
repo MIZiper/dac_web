@@ -484,7 +484,7 @@ wheels = [
 
 [[package]]
 name = "miz-dac"
-version = "0.7.0"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -494,14 +494,14 @@ dependencies = [
     { name = "pyyaml" },
     { name = "scipy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/b6/3e261286d2b40defeed3b5398ca23b1a55ae60395aa54d71ffc7a5a0a0f3/miz_dac-0.7.0.tar.gz", hash = "sha256:5240562983cae5b4cddc5d50619fdc0bcd416020c0c3fe7c1ba3b4b05cf51d3d", size = 201965, upload-time = "2026-07-16T20:18:19.016Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/d4/71b7b3a0c1f278b95442c734767f6ed7eb634846878d259985a8c61e305b/miz_dac-0.7.1.tar.gz", hash = "sha256:76ae3a6340c6bab20a830e5bc8b63b8ef7f381f934696065cd880adab56e6131", size = 214432, upload-time = "2026-08-22T14:12:24.455Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/8c/eebdf09e0d26991d7a7a69714bf8eec04132da1cd9faad5ea253a4983395/miz_dac-0.7.0-py3-none-any.whl", hash = "sha256:f18904411166fd4cabdabe07211074fc9587710658e6f9ca35deeb2079790e84", size = 104510, upload-time = "2026-07-16T20:18:17.942Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/b2/4171ab5e9b84767f61f78136f1348151f2186acfd0c7980cd85a08955420/miz_dac-0.7.1-py3-none-any.whl", hash = "sha256:f4e76a6dd7938a2e7d09fe6aa43227a9b54d48b737823b2f5dc47fff9da44207", size = 117018, upload-time = "2026-08-22T14:12:22.881Z" },
 ]
 
 [[package]]
 name = "miz-dac-web"
-version = "0.3.0.dev1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
@@ -524,7 +524,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
-    { name = "miz-dac", specifier = ">=0.7.0" },
+    { name = "miz-dac", specifier = ">=0.7.1" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },

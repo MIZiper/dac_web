@@ -1,6 +1,6 @@
 {
   "name": "@mizip/dac_web",
-  "version": "0.3.0-dev.1",
+  "version": "0.3.0",
   "description": "DAC web version frontend with Svelte",
   "keywords": [
     "dac",
