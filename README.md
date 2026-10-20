@@ -82,6 +82,8 @@ podman run -p 8000:8000 dac_web
 | `LOG_DIR` | `/app/storage/logs` | Session output logs |
 | `APP_LOG_ON` | `1` | Capture session subprocess stdout/stderr on termination |
 
+For local development and the container defaults, Keycloak uses realm `master` and client ID `miz`. Authentication stays disabled while `KEYCLOAK_URL` is empty.
+
 ### Storage structure
 
 With file storage (`DBSTORE=false`), analysis settings are stored under:
@@ -110,6 +112,8 @@ cd dac-frontend && pnpm build
 # Backend
 cd backend && uv run uvicorn dac_web.main:app --host 0.0.0.0 --port 8000
 ```
+
+Local VS Code tasks use the fixed development ports PostgreSQL `5431`, backend `8031` and frontend `5131`; the container keeps port `8000` internally.
 
 ## License
 

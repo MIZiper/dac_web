@@ -26,8 +26,9 @@
                     "PROJECT_DIR": "./storage/projects/",
                     "POSTGRES_PORT": "5431",
                     "KEYCLOAK_URL": "http://localhost:8080",
-                    "KEYCLOAK_REALM": "miz",
-                    "KEYCLOAK_CLIENT_ID": "dac-frontend",
+                    "KEYCLOAK_URL_PUBLIC": "http://localhost:8080",
+                    "KEYCLOAK_REALM": "master",
+                    "KEYCLOAK_CLIENT_ID": "miz",
                     "KEYCLOAK_CLIENT_SECRET": "",
             }
         }
