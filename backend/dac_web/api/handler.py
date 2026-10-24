@@ -28,6 +28,7 @@ from dac_web.schema import SESSID_KEY
 from dac_web.config import settings
 from dac_web.db.connection import get_db
 from dac_web.auth import get_current_user, get_keycloak_config, is_keycloak_enabled, require_admin
+from dac_web import external
 
 logger = logging.getLogger(__name__)
 
@@ -375,6 +376,13 @@ async def save_project(
 
     project_id = data.project_id
     title = data.title
+    token = _bearer_token(request)
+
+    external_link = None
+    if project_id and project_id != "new":
+        existing_content = await read_project_content(project_id, conn)
+        external_link = _external_link(existing_content)
+        await _assert_link_editable(external_link, token)
 
     creator_name = None
     if current_user is not None:
@@ -407,11 +415,13 @@ async def save_project(
             if conn is None:
                 _raise_http(503, "Database not available", endpoint="/api/save")
             fin_project_id = await save_project_config(
-                project_id, config, title, signature, conn, user_id, creator_name
+                project_id, config, title, signature, conn, user_id, creator_name,
+                external_link,
             )
         else:
             fin_project_id = await save_project_config_file(
-                project_id, config, title, signature, user_id, creator_name
+                project_id, config, title, signature, user_id, creator_name,
+                external_link,
             )
 
         user_manager.set_project_id(sess_id, fin_project_id)
@@ -591,7 +601,8 @@ async def get_project_list(
         f"""
         SELECT n.id, n.created_at, n.updated_at,
                n.content->'dac_web'->>'title' as title,
-               n.content->'dac_web'->>'creator_name' as creator_name
+               n.content->'dac_web'->>'creator_name' as creator_name,
+               n.content->'dac_web'->'external_link' as external_link
         FROM nodes n
         {where_clause}
         ORDER BY n.created_at DESC
@@ -608,6 +619,11 @@ async def get_project_list(
             updated_at=r["updated_at"].isoformat(),
             title=r["title"],
             creator_name=r["creator_name"],
+            external_link=(
+                json.loads(r["external_link"])
+                if isinstance(r["external_link"], str)
+                else r["external_link"]
+            ) if r["external_link"] else None,
         )
         for r in rows
     ]
@@ -618,6 +634,156 @@ async def get_project_list(
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get("/projects/{project_id}/external-link", response_model=s.ExternalLinkResp)
+async def get_project_external_link(
+    project_id: str,
+    request: Request,
+    conn: Connection | None = Depends(get_db),
+):
+    content = await read_project_content(project_id, conn)
+    if content is None:
+        _raise_http(404, "Project not found")
+    link = _external_link(content)
+    if link is None:
+        return s.ExternalLinkResp(message="Project is not linked", linked=False)
+
+    token = _bearer_token(request)
+    try:
+        state = await external.get_state(token, link["external_id"])
+    except external.ExternalError:
+        return s.ExternalLinkResp(
+            message="External state unavailable",
+            linked=True,
+            link=s.ExternalLinkInfo(**link),
+            reachable=False,
+        )
+
+    refreshed = _external_link_from_state(state)
+    return s.ExternalLinkResp(
+        message="Project link refreshed",
+        linked=True,
+        link=s.ExternalLinkInfo(**refreshed),
+    )
+
+
+@router.get(
+    "/projects/{project_id}/external-link/candidates",
+    response_model=s.ExternalCandidatesResp,
+)
+async def list_external_link_candidates(
+    project_id: str,
+    request: Request,
+    q: str = Query(""),
+    page_size: int = Query(20, ge=1, le=100),
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    content = await read_project_content(project_id, conn)
+    if content is None:
+        _raise_http(404, "Project not found")
+    _check_project_owner(content, current_user)
+
+    try:
+        items = await external.query_candidates(
+            _bearer_token(request), q, page_size
+        )
+    except external.ExternalError as exc:
+        _raise_http(503, exc.detail, endpoint="/api/projects/external-link/candidates")
+    return s.ExternalCandidatesResp(message="Candidates retrieved", items=items)
+
+
+@router.put("/projects/{project_id}/external-link", response_model=s.ExternalLinkResp)
+async def link_project_external(
+    project_id: str,
+    body: s.ExternalLinkReq,
+    request: Request,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    content = await read_project_content(project_id, conn)
+    if content is None:
+        _raise_http(404, "Project not found")
+    _check_project_owner(content, current_user)
+
+    existing = _external_link(content)
+    if existing and existing.get("external_id") != body.external_id:
+        _raise_http(409, "Project is already linked to another external node")
+
+    token = _bearer_token(request)
+    try:
+        state = await external.get_state(token, body.external_id)
+        if state.get("data_type") != "dac_web.project":
+            _raise_http(400, "External node must be of type dac_web.project")
+        if state.get("source_system") and not (
+            state.get("source_system") == "dac_web"
+            and state.get("source_id") == project_id
+        ):
+            _raise_http(409, "External node is already linked to another resource")
+        state = await external.attach_source(token, body.external_id, project_id)
+    except external.ExternalError as exc:
+        if exc.status_code in (401, 403, 404):
+            _raise_http(exc.status_code, exc.detail)
+        _raise_http(503, exc.detail)
+
+    link = _external_link_from_state(state)
+    content.setdefault("dac_web", {})["external_link"] = link
+    try:
+        await write_project_content(project_id, content, conn)
+    except Exception:
+        try:
+            await external.detach_source(token, body.external_id)
+        except external.ExternalError:
+            pass
+        raise
+
+    return s.ExternalLinkResp(
+        message="Project linked",
+        linked=True,
+        link=s.ExternalLinkInfo(**link),
+    )
+
+
+@router.delete("/projects/{project_id}/external-link", response_model=s.ExternalLinkResp)
+async def unlink_project_external(
+    project_id: str,
+    request: Request,
+    conn: Connection | None = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user),
+):
+    content = await read_project_content(project_id, conn)
+    if content is None:
+        _raise_http(404, "Project not found")
+    _check_project_owner(content, current_user)
+
+    link = _external_link(content)
+    if link is None:
+        _raise_http(404, "Project is not linked")
+
+    token = _bearer_token(request)
+    try:
+        state = await external.get_state(token, link["external_id"])
+        if external.is_frozen(state.get("status")):
+            _raise_http(
+                423,
+                f"Resource is read-only while external status is '{state.get('status')}'",
+            )
+        await external.detach_source(token, link["external_id"])
+    except external.ExternalError as exc:
+        if exc.status_code == 404:
+            pass
+        elif exc.status_code in (401, 403):
+            _raise_http(exc.status_code, exc.detail)
+        else:
+            _raise_http(503, exc.detail)
+
+    (content.get("dac_web") or {}).pop("external_link", None)
+    await write_project_content(project_id, content, conn)
+    return s.ExternalLinkResp(
+        message="Project unlinked",
+        linked=False,
     )
 
 
@@ -653,9 +819,99 @@ async def read_project_config(project_id: str, conn: Connection) -> tuple[dict |
     return content.get("dac"), content.get("dac_web", {}).get("title")
 
 
+async def read_project_content(
+    project_id: str, conn: Connection | None = None
+) -> dict | None:
+    if DBSTORE:
+        if conn is None:
+            return None
+        row = await conn.fetchrow(
+            "SELECT content FROM nodes WHERE id = $1::uuid AND valid = TRUE",
+            project_id,
+        )
+        return json.loads(row["content"]) if row else None
+    return await read_project_full_config_file(project_id)
+
+
+async def write_project_content(
+    project_id: str, content: dict, conn: Connection | None = None
+) -> None:
+    if DBSTORE:
+        if conn is None:
+            _raise_http(503, "Database not available", endpoint="/api/projects")
+        await conn.execute(
+            "UPDATE nodes SET content = $1::jsonb WHERE id = $2::uuid",
+            json.dumps(content),
+            project_id,
+        )
+        return
+    if "/" in project_id or "\\" in project_id or ".." in project_id:
+        _raise_http(400, "Invalid project ID")
+    project_fpath = path.join(PROJDIR, project_id)
+    await asyncio.to_thread(
+        Path(project_fpath).write_text, json.dumps(content, indent=2)
+    )
+
+
+def _bearer_token(request: Request) -> str | None:
+    value = request.headers.get("Authorization", "")
+    if value.lower().startswith("bearer "):
+        return value[7:].strip()
+    return None
+
+
+def _external_link(content: dict | None) -> dict | None:
+    if not content:
+        return None
+    link = (content.get("dac_web") or {}).get("external_link")
+    return link if isinstance(link, dict) else None
+
+
+def _external_link_from_state(state: dict, link: dict | None = None) -> dict:
+    now = datetime.now(_timezone.utc).isoformat()
+    return {
+        "provider": settings.external_system,
+        "external_id": str(state["id"]),
+        "external_url": external.external_url(str(state["id"])),
+        "status": state.get("status") or "draft",
+        "status_updated_at": state.get("updated_at"),
+        "checked_at": now,
+        "frozen": external.is_frozen(state.get("status")),
+    }
+
+
+def _check_project_owner(content: dict, current_user: dict | None) -> None:
+    if current_user is None:
+        if is_keycloak_enabled():
+            _raise_http(401, "Authentication required", endpoint="/api/projects")
+        return
+    owner = (content.get("dac_web") or {}).get("user_id")
+    if owner and owner != current_user.get("sub"):
+        _raise_http(403, "Project is owned by another user", endpoint="/api/projects")
+
+
+async def _assert_link_editable(
+    link: dict | None, token: str | None
+) -> None:
+    if not link:
+        return
+    try:
+        state = await external.get_state(token, link["external_id"])
+    except external.ExternalError as exc:
+        if exc.status_code == 404:
+            _raise_http(409, "Linked external node no longer exists")
+        _raise_http(503, "Cannot verify external resource status")
+    if external.is_frozen(state.get("status")):
+        _raise_http(
+            423,
+            f"Resource is read-only while external status is '{state.get('status')}'",
+        )
+
+
 async def save_project_config_file(
     project_id: str, config: dict, title: str, signature: str,
     user_id: str | None = None, creator_name: str | None = None,
+    external_link: dict | None = None,
 ) -> str:
     dac_web_config = {
         "signature": signature,
@@ -681,6 +937,8 @@ async def save_project_config_file(
 
     if user_id:
         dac_web_config["user_id"] = user_id
+    if external_link and fin_project_id == project_id:
+        dac_web_config["external_link"] = external_link
 
     project_fpath = path.join(PROJDIR, fin_project_id)
     content_str = json.dumps(
@@ -720,7 +978,7 @@ async def export_project(
     dac_web_full = content.get("dac_web", {})
     dac_web_meta = {
         k: v for k, v in dac_web_full.items()
-        if k not in ("signature", "user_id")
+        if k not in ("signature", "user_id", "external_link")
     }
 
     return s.ProjectExportResp(
@@ -785,12 +1043,15 @@ async def import_project(
 async def save_project_config(
     project_id: str, config: dict, title: str, signature: str, conn: Connection,
     user_id: str | None = None, creator_name: str | None = None,
+    external_link: dict | None = None,
 ) -> str:
     dac_web: dict = {"version": __VERSION__}
     if title:
         dac_web["title"] = title
     if creator_name:
         dac_web["creator_name"] = creator_name
+    if user_id:
+        dac_web["user_id"] = user_id
     content = {"dac": config, "dac_web": dac_web}
     content_json = json.dumps(content)
 
@@ -823,9 +1084,13 @@ async def save_project_config(
                         project_id,
                     )
                 else:
+                    linked_web = dict(dac_web)
+                    if external_link:
+                        linked_web["external_link"] = external_link
+                    linked_json = json.dumps({"dac": config, "dac_web": linked_web})
                     await conn.execute(
                         "UPDATE nodes SET content = $1::jsonb, creator_signature = $2, user_id = $3 WHERE id = $4::uuid",
-                        content_json,
+                        linked_json,
                         signature,
                         user_id,
                         project_id,

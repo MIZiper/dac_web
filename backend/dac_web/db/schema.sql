@@ -1,3 +1,5 @@
+-- Deprecated: publication/review status is owned by the external TC system.
+-- Kept only for existing databases; new code does not read or write this table.
 CREATE TYPE PubStatus AS ENUM ('Registered', 'Approved', 'Rejected', 'Deleted');
 
 CREATE TABLE IF NOT EXISTS nodes (
@@ -30,6 +32,7 @@ CREATE TABLE IF NOT EXISTS histories (
     FOREIGN KEY (inherit_from_id) REFERENCES nodes(id) ON DELETE CASCADE
 );
 
+-- Deprecated: see PubStatus above.
 CREATE TABLE IF NOT EXISTS publishes (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     title VARCHAR(50),

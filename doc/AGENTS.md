@@ -9,13 +9,13 @@ DAC Web is a browser-based data analysis application using the DAC (Data Action 
 ```
 Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess (random port)
                           │                           │
-                    PostgreSQL (nodes, publishes)    matplotlib WebAgg
+                    PostgreSQL (nodes, histories)    matplotlib WebAgg
 ```
 
 - **Frontend**: Svelte 5 SPA served as static files by FastAPI in production
 - **Backend**: FastAPI manages sessions, proxies `/app/*` to session subprocesses
 - **Sessions**: Each analysis session is a Python subprocess (`dac_web.app.entry`), isolated by UUID
-- **Storage**: PostgreSQL (`nodes` table for projects, `publishes` for published/shared), or flat JSON files if DB unavailable
+- **Storage**: PostgreSQL (`nodes` table for projects, `histories` for inheritance), or flat JSON files if DB unavailable. The old `publishes` table is deprecated; publication/status is owned by an external TC system.
 
 ## Directory Layout
 
@@ -39,7 +39,7 @@ Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess
 │       │   └── handler.py             # DAC framework routes: data/context/action CRUD
 │       └── db/
 │           ├── connection.py          # asyncpg pool, get_db() dependency
-│           └── schema.sql             # tables: nodes, histories, publishes
+│           └── schema.sql             # tables: nodes, histories (publishes deprecated)
 ├── dac-frontend/                      # PRIMARY frontend (Svelte 5)
 │   ├── package.json                   # deps: svelte, @sveltestrap/sveltestrap, sv-router, axios
 │   ├── vite.config.ts                 # proxies /api, /app, /api/mpl to backend
@@ -61,7 +61,7 @@ Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess
 │       │   ├── MplCanvas.svelte       # matplotlib WebAgg canvas
 │       │   ├── ScenarioList.svelte    # navbar scenario selector
 │       │   ├── DataNode.svelte        # recursive tree node
-│       │   ├── SaveProjectDropdown.svelte  # navbar save/publish
+│       │   ├── SaveProjectDropdown.svelte  # navbar save / save as
 │       │   └── StatsTable.svelte      # modal stats table
 │       ├── tasks/
 │       │   ├── TaskRouter.svelte.ts   # action_type → modal component mapping
@@ -72,7 +72,7 @@ Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess
 ├── frontend/                          # LEGACY Vue 3 + Vuetify frontend
 ├── storage/
 │   ├── projects/                      # active project .json files
-│   ├── projects_save/                 # published/shared projects
+│   ├── projects_save/                 # legacy published/shared project files
 │   └── logs/                          # session output logs
 └── test/
 ```
@@ -98,7 +98,7 @@ Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess
 ### Database
 - **`nodes`**: `id UUID`, `content JSONB`, `creator_signature VARCHAR(20)`, `valid BOOLEAN`
 - **`histories`**: tracks inheritance chain (`node_id` → `inherit_from_id`)
-- **`publishes`**: `title`, `status` (Registered/Approved/Rejected/Deleted), `node_id`
+- **`publishes`**: deprecated; status is now read from the linked external system
 - Config stored as `{"dac": {...}, "dac_web": {"version": ..., "signature": ...}}`
 
 ### Routes (sv-router hash-based)
@@ -131,6 +131,7 @@ cd dac-frontend && pnpm build
 
 # Backend run
 cd backend && uv run uvicorn dac_web.main:app --host 0.0.0.0 --port 8000
+# Local VS Code tasks use fixed ports: PostgreSQL 5431, backend 8031, frontend 5131.
 
 # Docker build
 podman build -t dac_web .

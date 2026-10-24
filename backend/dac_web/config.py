@@ -43,6 +43,21 @@ class Settings(BaseSettings):
     project_save_dir: str = "./storage/projects_save"
     """Directory for published/shared project JSON files (file-based storage)."""
 
+    external_system: str = "tc"
+    """External catalog/process system used for resource links (tc or windchill)."""
+
+    external_system_url: str = "http://localhost:8030"
+    """Backend base URL of the external system."""
+
+    external_system_ui_url: str = "http://localhost:5130"
+    """Browser base URL used to generate external links."""
+
+    external_frozen_statuses: str = "pending_review,published,archived"
+    """Comma-separated external statuses that make a linked resource read-only."""
+
+    public_base_url: str = "http://localhost:5131"
+    """Browser base URL of this application, used when linking source resources."""
+
     frontend_dist: str = ""
     """Path to built Svelte frontend. When set, FastAPI serves the SPA."""
 
@@ -55,7 +70,7 @@ class Settings(BaseSettings):
     admin_token: str = ""
     """Static admin token for non-Keycloak deployments. Sent as X-Admin-Token header."""
 
-    admin_role: str = "dac-admin"
+    admin_role: str = "tap:admin"
     """Keycloak realm role name required for admin access."""
 
     log_buffer_size: int = 2000

@@ -46,6 +46,7 @@
     import { taskHolder } from "../tasks/TaskRouter.svelte";
     import StatsTable from "../lib/StatsTable.svelte";
     import SaveProjectDropdown from "../lib/SaveProjectDropdown.svelte";
+    import ExternalLinkPanel from "../lib/ExternalLinkPanel.svelte";
     import { keycloakService } from "../utils/KeycloakService.svelte";
 
     let loading = $state(0);
@@ -58,8 +59,10 @@
 
     const router = getContext<{ route: { getParams: (p: string) => void; params: { id: string } }; navigate: (p: string, opts?: any) => void }>("router");
     router.route.getParams("/projects/:id");
-    let project_id = router.route.params.id;
+    let project_id = $state(router.route.params.id);
     let projectTitle = $state("");
+    let externalFrozen = $state(false);
+    let externalStatus = $state("");
 
     let config_in: Record<string, any> = $state({});
     let onTaskDone: ((c: Record<string, any> | null) => void) | null =
@@ -260,7 +263,7 @@
         });
         es.addEventListener("error", (e) => {
             try {
-                const err = JSON.parse(e.data);
+                const err = JSON.parse((e as MessageEvent).data);
                 message = err.message || "Subprocess error";
                 if (err.detail) {
                     errorDetail = err.detail;
@@ -286,7 +289,11 @@
 </script>
 
 {#snippet contextMenuSnippet()}
-    <SaveProjectDropdown onSaveProject={saveProjectHandler} {projectTitle} />
+    <SaveProjectDropdown
+        onSaveProject={saveProjectHandler}
+        {projectTitle}
+        readOnly={externalFrozen}
+    />
     <ScenarioList
         scenarios={appdata.scenarios}
         currentScenario={appdata.currentScenario}
@@ -299,6 +306,21 @@
     <Alert color="warning" class="mb-0 py-2 text-center">
         You are not logged in. You can view and run analyses, but <b>saving is disabled</b>.
         <button class="btn btn-link btn-sm p-0 ms-2" onclick={() => keycloakService.login()}>Login now</button>
+    </Alert>
+{/if}
+<div class="px-2 pt-2">
+    <ExternalLinkPanel
+        projectId={project_id}
+        onchange={(state) => {
+            externalFrozen = state.frozen;
+            externalStatus = state.status || "";
+        }}
+    />
+</div>
+{#if externalFrozen}
+    <Alert color="warning" class="mb-0 py-2 text-center">
+        This project is read-only because its TC status is <b>{externalStatus || "frozen"}</b>.
+        Save is disabled, but <b>Save As</b> is still available.
     </Alert>
 {/if}
 <div id="toast-holder">

@@ -12,7 +12,7 @@ import NameEditor from "./NameEditor.svelte";
 import DataNodePicker from "./DataNodePicker.svelte";
 
 export const taskHolder: {
-    mapping: Record<string, [[string, Component<TaskBaseProps>]]>,
+    mapping: Record<string, [string, Component<TaskBaseProps>][]>,
     defaults: Record<string, [string, Component]>,
     currentComponent: Component<TaskBaseProps> | null,
 } = $state({

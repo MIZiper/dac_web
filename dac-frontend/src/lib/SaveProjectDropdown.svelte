@@ -16,6 +16,7 @@
     let {
         onSaveProject,
         projectTitle = "",
+        readOnly = false,
     }: {
         onSaveProject: (
             hashed_signature: string,
@@ -23,6 +24,7 @@
             saveAs: boolean,
         ) => void;
         projectTitle?: string;
+        readOnly?: boolean;
     } = $props();
 
     let title = $state("");
@@ -70,6 +72,10 @@
 
             <p class="mt-2" style="width: 400px; text-wrap-mode: wrap;">
                 {#if keycloakService.enabled}
+                    {#if readOnly}
+                        <span class="text-danger"><b>This project is read-only.</b> Save As creates an unlinked copy.</span>
+                        <br />
+                    {/if}
                     <b>Save and identity</b> <br />
                     One analysis project can only be overwritten by the same user.
                     If you are not the original creator, a new project id will be
@@ -88,7 +94,7 @@
                         <Input placeholder="Project title" bind:value={title} />
                     </Col>
                     <Col xs="auto" class="px-0">
-                        <Button color="primary" onclick={() => doSave(false)}
+                        <Button color="primary" disabled={readOnly} onclick={() => doSave(false)}
                             >Save</Button
                         >
                     </Col>

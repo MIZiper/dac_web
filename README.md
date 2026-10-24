@@ -20,6 +20,7 @@ DAC web is a browser-based data analysis application built on the [DAC](http://g
 - **Import / export** — export project configs and import them back, with a two-phase preview that proposes action replacements for review
 - **Optional authentication** — Keycloak-based login (JWT); degrades gracefully when disabled
 - **Dual storage** — PostgreSQL or flat JSON files, controlled by `DBSTORE`
+- **TC catalog links** — link projects to metadata-only TC nodes; TC status controls read-only, while Save As remains available
 
 ## Architecture
 
@@ -75,6 +76,12 @@ podman run -p 8000:8000 dac_web
 | `KEYCLOAK_REALM` | `` | Keycloak realm |
 | `KEYCLOAK_CLIENT_ID` | `` | Keycloak client ID |
 | `KEYCLOAK_CLIENT_SECRET` | `` | Keycloak client secret |
+| `ADMIN_ROLE` | `tap:admin` | Keycloak role required for admin access |
+| `EXTERNAL_SYSTEM` | `tc` | External catalog/process system (`tc`; WindChill planned) |
+| `EXTERNAL_SYSTEM_URL` | `http://localhost:8030` | External system API base URL |
+| `EXTERNAL_SYSTEM_UI_URL` | `http://localhost:5130` | External system browser URL |
+| `EXTERNAL_FROZEN_STATUSES` | `pending_review,published,archived` | External statuses that lock the project |
+| `PUBLIC_BASE_URL` | `http://localhost:5131` | Public URL written into TC source links |
 | `FRONTEND_DIST` | `/app/frontend-dist` | Directory containing the built frontend |
 | `PROJECT_DIR` | `/app/storage/projects` | Active project files (file storage) |
 | `PROJECT_SAVE_DIR` | `/app/storage/projects_save` | Published/shared projects (file storage) |
@@ -95,7 +102,7 @@ storage/
 └── logs/           # session output logs
 ```
 
-With PostgreSQL (`DBSTORE=true`), projects live in the `nodes` table, with `histories` tracking the inheritance chain and `publishes` recording published projects. See `backend/dac_web/db/schema.sql`.
+With PostgreSQL (`DBSTORE=true`), projects live in the `nodes` table, with `histories` tracking the inheritance chain. The old `publishes` table is deprecated; publication/status metadata now lives in the linked external system (TC). See `backend/dac_web/db/schema.sql`.
 
 ## Development
 

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import {
+        Badge,
         Button,
         Card,
         CardBody,
@@ -104,6 +105,18 @@
                                     {p.creator_name}
                                 {:else}
                                     <span class="text-muted">&mdash;</span>
+                                {/if}
+                                {#if p.external_link}
+                                    <a
+                                        class="ms-2 text-decoration-none"
+                                        href={p.external_link.external_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <Badge color={p.external_link.frozen ? "warning" : "secondary"}>
+                                            TC: {p.external_link.status}
+                                        </Badge>
+                                    </a>
                                 {/if}
                             </CardSubtitle>
                             <CardText class="text-muted small mb-1">

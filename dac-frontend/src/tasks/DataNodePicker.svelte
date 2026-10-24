@@ -72,7 +72,7 @@
             <select
                 class="form-select"
                 bind:value={selectedQname}
-                size={String(Math.min(groups.reduce((s, [, ns]) => s + ns.length, 0) + groups.length, 12))}
+                size={Math.min(groups.reduce((s, [, ns]) => s + ns.length, 0) + groups.length, 12)}
             >
                 <option value="" disabled>-- choose a data node --</option>
                 {#each groups as [typePath, nodes] (typePath)}

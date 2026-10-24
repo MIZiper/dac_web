@@ -113,6 +113,13 @@ export interface ProjectItem {
     updated_at: string;
     title: string | null;
     creator_name: string | null;
+    external_link?: {
+        provider: string;
+        external_id: string;
+        external_url: string;
+        status: string;
+        frozen: boolean;
+    } | null;
 }
 
 export interface ProjectListResponse {

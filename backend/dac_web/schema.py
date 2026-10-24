@@ -171,6 +171,7 @@ class ProjectItem(BaseModel):
     updated_at: str
     title: str | None = None
     creator_name: str | None = None
+    external_link: dict | None = None
 
 
 class ProjectListResp(DACResponse):
@@ -178,6 +179,30 @@ class ProjectListResp(DACResponse):
     total: int
     page: int
     page_size: int
+
+
+class ExternalLinkInfo(BaseModel):
+    provider: str
+    external_id: str
+    external_url: str
+    status: str
+    status_updated_at: str | None = None
+    checked_at: str | None = None
+    frozen: bool = False
+
+
+class ExternalLinkReq(BaseModel):
+    external_id: str
+
+
+class ExternalLinkResp(DACResponse):
+    linked: bool
+    link: ExternalLinkInfo | None = None
+    reachable: bool = True
+
+
+class ExternalCandidatesResp(DACResponse):
+    items: list[dict]
 
 
 class ProjectExportResp(DACResponse):

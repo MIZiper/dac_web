@@ -41,6 +41,11 @@
                     "KEYCLOAK_REALM": "master",
                     "KEYCLOAK_CLIENT_ID": "miz",
                     "KEYCLOAK_CLIENT_SECRET": "",
+                    "PUBLIC_BASE_URL": "http://localhost:5131",
+                    "EXTERNAL_SYSTEM": "tc",
+                    "EXTERNAL_SYSTEM_URL": "http://localhost:8030",
+                    "EXTERNAL_SYSTEM_UI_URL": "http://localhost:5130",
+                    "EXTERNAL_FROZEN_STATUSES": "pending_review,published,archived",
                 }
             }
         },

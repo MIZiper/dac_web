@@ -76,7 +76,9 @@ export const keycloakService: {
                         keycloakService.userId = _kc.tokenParsed.sub || null;
                         const resourceAccess: Record<string, { roles?: string[] }> = _kc.tokenParsed.resource_access || {};
                         const clientRoles: string[] = resourceAccess[config.keycloak_client_id]?.roles || [];
-                        keycloakService.isAdmin = clientRoles.includes(config.admin_role);
+                        const realmRoles: string[] = _kc.tokenParsed.realm_access?.roles || [];
+                        const roles = new Set([...clientRoles, ...realmRoles]);
+                        keycloakService.isAdmin = roles.has(config.admin_role);
                     }
 
                     _kc.onTokenExpired = () => {

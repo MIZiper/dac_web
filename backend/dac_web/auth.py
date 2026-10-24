@@ -143,7 +143,7 @@ async def require_admin(
 ) -> None:
     """FastAPI dependency: require admin access.
 
-    - Keycloak enabled: checks token has settings.admin_role in resource_access.{client_id}.roles.
+    - Keycloak enabled: checks token has settings.admin_role in client or realm roles.
     - Keycloak disabled + admin_token set: checks X-Admin-Token header.
     - Keycloak disabled + admin_token empty: allows all (dev mode).
 
@@ -158,7 +158,8 @@ async def require_admin(
             raise HTTPException(status_code=401, detail="Invalid or expired token")
         resource_access = payload.get("resource_access", {})
         client_roles = resource_access.get(settings.keycloak_client_id, {})
-        roles: list[str] = client_roles.get("roles", [])
+        roles = set(client_roles.get("roles", []))
+        roles.update(payload.get("realm_access", {}).get("roles", []))
         if settings.admin_role not in roles:
             raise HTTPException(status_code=403, detail="Admin access required")
     else:
