@@ -16,6 +16,8 @@ Browser (SPA) ──→ FastAPI backend (:8000) ──→ per-session subprocess
 - **Backend**: FastAPI manages sessions, proxies `/app/*` to session subprocesses
 - **Sessions**: Each analysis session is a Python subprocess (`dac_web.app.entry`), isolated by UUID
 - **Storage**: PostgreSQL (`nodes` table for projects, `histories` for inheritance), or flat JSON files if DB unavailable. The old `publishes` table is deprecated; publication/status is owned by an external TC system.
+- **TC links**: users create a `SourceItem.v00` in TC, then link it from `ExternalLinkPanel`; the backend sends `data_type=dac_web.project` and TC flips the node type. Frozen status is read from `state.frozen` with `EXTERNAL_FROZEN_STATUSES` as fallback.
+- **TC push**: `PushDataToTCAction` (registered in `dac_web/scenarios/0.base.yaml`) converts `TimeData`/`FreqDomainData` to `Tabular.v00` and calls `PUT /api/nodes/{id}/push/data`. `PushConfigTask.svelte` picks the data node, target item and append/replace mode.
 
 ## Directory Layout
 

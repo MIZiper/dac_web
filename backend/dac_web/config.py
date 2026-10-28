@@ -90,8 +90,7 @@ class Settings(BaseSettings):
     @classmethod
     def _fallback_scenario_dir(cls, v: str) -> str:
         if not v:
-            import dac
-            return path.join(path.dirname(dac.__file__), "scenarios")
+            return path.join(path.dirname(__file__), "scenarios")
         return v
 
 

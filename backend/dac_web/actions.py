@@ -16,6 +16,10 @@ from contextlib import contextmanager
 
 import httpx
 from dac.core.actions import ProcessActionBase
+from dac.modules.nvh.data import FreqDomainData
+from dac.modules.timedata import TimeData
+
+from dac_web.tc_push import build_tabular_payload, push_payload_to_tc
 
 
 class AuthenticatedActionBase(ProcessActionBase):
@@ -77,3 +81,36 @@ class AuthenticatedActionBase(ProcessActionBase):
     def auth_delete(self, url: str, **kwargs) -> httpx.Response:
         """``DELETE`` request with the bearer token."""
         return self.auth_request("DELETE", url, **kwargs)
+
+
+class PushDataToTCAction(AuthenticatedActionBase):
+    """Push a DAC result into an existing TC item as ``Tabular.v00``."""
+
+    CAPTION = "Push data to TC"
+
+    def __call__(
+        self,
+        target_node_id: str = "",
+        target_title: str = "",
+        source_id: str = "",
+        mode: str = "a",
+        channels: list[TimeData] = None,
+        spectra: list[FreqDomainData] = None,
+    ) -> None:
+        """Push time-domain or frequency-domain data to a TC item.
+
+        ``mode='a'`` appends channels to an existing Tabular item, which is
+        the normal choice when several analysis projects contribute to one
+        resource. ``mode='w'`` replaces the item content.
+        """
+        selected = channels or spectra or []
+        if not selected:
+            raise ValueError("No TimeData or FreqDomainData selected for push")
+        payload = build_tabular_payload(selected)
+        push_payload_to_tc(
+            self,
+            target_node_id=target_node_id,
+            source_id=source_id,
+            payload=payload,
+            mode=mode,
+        )

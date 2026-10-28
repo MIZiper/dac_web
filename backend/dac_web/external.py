@@ -97,6 +97,7 @@ async def attach_source(
             "source_id": project_id,
             "source_part": "project",
             "source_url": source_url(project_id),
+            "data_type": "dac_web.project",
         },
     )
 
@@ -111,14 +112,69 @@ async def query_candidates(
     page_size: int = 20,
 ) -> list[dict]:
     data = await _request(
-        "POST",
-        "/api/nodes/query",
+        "GET",
+        "/api/nodes/source-candidates",
         token,
-        json={
-            "text": text or None,
-            "types": ["dac_web.project"],
-            "page": 1,
+        params={
+            "source_system": "dac_web",
+            "q": text or "",
             "page_size": page_size,
         },
     )
     return data.get("items", []) if isinstance(data, dict) else []
+
+
+async def query_push_candidates(
+    token: Optional[str],
+    text: str = "",
+    page_size: int = 20,
+) -> list[dict]:
+    data = await _request(
+        "GET",
+        "/api/nodes/push-candidates",
+        token,
+        params={
+            "q": text or "",
+            "page_size": page_size,
+            "data_type": "Tabular.v00",
+        },
+    )
+    return data.get("items", []) if isinstance(data, dict) else []
+
+
+def result_source_url(project_id: str) -> str:
+    return f"{settings.public_base_url.rstrip('/')}/projects/{project_id}"
+
+
+async def push_data(
+    token: Optional[str],
+    external_id: str,
+    content: dict,
+    project_id: str,
+    *,
+    data_type: str = "Tabular.v00",
+    mode: str = "a",
+) -> dict:
+    return await _request(
+        "PUT",
+        f"/api/nodes/{external_id}/push/data",
+        token,
+        json={
+            "content": content,
+            "data_type": data_type,
+            "mode": mode,
+            "source_system": "dac_web",
+            "source_id": project_id,
+            "source_part": "result",
+            "source_url": result_source_url(project_id),
+        },
+    )
+
+
+async def list_contributions(token: Optional[str], project_id: str) -> list[dict]:
+    return await _request(
+        "GET",
+        "/api/nodes/contributions",
+        token,
+        params={"source_system": "dac_web", "source_id": project_id},
+    )

@@ -265,6 +265,15 @@ async def auth_status():
     return s.KeycloakStatus(**config)
 
 
+@router.get("/config", response_model=s.FrontendConfig)
+async def frontend_config():
+    return s.FrontendConfig(
+        external_system=settings.external_system,
+        external_system_ui_url=settings.external_system_ui_url,
+        public_base_url=settings.public_base_url,
+    )
+
+
 @router.post("/load", response_model=s.ManProjectResp)
 async def load_project(
     data: s.InitProjectReq,
@@ -695,6 +704,24 @@ async def list_external_link_candidates(
     return s.ExternalCandidatesResp(message="Candidates retrieved", items=items)
 
 
+@router.get("/tc/push-candidates", response_model=s.ExternalCandidatesResp)
+async def list_tc_push_candidates(
+    request: Request,
+    q: str = Query(""),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: dict | None = Depends(get_current_user),
+):
+    if current_user is None and is_keycloak_enabled():
+        _raise_http(401, "Authentication required", endpoint="/api/tc/push-candidates")
+    try:
+        items = await external.query_push_candidates(
+            _bearer_token(request), q, page_size
+        )
+    except external.ExternalError as exc:
+        _raise_http(503, exc.detail, endpoint="/api/tc/push-candidates")
+    return s.ExternalCandidatesResp(message="Push candidates retrieved", items=items)
+
+
 @router.put("/projects/{project_id}/external-link", response_model=s.ExternalLinkResp)
 async def link_project_external(
     project_id: str,
@@ -715,8 +742,20 @@ async def link_project_external(
     token = _bearer_token(request)
     try:
         state = await external.get_state(token, body.external_id)
-        if state.get("data_type") != "dac_web.project":
-            _raise_http(400, "External node must be of type dac_web.project")
+        if (
+            bool(state.get("frozen"))
+            if "frozen" in state
+            else external.is_frozen(state.get("status"))
+        ):
+            _raise_http(423, "External node is frozen and cannot be linked")
+        if not (
+            state.get("source_item")
+            or state.get("data_type") == "dac_web.project"
+        ):
+            _raise_http(
+                400,
+                "External node must be an unlinked Source Item or type dac_web.project",
+            )
         if state.get("source_system") and not (
             state.get("source_system") == "dac_web"
             and state.get("source_id") == project_id
@@ -876,7 +915,11 @@ def _external_link_from_state(state: dict, link: dict | None = None) -> dict:
         "status": state.get("status") or "draft",
         "status_updated_at": state.get("updated_at"),
         "checked_at": now,
-        "frozen": external.is_frozen(state.get("status")),
+        "frozen": (
+            bool(state.get("frozen"))
+            if "frozen" in state
+            else external.is_frozen(state.get("status"))
+        ),
     }
 
 

@@ -10,6 +10,7 @@ export interface TaskBaseProps {
 
 import NameEditor from "./NameEditor.svelte";
 import DataNodePicker from "./DataNodePicker.svelte";
+import PushConfigTask from "./PushConfigTask.svelte";
 
 export const taskHolder: {
     mapping: Record<string, [string, Component<TaskBaseProps>][]>,
@@ -20,7 +21,10 @@ export const taskHolder: {
         "dac.core.actions.Separator": [
             ["Example task", NameEditor],
             ["Pick data node", DataNodePicker],
-        ]
+        ],
+        "dac_web.actions.PushDataToTCAction": [
+            ["Configure push target", PushConfigTask],
+        ],
     },
     defaults: {},
     currentComponent: null,

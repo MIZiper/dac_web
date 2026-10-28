@@ -1,0 +1,5 @@
+inherit: /dac/scenarios/9.test.yaml
+
+actions:
+  dac.core.data.SimpleDefinition:
+  - dac_web.actions.PushDataToTCAction

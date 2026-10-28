@@ -148,10 +148,13 @@
 
         {#if pickerOpen && !link}
             <div class="mt-2">
+                <p class="small text-muted mb-2">
+                    Create a <strong>Source Item</strong> in TC first, then select it here.
+                </p>
                 <div class="d-flex gap-2">
                     <Input
                         type="text"
-                        placeholder="Search TC nodes by title"
+                        placeholder="Search unlinked TC Source Items"
                         bind:value={candidateQuery}
                         onkeydown={(e) => { if (e.key === "Enter") search(); }}
                     />

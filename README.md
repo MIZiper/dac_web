@@ -20,7 +20,8 @@ DAC web is a browser-based data analysis application built on the [DAC](http://g
 - **Import / export** — export project configs and import them back, with a two-phase preview that proposes action replacements for review
 - **Optional authentication** — Keycloak-based login (JWT); degrades gracefully when disabled
 - **Dual storage** — PostgreSQL or flat JSON files, controlled by `DBSTORE`
-- **TC catalog links** — link projects to metadata-only TC nodes; TC status controls read-only, while Save As remains available
+- **TC catalog links** — create a unified Source Item in TC, then link it from the project; TC fills in `dac_web.project`. TC status controls read-only, while Save As remains available
+- **TC result push** — `Push data to TC` action converts `TimeData`/`FreqDomainData` to `Tabular.v00` and appends it to a TC item; frozen items reject pushes
 
 ## Architecture
 
@@ -85,7 +86,7 @@ podman run -p 8000:8000 dac_web
 | `FRONTEND_DIST` | `/app/frontend-dist` | Directory containing the built frontend |
 | `PROJECT_DIR` | `/app/storage/projects` | Active project files (file storage) |
 | `PROJECT_SAVE_DIR` | `/app/storage/projects_save` | Published/shared projects (file storage) |
-| `SCENARIO_DIR` | dac built-in | Directory containing scenario definitions |
+| `SCENARIO_DIR` | `dac_web/scenarios` | Directory containing scenario definitions (inherits the shared DAC base scenario) |
 | `LOG_DIR` | `/app/storage/logs` | Session output logs |
 | `APP_LOG_ON` | `1` | Capture session subprocess stdout/stderr on termination |
 

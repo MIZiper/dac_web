@@ -1,0 +1,6 @@
+# Web entry scenario: inherit the shared DAC base and add web-only actions.
+inherit: /dac/scenarios/0.base.yaml
+
+actions:
+  dac.core.data.SimpleDefinition:
+  - dac_web.actions.PushDataToTCAction

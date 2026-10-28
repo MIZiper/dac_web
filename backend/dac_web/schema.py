@@ -101,6 +101,12 @@ class KeycloakStatus(BaseModel):
     admin_available: bool = False
 
 
+class FrontendConfig(BaseModel):
+    external_system: str = "tc"
+    external_system_ui_url: str = ""
+    public_base_url: str = ""
+
+
 class ProjectConfigResp(DACResponse):
     config: DACConfig
 
