@@ -62,6 +62,7 @@
     let project_id = $state(router.route.params.id);
     let projectTitle = $state("");
     let externalFrozen = $state(false);
+    let externalReachable = $state(true);
     let externalStatus = $state("");
 
     let config_in: Record<string, any> = $state({});
@@ -313,13 +314,18 @@
         projectId={project_id}
         onchange={(state) => {
             externalFrozen = state.frozen;
+            externalReachable = state.reachable;
             externalStatus = state.status || "";
         }}
     />
 </div>
 {#if externalFrozen}
     <Alert color="warning" class="mb-0 py-2 text-center">
-        This project is read-only because its TC status is <b>{externalStatus || "frozen"}</b>.
+        {#if !externalReachable}
+            This project is read-only because its TC state is <b>unavailable</b>.
+        {:else}
+            This project is read-only because its TC status is <b>{externalStatus || "frozen"}</b>.
+        {/if}
         Save is disabled, but <b>Save As</b> is still available.
     </Alert>
 {/if}

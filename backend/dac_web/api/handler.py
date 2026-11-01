@@ -590,6 +590,7 @@ async def admin_session_logs(
 
 @router.get("/projects", response_model=s.ProjectListResp)
 async def get_project_list(
+    request: Request,
     conn: Connection | None = Depends(get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
@@ -621,21 +622,38 @@ async def get_project_list(
         offset,
     )
 
-    projects = [
-        s.ProjectItem(
-            id=str(r["id"]),
-            created_at=r["created_at"].isoformat(),
-            updated_at=r["updated_at"].isoformat(),
-            title=r["title"],
-            creator_name=r["creator_name"],
-            external_link=(
-                json.loads(r["external_link"])
-                if isinstance(r["external_link"], str)
-                else r["external_link"]
-            ) if r["external_link"] else None,
-        )
-        for r in rows
+    cached_links = [_row_external_link(r["external_link"]) for r in rows]
+    external_ids = [
+        str(link["external_id"])
+        for link in cached_links
+        if link and link.get("external_id")
     ]
+    live_states = (
+        await external.get_states(_bearer_token(request), external_ids)
+        if external_ids
+        else {}
+    )
+
+    projects: list[s.ProjectItem] = []
+    for r, cached_link in zip(rows, cached_links):
+        external_link = cached_link
+        if cached_link and cached_link.get("external_id"):
+            state = live_states.get(str(cached_link["external_id"]))
+            if state is not None:
+                external_link = {**_external_link_from_state(state), "reachable": True}
+            else:
+                external_link = {**cached_link, "reachable": False}
+
+        projects.append(
+            s.ProjectItem(
+                id=str(r["id"]),
+                created_at=r["created_at"].isoformat(),
+                updated_at=r["updated_at"].isoformat(),
+                title=r["title"],
+                creator_name=r["creator_name"],
+                external_link=external_link,
+            )
+        )
 
     return s.ProjectListResp(
         message="Project list retrieved",
@@ -768,7 +786,7 @@ async def link_project_external(
         _raise_http(503, exc.detail)
 
     link = _external_link_from_state(state)
-    content.setdefault("dac_web", {})["external_link"] = link
+    content.setdefault("dac_web", {})["external_link"] = _link_identity(link)
     try:
         await write_project_content(project_id, content, conn)
     except Exception:
@@ -899,11 +917,34 @@ def _bearer_token(request: Request) -> str | None:
     return None
 
 
+def _link_identity(link: dict | None) -> dict | None:
+    """Persisted part of a link: identity only, never external status.
+
+    Status is looked up live; caching a snapshot in the project would let a
+    stale value unlock a project whose external state is unknown.
+    """
+    if not link or not link.get("external_id"):
+        return None
+    external_id = str(link["external_id"])
+    return {
+        "provider": link.get("provider") or settings.external_system,
+        "external_id": external_id,
+        "external_url": link.get("external_url") or external.external_url(external_id),
+    }
+
+
 def _external_link(content: dict | None) -> dict | None:
     if not content:
         return None
     link = (content.get("dac_web") or {}).get("external_link")
-    return link if isinstance(link, dict) else None
+    return _link_identity(link) if isinstance(link, dict) else None
+
+
+def _row_external_link(raw: object) -> dict | None:
+    if not raw:
+        return None
+    link = json.loads(raw) if isinstance(raw, str) else raw
+    return _link_identity(link) if isinstance(link, dict) else None
 
 
 def _external_link_from_state(state: dict, link: dict | None = None) -> dict:

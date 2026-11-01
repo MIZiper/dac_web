@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any, Optional
 
 import httpx
 
 from dac_web.config import settings
+
+# Linked resources refresh their external status on read. The cache keeps the
+# same page load (and quick reloads) from hitting the external system twice.
+_STATE_CACHE_TTL = 10.0
+_state_cache: dict[str, tuple[float, dict]] = {}
+# Only fields needed to describe the link are cached; node content may depend
+# on the caller's visibility.
+_STATE_CACHE_FIELDS = ("id", "status", "updated_at", "frozen")
+
 
 
 class ExternalError(Exception):
@@ -33,11 +44,13 @@ async def _request(
     method: str,
     path: str,
     token: Optional[str],
+    *,
+    timeout: float = 15.0,
     **kwargs: Any,
 ) -> Any:
     _ensure_supported()
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.request(
                 method, f"{_base_url()}{path}", headers=_headers(token), **kwargs
             )
@@ -79,8 +92,61 @@ def source_url(project_id: str) -> str:
     return f"{settings.public_base_url.rstrip('/')}/projects/{project_id}"
 
 
-async def get_state(token: Optional[str], external_id: str) -> dict:
-    return await _request("GET", f"/api/nodes/{external_id}/state", token)
+async def get_state(
+    token: Optional[str], external_id: str, *, timeout: float = 15.0
+) -> dict:
+    return await _request(
+        "GET", f"/api/nodes/{external_id}/state", token, timeout=timeout
+    )
+
+
+async def get_states(
+    token: Optional[str],
+    external_ids: list[str],
+    *,
+    timeout: float = 3.0,
+    concurrency: int = 5,
+) -> dict[str, Optional[dict]]:
+    """Fetch several node states in parallel, using a short-lived cache.
+
+    Returns ``external_id -> state``; unreachable nodes map to ``None`` so
+    callers can fall back to their cached link.
+    """
+    unique = list(dict.fromkeys(external_ids))
+    now = time.monotonic()
+    result: dict[str, Optional[dict]] = {}
+    pending: list[str] = []
+
+    for external_id in unique:
+        cached = _state_cache.get(external_id)
+        if cached is not None and now - cached[0] < _STATE_CACHE_TTL:
+            result[external_id] = cached[1]
+        else:
+            pending.append(external_id)
+
+    if pending:
+        semaphore = asyncio.Semaphore(max(1, concurrency))
+
+        async def fetch(external_id: str) -> Optional[dict]:
+            async with semaphore:
+                try:
+                    return await get_state(token, external_id, timeout=timeout)
+                except Exception:
+                    return None
+
+        states = await asyncio.gather(*(fetch(item) for item in pending))
+        for external_id, state in zip(pending, states):
+            if state is None:
+                result[external_id] = None
+                continue
+            cached_state = {
+                key: state[key] for key in _STATE_CACHE_FIELDS if key in state
+            }
+            cached_state.setdefault("id", external_id)
+            _state_cache[external_id] = (time.monotonic(), cached_state)
+            result[external_id] = cached_state
+
+    return result
 
 
 async def attach_source(

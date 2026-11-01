@@ -107,16 +107,20 @@
                                     <span class="text-muted">&mdash;</span>
                                 {/if}
                                 {#if p.external_link}
-                                    <a
-                                        class="ms-2 text-decoration-none"
-                                        href={p.external_link.external_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        <Badge color={p.external_link.frozen ? "warning" : "secondary"}>
-                                            TC: {p.external_link.status}
-                                        </Badge>
-                                    </a>
+                                    {#if p.external_link.reachable === false || !p.external_link.status}
+                                        <Badge color="danger" class="ms-2">TC: state unavailable</Badge>
+                                    {:else}
+                                        <a
+                                            class="ms-2 text-decoration-none"
+                                            href={p.external_link.external_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            <Badge color={p.external_link.frozen ? "warning" : "secondary"}>
+                                                TC: {p.external_link.status}
+                                            </Badge>
+                                        </a>
+                                    {/if}
                                 {/if}
                             </CardSubtitle>
                             <CardText class="text-muted small mb-1">

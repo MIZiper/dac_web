@@ -191,7 +191,7 @@ class ExternalLinkInfo(BaseModel):
     provider: str
     external_id: str
     external_url: str
-    status: str
+    status: str | None = None
     status_updated_at: str | None = None
     checked_at: str | None = None
     frozen: bool = False

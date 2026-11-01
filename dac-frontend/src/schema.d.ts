@@ -117,8 +117,11 @@ export interface ProjectItem {
         provider: string;
         external_id: string;
         external_url: string;
-        status: string;
+        status?: string | null;
         frozen: boolean;
+        status_updated_at?: string | null;
+        checked_at?: string | null;
+        reachable?: boolean;
     } | null;
 }
 

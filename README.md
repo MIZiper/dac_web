@@ -20,7 +20,7 @@ DAC web is a browser-based data analysis application built on the [DAC](http://g
 - **Import / export** — export project configs and import them back, with a two-phase preview that proposes action replacements for review
 - **Optional authentication** — Keycloak-based login (JWT); degrades gracefully when disabled
 - **Dual storage** — PostgreSQL or flat JSON files, controlled by `DBSTORE`
-- **TC catalog links** — create a unified Source Item in TC, then link it from the project; TC fills in `dac_web.project`. TC status controls read-only, while Save As remains available
+- **TC catalog links** — create a unified Source Item in TC, then link it from the project; TC fills in `dac_web.project`. Only the link identity (provider, id, URL) is stored — status is never cached. The project list refreshes linked statuses on read (short in-process cache); when TC is unreachable the link shows `state unavailable`, the project is read-only, and unlink is rejected; Save As remains available and does not inherit the link
 - **TC result push** — `Push data to TC` action converts `TimeData`/`FreqDomainData` to `Tabular.v00` and appends it to a TC item; frozen items reject pushes
 
 ## Architecture

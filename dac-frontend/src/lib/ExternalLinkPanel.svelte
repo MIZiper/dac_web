@@ -6,7 +6,7 @@
         provider: string;
         external_id: string;
         external_url: string;
-        status: string;
+        status?: string | null;
         status_updated_at?: string | null;
         checked_at?: string | null;
         frozen: boolean;
@@ -17,7 +17,13 @@
         onchange,
     }: {
         projectId: string;
-        onchange?: (state: { linked: boolean; frozen: boolean; status?: string; url?: string }) => void;
+        onchange?: (state: {
+            linked: boolean;
+            frozen: boolean;
+            reachable: boolean;
+            status?: string;
+            url?: string;
+        }) => void;
     } = $props();
 
     let link = $state<ExternalLink | null>(null);
@@ -34,7 +40,8 @@
         onchange?.({
             linked: !!link,
             frozen,
-            status: link?.status,
+            reachable,
+            status: link?.status ?? undefined,
             url: link?.external_url,
         });
     }
@@ -124,7 +131,9 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="small fw-semibold">TC catalog</span>
             {#if link}
-                <Badge color={link.frozen ? "warning" : "secondary"}>{link.status}</Badge>
+                {#if link.status}
+                    <Badge color={link.frozen ? "warning" : "secondary"}>{link.status}</Badge>
+                {/if}
                 {#if !reachable}
                     <Badge color="danger">state unavailable</Badge>
                 {/if}
@@ -134,7 +143,12 @@
                 <Button size="sm" color="outline-secondary" onclick={refresh} disabled={loading}>
                     Refresh
                 </Button>
-                <Button size="sm" color="outline-danger" onclick={unlink} disabled={loading || link.frozen}>
+                <Button
+                    size="sm"
+                    color="outline-danger"
+                    onclick={unlink}
+                    disabled={loading || !reachable || link.frozen}
+                >
                     Unlink
                 </Button>
             {:else}
