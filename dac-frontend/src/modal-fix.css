@@ -1,0 +1,14 @@
+@media (prefers-reduced-motion: reduce) {
+  .modal.fade .modal-dialog {
+    transition: none !important;
+    transform: none !important;
+    margin-top: 1.75rem !important;
+  }
+  .modal.fade:not(.show) {
+    opacity: 1 !important;
+  }
+  .modal-backdrop.fade {
+    transition: none !important;
+    opacity: 0.5 !important;
+  }
+}

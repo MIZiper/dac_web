@@ -9,3 +9,6 @@ __pycache__/
 projects_save/
 projects/
 logs/
+
+# Local database dumps (never commit)
+backend/dac_web/db/z_*.sql*
